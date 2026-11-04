@@ -2274,12 +2274,12 @@ export const FLUID_PROFILES: Record<FluidKind, FluidPhysicalProfile> = {
     kind: 'clean-water',
     nameVi: 'Nước sạch tinh khiết (Xanh nhạt thủy tinh)',
     ior: 1.333,
-    transmission: 0.82,         // Khúc xạ ánh sáng thực tế nhưng vẫn nhìn rõ thể tích nước
+    transmission: 0.95,         // Khúc xạ quang học Beer-Lambert chuẩn (0.94 - 0.96)
     roughness: 0.008,          // Mặt nước cực kỳ phẳng bóng
     metalness: 0.01,
     thickness: 0.08,
-    attenuationDistance: 0.12,  // Hấp thụ Beer-Lambert sâu lắng: góc mỏng ánh xanh lơ dịu, khối dày có chiều sâu
-    attenuationColor: 0x0284c7, // Xanh biển sâu khi ánh sáng đi qua chiều dày khối nước
+    attenuationDistance: 0.18,  // Hấp thụ Beer-Lambert sâu lắng: góc mỏng ánh xanh lơ dịu, khối dày có chiều sâu
+    attenuationColor: 0x7dd3fc, // Xanh lơ dịu chuẩn quang học khi ánh sáng đi qua chiều dày khối nước
     baseColor: 0x7dd3fc,        // Màu xanh nhạt tươi mát tự nhiên đặc trưng của nước trong phòng thí nghiệm
     specularIntensity: 1.0,
     clearcoat: 1.0,
