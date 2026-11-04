@@ -38,6 +38,7 @@ interface SynapseParticle {
   speed: number;
   size: number;
   color: string;
+  flowDirection: 'outflow' | 'inflow' | 'bidirectional';
 }
 
 const CATEGORY_META: Record<DeviceCategory, { name: string; studentName: string; color: string; icon: string }> = {
@@ -72,6 +73,18 @@ const SYNAPSE_META: Record<SynapseKind, { name: string; studentName: string; col
   microscopy_dock:           { name: 'Gá vi thể hiển vi', studentName: 'Soi mẫu vật tế bào', color: '#4ade80' }
 };
 
+// Hàm chắt lọc diễn giải nhân quả ngắn gọn, súc tích, tránh từ ngữ thừa thãi
+const distillCausal = (text: string): string => {
+  if (!text) return '';
+  return text
+    .replace(/^Thả\s+/i, '')
+    .replace(/^Nhẹ nhàng\s+/i, '')
+    .replace(/^Vặn\s+/i, '')
+    .replace(/nhé các em!?/gi, '')
+    .replace(/\s*->\s*/g, ' → ')
+    .trim();
+};
+
 // ĐỘNG CƠ ÂM THANH WEB AUDIO NỘI TẠI (ZERO ASSETS)
 class ProceduralAudio {
   private ctx: AudioContext | null = null;
@@ -88,7 +101,6 @@ class ProceduralAudio {
     this.isMuted = mute;
   }
 
-  // Tiếng bấm nơ-ron (Pluck synth)
   playNodeClick() {
     if (this.isMuted) return;
     this.init();
@@ -108,7 +120,6 @@ class ProceduralAudio {
     } catch {}
   }
 
-  // Tiếng thành công (Success chime)
   playSuccessChime() {
     if (this.isMuted) return;
     this.init();
@@ -130,7 +141,6 @@ class ProceduralAudio {
     } catch {}
   }
 
-  // Tiếng thử thách sai (Low buzz)
   playErrorBuzz() {
     if (this.isMuted) return;
     this.init();
@@ -158,7 +168,6 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   initialDeviceId,
   onClose,
   onSelectDevice,
-  onTriggerMacroCluster,
   activeSceneDeviceIds = []
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -178,11 +187,10 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       }
     }
   }, [isOpen, initialDeviceId]);
+
   const [hoveredNode, setHoveredNode] = useState<NeuralDeviceNode | null>(null);
   const [selectedExperiment, setSelectedExperiment] = useState<ExperimentMacroCluster | null>(null);
-  const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [layoutMode, setLayoutMode] = useState<'circular' | 'neural_layers'>('circular');
-  const [subjectFilter, setSubjectFilter] = useState<'all' | 'physics' | 'chemistry' | 'biology'>('all');
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [isFiringSignal, setIsFiringSignal] = useState<boolean>(true);
   const [isSoundMuted, setIsSoundMuted] = useState<boolean>(false);
@@ -196,6 +204,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   const isDraggingRef = useRef<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const cameraStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const lastClickTimeRef = useRef<number>(0);
 
   const nodesRef = useRef<NodeSimulationState[]>([]);
   const particlesRef = useRef<SynapseParticle[]>([]);
@@ -213,7 +222,6 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   const filteredNodes = useMemo(() => {
     return NEURAL_DEVICE_NODES.filter(device => {
       if (selectedGrade !== 'ALL' && !device.grades.includes(selectedGrade)) return false;
-      if (subjectFilter !== 'all' && device.subject !== subjectFilter && device.subject !== 'general') return false;
       if (searchKeyword.trim()) {
         const kw = searchKeyword.toLowerCase();
         const matchVi = device.nameVi.toLowerCase().includes(kw);
@@ -223,34 +231,47 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       }
       return true;
     });
-  }, [selectedGrade, subjectFilter, searchKeyword]);
+  }, [selectedGrade, searchKeyword]);
 
   const filteredNodeIds = useMemo(() => new Set(filteredNodes.map(n => n.id)), [filteredNodes]);
+
+  // Lọc danh sách bài thực hành SGK
+  const filteredExperiments = useMemo(() => {
+    return EXPERIMENT_MACRO_CLUSTERS.filter(cluster => {
+      if (selectedGrade !== 'ALL' && cluster.gradeCode !== selectedGrade) return false;
+      if (searchKeyword.trim()) {
+        const kw = searchKeyword.toLowerCase();
+        const matchTitle = cluster.title.toLowerCase().includes(kw);
+        const matchSubject = cluster.subject.toLowerCase().includes(kw);
+        const matchGoal = cluster.studentGoal.toLowerCase().includes(kw);
+        const matchDevs = cluster.deviceIds.some(id => {
+          const dev = NEURAL_DEVICE_NODES.find(d => d.id === id);
+          return dev && (dev.nameVi.toLowerCase().includes(kw) || dev.nameStudent.toLowerCase().includes(kw));
+        });
+        if (!matchTitle && !matchSubject && !matchGoal && !matchDevs) return false;
+      }
+      return true;
+    });
+  }, [selectedGrade, searchKeyword]);
 
   // Lọc Edges
   const filteredEdges = useMemo(() => {
     return NEURAL_SYNAPSE_EDGES.filter(edge => {
       if (!filteredNodeIds.has(edge.source) || !filteredNodeIds.has(edge.target)) return false;
       if (selectedExperiment) {
-        if (selectedExperiment.steps && selectedExperiment.steps.length > 0) {
-          const currentStep = selectedExperiment.steps[currentStepIndex];
-          if (currentStep) {
-            return currentStep.activeSynapseIds.includes(edge.id);
-          }
-        }
         return selectedExperiment.deviceIds.includes(edge.source) && selectedExperiment.deviceIds.includes(edge.target);
       }
       return true;
     });
-  }, [filteredNodeIds, selectedExperiment, currentStepIndex]);
+  }, [filteredNodeIds, selectedExperiment]);
 
-  // Vị trí Target: Gốc (0, 0) là tâm World Space + Thuật toán khử đè nhãn
-  const computeTargetPositions = useCallback((width: number, height: number, mode: typeof layoutMode) => {
+  // Vị trí Target: Gốc (0, 0) là tâm World Space - Cố định hình học tròn chuẩn 1:1, không bị méo khi mở/đóng bảng
+  const computeTargetPositions = useCallback((_width: number, height: number, mode: typeof layoutMode) => {
     const nodes = nodesRef.current;
     if (nodes.length === 0) return;
 
-    // Giới hạn bán kính quỹ đạo tương quan với chiều cao modal
-    const R_orbit = Math.min((width - 320) * 0.44, (height - 160) * 0.40);
+    // Bán kính quỹ đạo tròn ổn định, căn cứ theo chiều cao modal để không bao giờ bị méo dẹt
+    const R_orbit = Math.max(220, Math.min(270, (height - 120) * 0.42));
 
     if (mode === 'circular') {
       const categories = Object.keys(CATEGORY_META) as DeviceCategory[];
@@ -259,34 +280,35 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
 
       activeCats.forEach((cat, gIndex) => {
         const angle = (gIndex / groupCount) * Math.PI * 2 - Math.PI / 2;
+        // Tọa độ tròn cân đối 1:1, không nhân hệ số làm dẹt
         const gx = R_orbit * Math.cos(angle);
-        const gy = R_orbit * Math.sin(angle) * 0.88;
+        const gy = R_orbit * Math.sin(angle);
 
         const inCat = nodes.filter(n => n.device.category === cat);
         if (inCat.length === 1) {
           inCat[0].tx = gx;
           inCat[0].ty = gy;
         } else {
-          const fanSpan = Math.PI * 0.36;
+          const fanSpan = Math.PI * 0.38;
           const startAngle = angle - fanSpan / 2;
           inCat.forEach((node, idx) => {
             const a = startAngle + (idx / Math.max(1, inCat.length - 1)) * fanSpan;
-            const rOffset = idx % 2 === 0 ? 0.85 : 1.12;
-            node.tx = gx + (R_orbit * 0.26 * rOffset) * Math.cos(a);
-            node.ty = gy + (R_orbit * 0.24 * rOffset) * Math.sin(a);
+            const rOffset = idx % 2 === 0 ? 0.90 : 1.10;
+            node.tx = gx + (R_orbit * 0.28 * rOffset) * Math.cos(a);
+            node.ty = gy + (R_orbit * 0.28 * rOffset) * Math.sin(a);
           });
         }
       });
 
-      // THUẬT TOÁN KHỬ TRÙNG LẶP & ĐÈ NHÃN (ELLIPTICAL COLLISION RELAXATION)
-      for (let iter = 0; iter < 50; iter++) {
+      // KHỬ TRÙNG LẶP & ĐÈ NHÃN CÂN BẰNG TỶ LỆ (KHÔNG GÂY DẸT HẸP CHIỀU NGANG)
+      for (let iter = 0; iter < 45; iter++) {
         for (let i = 0; i < nodes.length; i++) {
           for (let j = i + 1; j < nodes.length; j++) {
             const a = nodes[i];
             const b = nodes[j];
             const dx = b.tx - a.tx;
             const dy = b.ty - a.ty;
-            const rx = 112;
+            const rx = 65;
             const ry = 42;
             const nx = dx / rx;
             const ny = dy / ry;
@@ -325,9 +347,9 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         layers[layerIdx].push(n);
       });
 
-      const totalW = Math.min((width - 320) * 0.88, 920);
+      const totalW = 660;
       const spacingX = totalW / 5;
-      const totalH = Math.min(height * 0.65, 520);
+      const totalH = Math.min(height * 0.65, 480);
 
       layers.forEach((layerNodes, lIdx) => {
         const lx = -totalW / 2 + lIdx * spacingX;
@@ -361,16 +383,17 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
     }));
 
     if (canvasRef.current) {
-      const w = canvasRef.current.parentElement?.clientWidth || window.innerWidth;
-      const h = canvasRef.current.parentElement?.clientHeight || window.innerHeight;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const w = Math.round(rect.width) || canvasRef.current.parentElement?.clientWidth || window.innerWidth;
+      const h = Math.round(rect.height) || canvasRef.current.parentElement?.clientHeight || window.innerHeight;
       canvasRef.current.width = w;
       canvasRef.current.height = h;
 
-      nodesRef.current.forEach(n => {
-        n.x = w / 2;
-        n.y = h / 2;
-      });
       computeTargetPositions(w, h, layoutMode);
+      nodesRef.current.forEach(n => {
+        n.x = n.tx;
+        n.y = n.ty;
+      });
     }
   }, [isOpen, layoutMode, computeTargetPositions]);
 
@@ -400,6 +423,15 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       const dt = (time - lastTime) / 1000;
       lastTime = time;
 
+      // ĐỒNG BỘ ĐỘ PHÂN GIẢI CANVAS THEO KÍCH THƯỚC THỰC TẾ 1:1, TRIỆT TIÊU HIỆN TƯỢNG MÉO DẸT
+      const rect = canvas.getBoundingClientRect();
+      const curW = Math.round(rect.width);
+      const curH = Math.round(rect.height);
+      if (curW > 0 && curH > 0 && (canvas.width !== curW || canvas.height !== curH)) {
+        canvas.width = curW;
+        canvas.height = curH;
+      }
+
       const w = canvas.width;
       const h = canvas.height;
       const cam = cameraRef.current;
@@ -410,20 +442,46 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       });
 
       if (isFiringSignal && filteredEdges.length > 0) {
-        if (particlesRef.current.length < 180 && Math.random() < 0.4) {
+        if (particlesRef.current.length < 240 && Math.random() < 0.45) {
           const edge = filteredEdges[Math.floor(Math.random() * filteredEdges.length)];
           const srcNode = nodesRef.current.find(n => n.device.id === edge.source);
           const tgtNode = nodesRef.current.find(n => n.device.id === edge.target);
           if (srcNode && tgtNode) {
-            particlesRef.current.push({
-              edge,
-              sourceNode: srcNode,
-              targetNode: tgtNode,
-              progress: 0,
-              speed: (0.32 + Math.random() * 0.35) * edge.signalSpeed,
-              size: 2.4 + Math.random() * 1.8,
-              color: SYNAPSE_META[edge.type]?.color || '#818cf8'
-            });
+            let color = '#6366f1'; // Mặc định lam tím neon (cùng cấp / gợi ý)
+            let flowDirection: 'outflow' | 'inflow' | 'bidirectional' = 'bidirectional';
+
+            if (selectedNode) {
+              if (edge.source === selectedNode.id) {
+                color = '#0080ff'; // Dòng chảy ra: Xanh dương neon
+                flowDirection = 'outflow';
+              } else if (edge.target === selectedNode.id) {
+                color = '#b026ff'; // Dòng chảy vào: Tím neon
+                flowDirection = 'inflow';
+              }
+            } else {
+              // Phân định dòng năng lượng theo nhóm chức năng
+              if (['G07_ELECTRICITY', 'G06_OPTICS', 'G10_FLUID_SUPPLY'].includes(srcNode.device.category)) {
+                color = '#0080ff';
+                flowDirection = 'outflow';
+              } else if (['G02_MASS_FORCE', 'G04_VOLUMETRIC', 'G03_TIME_TEMP'].includes(tgtNode.device.category)) {
+                color = '#b026ff';
+                flowDirection = 'inflow';
+              }
+            }
+
+            // Tạo chuỗi 3 hạt photon nhỏ liên tiếp chảy thành dòng (kích thước giảm 50%)
+            for (let sIdx = 0; sIdx < 3; sIdx++) {
+              particlesRef.current.push({
+                edge,
+                sourceNode: srcNode,
+                targetNode: tgtNode,
+                progress: -sIdx * 0.08,
+                speed: (0.35 + Math.random() * 0.3) * edge.signalSpeed,
+                size: 1.4 + Math.random() * 0.7,
+                color,
+                flowDirection,
+              });
+            }
           }
         }
       }
@@ -434,14 +492,14 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         if (p.progress >= 1) particlesRef.current.splice(i, 1);
       }
 
-      ctx.fillStyle = '#060913';
-      ctx.fillRect(0, 0, w, h);
+      // ĐẢM BẢO NỀN TRONG SUỐT HOÀN TOÀN (TRANSPARENT BACKGROUND)
+      ctx.clearRect(0, 0, w, h);
 
       ctx.save();
       const gridSize = 45 * cam.zoom;
       const offX = (-cam.x * cam.zoom + w / 2) % gridSize;
       const offY = (-cam.y * cam.zoom + h / 2) % gridSize;
-      ctx.strokeStyle = 'rgba(79, 110, 247, 0.05)';
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.04)';
       ctx.lineWidth = 1;
       for (let x = offX; x < w; x += gridSize) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
@@ -456,7 +514,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         y: (wy - cam.y) * cam.zoom + h / 2
       });
 
-      // Vẽ khớp nối Synapse
+      // Vẽ khớp nối Synapse (Độ dày nét 1.2, màu Neon chuẩn)
       filteredEdges.forEach(edge => {
         const src = nodesRef.current.find(n => n.device.id === edge.source);
         const tgt = nodesRef.current.find(n => n.device.id === edge.target);
@@ -464,7 +522,17 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
 
         const sPos = toScreen(src.x, src.y);
         const tPos = toScreen(tgt.x, tgt.y);
-        const meta = SYNAPSE_META[edge.type] || { color: '#6366f1' };
+
+        let strokeColor = '#6366f1'; // Lam tím neon
+        if (selectedNode) {
+          if (edge.source === selectedNode.id) {
+            strokeColor = '#0080ff'; // Xanh dương neon
+          } else if (edge.target === selectedNode.id) {
+            strokeColor = '#b026ff'; // Tím neon
+          }
+        }
+
+        const meta = SYNAPSE_META[edge.type] || { color: strokeColor };
 
         const isHighlighted =
           (selectedNode && (selectedNode.id === edge.source || selectedNode.id === edge.target)) ||
@@ -489,19 +557,21 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         if (meta.dash) ctx.setLineDash(meta.dash);
 
         if (isHighlighted) {
-          ctx.strokeStyle = meta.color;
-          ctx.lineWidth = 2.6 * cam.zoom;
-          ctx.shadowColor = meta.color;
-          ctx.shadowBlur = 14;
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = 2.4 * cam.zoom;
+          ctx.shadowColor = strokeColor;
+          ctx.shadowBlur = 12;
           ctx.globalAlpha = 1.0;
         } else {
-          ctx.strokeStyle = meta.color;
-          ctx.lineWidth = 1.0 * cam.zoom;
-          ctx.globalAlpha = selectedNode || selectedExperiment ? 0.08 : 0.28;
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = 1.2 * cam.zoom;
+          ctx.shadowColor = strokeColor;
+          ctx.shadowBlur = 4;
+          ctx.globalAlpha = selectedNode || selectedExperiment ? 0.12 : 0.38;
         }
         ctx.stroke();
 
-        // Mũi tên
+        // Mũi tên nhỏ tinh tế
         const t = 0.65;
         const ax = (1 - t) * (1 - t) * sPos.x + 2 * (1 - t) * t * cx + t * t * tPos.x;
         const ay = (1 - t) * (1 - t) * sPos.y + 2 * (1 - t) * t * cy + t * t * tPos.y;
@@ -511,7 +581,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         const adx = nax - ax;
         const ady = nay - ay;
         const adist = Math.sqrt(adx * adx + ady * ady) || 1;
-        const arrowL = 6 * cam.zoom;
+        const arrowL = 5.8 * cam.zoom;
 
         ctx.setLineDash([]);
         ctx.beginPath();
@@ -519,13 +589,15 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         ctx.lineTo(ax - (ady / adist) * (arrowL * 0.6) - (adx / adist) * arrowL, ay + (adx / adist) * (arrowL * 0.6) - (ady / adist) * arrowL);
         ctx.lineTo(ax + (ady / adist) * (arrowL * 0.6) - (adx / adist) * arrowL, ay - (adx / adist) * (arrowL * 0.6) - (ady / adist) * arrowL);
         ctx.closePath();
-        ctx.fillStyle = meta.color;
+        ctx.fillStyle = strokeColor;
+        ctx.shadowColor = strokeColor;
+        ctx.shadowBlur = 8;
         ctx.fill();
 
         ctx.restore();
       });
 
-      // Vẽ hạt photon
+      // Vẽ hạt photon phát sáng Neon
       particlesRef.current.forEach(p => {
         const s = toScreen(p.sourceNode.x, p.sourceNode.y);
         const t = toScreen(p.targetNode.x, p.targetNode.y);
@@ -538,18 +610,26 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         const cx = midX - (dy / dist) * curvature;
         const cy = midY + (dx / dist) * curvature;
 
-        const pr = p.progress;
+        if (p.progress < 0 || p.progress > 1) return;
+
+        let pr = p.progress;
+        if (p.flowDirection === 'inflow') {
+          pr = 1 - p.progress;
+        } else if (p.flowDirection === 'bidirectional') {
+          pr = 0.5 + 0.48 * Math.sin(p.progress * Math.PI * 2);
+        }
+
         const px = (1 - pr) * (1 - pr) * s.x + 2 * (1 - pr) * pr * cx + pr * pr * t.x;
         const py = (1 - pr) * (1 - pr) * s.y + 2 * (1 - pr) * pr * cy + pr * pr * t.y;
 
-        const alpha = Math.sin(pr * Math.PI);
+        const alpha = Math.sin(p.progress * Math.PI);
         ctx.save();
-        ctx.globalAlpha = alpha;
+        ctx.globalAlpha = Math.max(0.18, alpha);
         ctx.beginPath();
-        ctx.arc(px, py, p.size * cam.zoom, 0, Math.PI * 2);
+        ctx.arc(px, py, (p.size || 1.4) * cam.zoom, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
         ctx.shadowColor = p.color;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 8;
         ctx.fill();
         ctx.restore();
       });
@@ -566,12 +646,9 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         const isHovered = hoveredNode?.id === n.device.id;
         const isInActiveScene = activeSceneDeviceIds.includes(n.device.id);
 
-        let isInCurrentStep = false;
-        if (selectedExperiment && selectedExperiment.steps && selectedExperiment.steps.length > 0) {
-          const step = selectedExperiment.steps[currentStepIndex];
-          isInCurrentStep = step?.activeDeviceIds.includes(n.device.id) ?? false;
-        } else if (selectedExperiment) {
-          isInCurrentStep = selectedExperiment.deviceIds.includes(n.device.id);
+        let isInCurrentExperiment = false;
+        if (selectedExperiment) {
+          isInCurrentExperiment = selectedExperiment.deviceIds.includes(n.device.id);
         }
 
         let alpha = 1.0;
@@ -583,19 +660,19 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               (e.target === selectedNode.id && e.source === n.device.id)
             );
           if (!isRelated) alpha = 0.14;
-        } else if (selectedExperiment && !isInCurrentStep) {
+        } else if (selectedExperiment && !isInCurrentExperiment) {
           alpha = 0.14;
         }
 
         ctx.save();
         ctx.globalAlpha = alpha;
 
-        if (isSelected || isHovered || isInActiveScene || isInCurrentStep) {
+        if (isSelected || isHovered || isInActiveScene || isInCurrentExperiment) {
           ctx.beginPath();
           ctx.arc(pos.x, pos.y, r + 9 * cam.zoom, 0, Math.PI * 2);
-          ctx.strokeStyle = isInActiveScene ? '#10b981' : isInCurrentStep ? '#eab308' : meta.color;
+          ctx.strokeStyle = isInActiveScene ? '#10b981' : isInCurrentExperiment ? '#eab308' : meta.color;
           ctx.lineWidth = 2.5;
-          ctx.shadowColor = isInActiveScene ? '#10b981' : isInCurrentStep ? '#eab308' : meta.color;
+          ctx.shadowColor = isInActiveScene ? '#10b981' : isInCurrentExperiment ? '#eab308' : meta.color;
           ctx.shadowBlur = 20;
           ctx.stroke();
         }
@@ -642,8 +719,8 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
           const bh = Math.max(16, 18 * cam.zoom);
 
           ctx.fillStyle = isSelected ? 'rgba(30, 41, 59, 0.95)' : isHovered ? 'rgba(15, 23, 42, 0.92)' : 'rgba(8, 12, 28, 0.88)';
-          ctx.strokeStyle = isSelected ? meta.color : isHovered ? '#ffffff' : (isInCurrentStep ? '#eab308' : 'rgba(99, 102, 241, 0.35)');
-          ctx.lineWidth = isSelected || isHovered || isInCurrentStep ? 1.5 : 1;
+          ctx.strokeStyle = isSelected ? meta.color : isHovered ? '#ffffff' : (isInCurrentExperiment ? '#eab308' : 'rgba(99, 102, 241, 0.35)');
+          ctx.lineWidth = isSelected || isHovered || isInCurrentExperiment ? 1.5 : 1;
           ctx.beginPath();
           if (ctx.roundRect) {
             ctx.roundRect(bx, by, bw, bh, 5);
@@ -653,7 +730,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
           ctx.fill();
           ctx.stroke();
 
-          ctx.fillStyle = isSelected || isHovered ? '#ffffff' : isInCurrentStep ? '#fef08a' : '#cbd5e1';
+          ctx.fillStyle = isSelected || isHovered ? '#ffffff' : isInCurrentExperiment ? '#fef08a' : '#cbd5e1';
           ctx.fillText(label, pos.x, by + bh / 2);
         }
 
@@ -668,10 +745,29 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
     return () => {
       if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
     };
-  }, [isOpen, filteredEdges, filteredNodeIds, selectedNode, hoveredNode, selectedExperiment, currentStepIndex, activeSceneDeviceIds, isFiringSignal, userMode]);
+  }, [isOpen, filteredEdges, filteredNodeIds, selectedNode, hoveredNode, selectedExperiment, activeSceneDeviceIds, isFiringSignal, userMode]);
 
-  // Xử lý chuột / chạm cảm ứng
+  // Căn giữa camera mượt mà
+  const handleResetCamera = () => {
+    cameraRef.current = { x: 0, y: 0, zoom: 1 };
+    setSelectedNode(null);
+    setSelectedExperiment(null);
+    setChallengeFeedback(null);
+    if (canvasRef.current) {
+      computeTargetPositions(canvasRef.current.width, canvasRef.current.height, layoutMode);
+    }
+  };
+
+  // Xử lý chuột & chạm cảm ứng (kèm đúp chuột để reset)
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const now = performance.now();
+    if (now - lastClickTimeRef.current < 280) {
+      handleResetCamera();
+      lastClickTimeRef.current = 0;
+      return;
+    }
+    lastClickTimeRef.current = now;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -701,7 +797,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
           setChallengeFeedback(`🎉 CHÍNH XÁC! ${selectedNode.nameStudent} kết nối chuẩn với ${clicked.device.nameStudent}! (+10 điểm)`);
           audioFX.playSuccessChime();
         } else {
-          setChallengeFeedback(`❌ Chưa đúng rồi! ${selectedNode.nameStudent} và ${clicked.device.nameStudent} không trực tiếp ghép nối với nhau.`);
+          setChallengeFeedback(`❌ Chưa đúng rồi! ${selectedNode.nameStudent} và ${clicked.device.nameStudent} không trực tiếp ghép nối.`);
           audioFX.playErrorBuzz();
         }
       }
@@ -750,15 +846,9 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
     cameraRef.current.zoom = Math.max(0.2, Math.min(3.5, cameraRef.current.zoom * factor));
   };
 
-  const handleResetCamera = () => {
-    cameraRef.current = { x: 0, y: 0, zoom: 1 };
-    setSelectedNode(null);
-    setSelectedExperiment(null);
-    setCurrentStepIndex(0);
-    setChallengeFeedback(null);
-    if (canvasRef.current) {
-      computeTargetPositions(canvasRef.current.width, canvasRef.current.height, layoutMode);
-    }
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    handleResetCamera();
   };
 
   const selectedNodeDetails = useMemo(() => {
@@ -771,33 +861,33 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-      <div className="relative w-full h-[95vh] max-w-7xl flex flex-col bg-[#070b1a] border border-indigo-500/30 rounded-2xl shadow-2xl overflow-hidden text-slate-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-2 md:p-4 animate-in fade-in duration-200">
+      <div className="relative w-full h-[96vh] max-w-7xl flex flex-col bg-slate-950/20 backdrop-blur-2xl border border-cyan-500/35 rounded-2xl shadow-[0_0_60px_rgba(0,243,255,0.15)] overflow-hidden text-slate-200">
         
         {/* HEADER BAR */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-indigo-500/20 bg-slate-950/70">
+        <div className="flex items-center justify-between px-6 py-3 border-b border-white/10 bg-slate-950/40 backdrop-blur-xl">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500/30 to-violet-600/30 border border-indigo-500/40 flex items-center justify-center text-xl shadow-inner">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/30 to-violet-600/30 border border-indigo-500/40 flex items-center justify-center text-lg shadow-inner">
               🧠
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-white tracking-wide">
+                <h2 className="text-sm font-bold text-white tracking-wide">
                   {userMode === 'student' ? 'SƠ ĐỒ LIÊN KẾT THIẾT BỊ KHTN THCS' : 'MẠNG NƠ-RON THẦN KINH OPENLAB 3D (CHUYÊN GIA)'}
                 </h2>
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-medium">
-                  {userMode === 'student' ? 'Dành cho Học sinh Lớp 6 - 9' : 'Chuẩn RWSS v1.1.1'}
+                  {userMode === 'student' ? 'Học sinh Lớp 6 - 9' : 'Chuẩn RWSS v1.1.1'}
                 </span>
               </div>
               <p className="text-[11px] text-slate-400">
                 {userMode === 'student'
-                  ? 'Khám phá cách các thiết bị kết hợp với nhau qua từng bước làm thí nghiệm'
+                  ? 'Mạng liên kết nhân quả giữa các dụng cụ thí nghiệm khoa học tự nhiên'
                   : 'Kiến trúc tương tác nhân quả 36 thiết bị & 15 cổng connector Thông tư 38/2021/TT-BGDĐT'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {/* NÚT MỞ BẢNG ĐIỀU HƯỚNG KHI ĐANG THU GỌN */}
             {!isSidebarOpen && (
               <button
@@ -805,7 +895,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                 className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 border border-indigo-400/40 text-white text-xs font-semibold shadow-xl flex items-center gap-1.5 transition-all"
               >
                 <span>📂</span>
-                <span>Chọn bài thực hành</span>
+                <span>Bài thực hành</span>
               </button>
             )}
 
@@ -813,7 +903,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
             <div className="flex rounded-xl bg-slate-900/90 p-1 border border-indigo-500/30 text-xs">
               <button
                 onClick={() => setUserMode('student')}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 ${
                   userMode === 'student'
                     ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white'
@@ -824,7 +914,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               </button>
               <button
                 onClick={() => setUserMode('expert')}
-                className={`px-3 py-1.5 rounded-lg font-medium transition-all flex items-center gap-1.5 ${
+                className={`px-2.5 py-1 rounded-lg font-medium transition-all flex items-center gap-1 ${
                   userMode === 'expert'
                     ? 'bg-indigo-600 text-white shadow-md'
                     : 'text-slate-400 hover:text-white'
@@ -841,13 +931,13 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                 <button
                   key={gr}
                   onClick={() => setSelectedGrade(gr)}
-                  className={`px-2.5 py-1 rounded-lg transition-all ${
+                  className={`px-2 py-1 rounded-lg transition-all text-[11px] ${
                     selectedGrade === gr
                       ? 'bg-indigo-600 text-white font-medium shadow'
                       : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
-                  {gr === 'ALL' ? 'Tất cả lớp' : gr === 'grade6' ? 'Lớp 6' : gr === 'grade7' ? 'Lớp 7' : gr === 'grade8' ? 'Lớp 8' : 'Lớp 9'}
+                  {gr === 'ALL' ? 'Tất cả' : gr === 'grade6' ? 'Lớp 6' : gr === 'grade7' ? 'Lớp 7' : gr === 'grade8' ? 'Lớp 8' : 'Lớp 9'}
                 </button>
               ))}
             </div>
@@ -860,18 +950,18 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all flex items-center gap-1.5 ${
                 challengeMode
-                  ? 'bg-amber-500/25 border-amber-500 text-amber-300'
+                  ? 'bg-amber-500/25 border-amber-500 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
                   : 'bg-slate-900 border-slate-700 text-slate-300 hover:bg-slate-800'
               }`}
             >
               <span>🎮</span>
-              <span>{challengeMode ? `Thử thách: ${challengeScore}đ` : 'Thử thách nối mạch'}</span>
+              <span>{challengeMode ? `Thử thách: ${challengeScore}đ` : 'Thử thách'}</span>
             </button>
 
             {/* Nút đóng */}
             <button
               onClick={onClose}
-              className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-700/60 hover:bg-rose-500/20 hover:border-rose-500 text-slate-300 hover:text-white flex items-center justify-center transition-colors"
+              className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-700/60 hover:bg-rose-500/20 hover:border-rose-500 text-slate-300 hover:text-white flex items-center justify-center transition-colors text-xs"
             >
               ✕
             </button>
@@ -881,10 +971,10 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         {/* WORKSPACE BODY */}
         <div className="relative flex-1 flex overflow-hidden">
           
-          {/* THANH ĐIỀU HƯỚNG TRÁI: CỐ ĐỊNH KÍCH THƯỚC 320PX & CÓ THỂ THU GỌN */}
+          {/* THANH ĐIỀU HƯỚNG TRÁI: DANH SÁCH BÀI THỰC HÀNH SGK (TỐI GIẢN, GỌN GÀNG, KHÔNG RỐI MẮT) */}
           <div
-            className={`transition-all duration-300 border-r border-indigo-500/15 bg-slate-950/80 backdrop-blur-md flex flex-col p-4 gap-3.5 overflow-y-auto ${
-              isSidebarOpen ? 'w-[320px] flex-shrink-0' : 'w-0 p-0 overflow-hidden border-none opacity-0 pointer-events-none'
+            className={`transition-all duration-300 border-r border-white/10 bg-slate-950/40 backdrop-blur-2xl flex flex-col p-3.5 gap-3 overflow-y-auto ${
+              isSidebarOpen ? 'w-[275px] flex-shrink-0' : 'w-0 p-0 overflow-hidden border-none opacity-0 pointer-events-none'
             }`}
           >
             {/* Tiêu đề thanh trái & Nút thu gọn */}
@@ -895,56 +985,50 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               </span>
               <button
                 onClick={() => setIsSidebarOpen(false)}
-                className="text-[11px] text-slate-400 hover:text-white px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 flex items-center gap-1 transition-all"
-                title="Thu gọn bảng điều khiển để mở rộng toàn màn hình sơ đồ"
+                className="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 flex items-center gap-1 transition-all"
+                title="Thu gọn bảng để mở rộng sơ đồ nơ-ron"
               >
                 <span>◀ Thu gọn</span>
               </button>
             </div>
 
             {/* Thanh tìm kiếm */}
-            <div>
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-indigo-400">
-                🔍 Tìm kiếm dụng cụ thí nghiệm
-              </label>
+            <div className="relative">
               <input
                 type="text"
-                placeholder={userMode === 'student' ? 'Gõ tên dụng cụ (cân, đèn, kính)...' : 'Mã asset hoặc tên quy chuẩn...'}
+                placeholder="🔍 Tìm bài hoặc dụng cụ..."
                 value={searchKeyword}
                 onChange={e => setSearchKeyword(e.target.value)}
-                className="w-full mt-1.5 px-3 py-2 text-xs rounded-xl bg-slate-900/90 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+                className="w-full px-3 py-1.5 text-xs rounded-xl bg-slate-900/90 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
               />
+              {searchKeyword && (
+                <button
+                  onClick={() => setSearchKeyword('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
-            {/* Box thử thách */}
-            {challengeMode && (
-              <div className="p-3 rounded-xl bg-amber-500/15 border border-amber-500/40 text-xs">
-                <div className="font-bold text-amber-300 flex items-center gap-1.5">
-                  <span>🎯 Hướng dẫn thử thách:</span>
-                </div>
-                <p className="text-[11px] text-amber-200/90 mt-1">
-                  1. Nhấp chọn 1 thiết bị phát tín hiệu.<br/>
-                  2. Nhấp chọn tiếp thiết bị mà bạn nghĩ nó sẽ liên kết trực tiếp tới!
-                </p>
-                {challengeFeedback && (
-                  <div className="mt-2 p-2 rounded bg-black/40 text-[11px] font-medium border border-amber-500/30 text-amber-100">
-                    {challengeFeedback}
-                  </div>
+            {/* Danh sách bài thực hành SGK (Chỉ hiển thị tên bài hoặc tên thí nghiệm, không hiển thị bước làm rối) */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Danh Mục Bài Học ({filteredExperiments.length})
+                </span>
+                {selectedExperiment && (
+                  <button
+                    onClick={() => setSelectedExperiment(null)}
+                    className="text-[10px] text-rose-400 hover:text-rose-300 underline"
+                  >
+                    Bỏ chọn
+                  </button>
                 )}
               </div>
-            )}
 
-            {/* Danh sách bài thực hành SGK */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-indigo-400">
-                  🔬 Bài Thực Hành Tiêu Biểu SGK
-                </label>
-                <span className="text-[10px] text-slate-500">{EXPERIMENT_MACRO_CLUSTERS.length} bài</span>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                {EXPERIMENT_MACRO_CLUSTERS.map(cluster => {
+              <div className="flex flex-col gap-1.5">
+                {filteredExperiments.map(cluster => {
                   const isActive = selectedExperiment?.id === cluster.id;
                   return (
                     <div
@@ -952,76 +1036,32 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                       onClick={() => {
                         if (isActive) {
                           setSelectedExperiment(null);
-                          setCurrentStepIndex(0);
                         } else {
                           setSelectedExperiment(cluster);
-                          setCurrentStepIndex(0);
                           setSelectedNode(null);
                           audioFX.playNodeClick();
                         }
                       }}
-                      className={`p-3 rounded-xl border text-xs cursor-pointer transition-all ${
+                      className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all ${
                         isActive
-                          ? 'bg-indigo-600/25 border-indigo-500 shadow-md shadow-indigo-500/15'
-                          : 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-900 hover:border-slate-700'
+                          ? 'bg-indigo-600/30 border-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.25)] text-white'
+                          : 'bg-slate-900/60 border-slate-800/80 hover:bg-slate-900 hover:border-slate-700 text-slate-300'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-slate-100">{cluster.title}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono">
+                      <div className="font-semibold text-[11.5px] leading-snug">
+                        {cluster.title}
+                      </div>
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-indigo-500/25 border border-indigo-400/30 text-indigo-300 font-medium">
                           {cluster.grade}
                         </span>
+                        <span className="text-[9.5px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
+                          {cluster.subject}
+                        </span>
+                        <span className="text-[9.5px] text-slate-500 ml-auto">
+                          {cluster.deviceIds.length} dụng cụ
+                        </span>
                       </div>
-                      <p className="text-[11px] text-slate-400 mt-1">
-                        {userMode === 'student' ? cluster.studentGoal : cluster.description}
-                      </p>
-
-                      {/* TIẾN TRÌNH TỪNG BƯỚC */}
-                      {isActive && cluster.steps && cluster.steps.length > 0 && (
-                        <div className="mt-3 pt-2.5 border-t border-indigo-500/30">
-                          <div className="flex items-center justify-between text-[11px] text-amber-300 font-semibold mb-1.5">
-                            <span>Tiến trình từng bước SGK:</span>
-                            <span>{currentStepIndex + 1} / {cluster.steps.length}</span>
-                          </div>
-
-                          <div className="p-2 rounded-lg bg-black/50 border border-indigo-500/30 mb-2">
-                            <div className="font-medium text-white text-[11px]">
-                              {cluster.steps[currentStepIndex].title}
-                            </div>
-                            <p className="text-[10px] text-slate-300 mt-0.5">
-                              {cluster.steps[currentStepIndex].instruction}
-                            </p>
-                            <div className="text-[9px] text-amber-300/90 mt-1 italic">
-                              💡 Mẹo: {cluster.steps[currentStepIndex].focusNote}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-2">
-                            <button
-                              disabled={currentStepIndex === 0}
-                              onClick={e => {
-                                e.stopPropagation();
-                                setCurrentStepIndex(i => Math.max(0, i - 1));
-                                audioFX.playNodeClick();
-                              }}
-                              className="px-2 py-1 rounded bg-slate-800 disabled:opacity-40 text-[10px] text-slate-200"
-                            >
-                              ◀ Bước trước
-                            </button>
-                            <button
-                              disabled={currentStepIndex === cluster.steps.length - 1}
-                              onClick={e => {
-                                e.stopPropagation();
-                                setCurrentStepIndex(i => Math.min(cluster.steps.length - 1, i + 1));
-                                audioFX.playNodeClick();
-                              }}
-                              className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-[10px] text-white font-medium"
-                            >
-                              Bước tiếp ▶
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -1029,8 +1069,8 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
             </div>
           </div>
 
-          {/* CANVAS TRUNG TÂM */}
-          <div className="relative flex-1 bg-black overflow-hidden">
+          {/* CANVAS TRUNG TÂM (NỀN TRONG SUỐT HOÀN TOÀN, ĐẢM BẢO TỶ LỆ 1:1 KHÔNG BỊ BIẾN DẠNG) */}
+          <div className="relative flex-1 bg-transparent overflow-hidden">
             <canvas
               ref={canvasRef}
               onPointerDown={handlePointerDown}
@@ -1038,14 +1078,35 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               onPointerUp={handlePointerUp}
               onPointerLeave={handlePointerUp}
               onWheel={handleWheel}
+              onDoubleClick={handleResetCamera}
+              onContextMenu={handleContextMenu}
               className="w-full h-full block"
             />
 
+            {/* THÔNG BÁO THỬ THÁCH NỔI TRÊN CANVAS (GIỮ GỌN BẢNG BÊN TRÁI) */}
+            {challengeMode && (
+              <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 px-4 py-2 rounded-xl bg-slate-950/80 border border-amber-500/50 backdrop-blur-md text-xs shadow-lg animate-in fade-in">
+                <span className="text-amber-300 font-bold flex items-center gap-1.5">
+                  <span>🎯 Thử thách:</span>
+                  <span className="text-white font-normal">Nhấp 2 thiết bị liên kết nhân quả!</span>
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-500/25 text-amber-300 font-bold border border-amber-500/40">
+                  {challengeScore} điểm
+                </span>
+                {challengeFeedback && (
+                  <span className="text-[11px] text-amber-200 pl-2 border-l border-amber-500/40">
+                    {challengeFeedback}
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* THANH ĐIỀU KHIỂN DƯỚI ĐÁY */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-950/85 border border-slate-800 backdrop-blur-md shadow-2xl text-xs">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-950/45 border border-white/15 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] text-xs">
               <button
                 onClick={handleResetCamera}
                 className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-1.5"
+                title="Đưa góc nhìn về vị trí chuẩn (hoặc nhấp đúp chuột lên màn hình)"
               >
                 🎯 Căn giữa
               </button>
@@ -1055,7 +1116,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                   isFiringSignal ? 'bg-indigo-600/30 border border-indigo-500 text-indigo-300' : 'bg-slate-900 text-slate-400'
                 }`}
               >
-                {isFiringSignal ? '⚡ Xung tín hiệu: BẬT' : '⏸ Xung: TẮT'}
+                {isFiringSignal ? '⚡ Xung: BẬT' : '⏸ Xung: TẮT'}
               </button>
               <button
                 onClick={handleToggleSound}
@@ -1069,7 +1130,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               <button
                 onClick={handleExportDiagramPng}
                 className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-1.5"
-                title="Lưu ảnh sơ đồ để dán vào báo cáo thực hành"
+                title="Lưu ảnh sơ đồ nơ-ron PNG"
               >
                 📸 Xuất ảnh PNG
               </button>
@@ -1090,40 +1151,36 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
             </div>
           </div>
 
-          {/* SIDEBAR PHẢI: CHI TIẾT THIẾT BỊ NƠ-RON */}
+          {/* SIDEBAR PHẢI: CHI TIẾT THIẾT BỊ NƠ-RON (CHẮT LỌC TỪ NGỮ GỌN ĐỦ NGHĨA, TRÁNH RỐI MẮT) */}
           {selectedNode && selectedNodeDetails && (
-            <div className="w-[340px] flex-shrink-0 border-l border-indigo-500/15 bg-slate-950/90 backdrop-blur-md flex flex-col p-5 overflow-y-auto">
+            <div className="w-[310px] flex-shrink-0 border-l border-white/10 bg-slate-950/40 backdrop-blur-2xl flex flex-col p-4 overflow-y-auto">
+              {/* Header thiết bị */}
               <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{selectedNode.glyphIcon}</span>
-                    <div>
-                      <h3 className="text-base font-bold text-white">
-                        {userMode === 'student' ? selectedNode.nameStudent : selectedNode.nameVi}
-                      </h3>
-                      <p className="text-[11px] text-slate-400">
-                        {userMode === 'student' ? selectedNode.nameVi : selectedNode.nameEn}
-                      </p>
-                    </div>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-2xl p-1.5 rounded-xl bg-slate-900 border border-slate-800 shadow-inner">
+                    {selectedNode.glyphIcon}
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-white leading-tight">
+                      {userMode === 'student' ? selectedNode.nameStudent : selectedNode.nameVi}
+                    </h3>
+                    <p className="text-[10.5px] text-slate-400">
+                      {userMode === 'student' ? selectedNode.nameVi : selectedNode.nameEn}
+                    </p>
                   </div>
-                  {userMode === 'expert' && (
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 mt-1 inline-block">
-                      {selectedNode.assetId}
-                    </span>
-                  )}
                 </div>
                 <button
                   onClick={() => setSelectedNode(null)}
-                  className="text-slate-400 hover:text-white text-sm p-1"
+                  className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors text-xs"
                 >
                   ✕
                 </button>
               </div>
 
               {/* Tag phân loại & lớp */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-3">
+              <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
                 <span
-                  className="text-[11px] px-2.5 py-1 rounded-lg font-medium"
+                  className="text-[10px] px-2 py-0.5 rounded-md font-medium"
                   style={{
                     backgroundColor: `${CATEGORY_META[selectedNode.category].color}25`,
                     color: CATEGORY_META[selectedNode.category].color
@@ -1131,106 +1188,136 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                 >
                   {userMode === 'student' ? CATEGORY_META[selectedNode.category].studentName : CATEGORY_META[selectedNode.category].name}
                 </span>
-                <span className="text-[10px] px-2 py-1 rounded-lg bg-slate-900 border border-slate-800 text-indigo-300 font-medium">
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-indigo-300 font-medium">
                   {selectedNode.grades.map(g => g.replace('grade', 'Lớp ')).join(', ')}
                 </span>
               </div>
 
-              {/* Mẹo an toàn */}
-              <div className="mt-4 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs">
-                <div className="font-semibold text-amber-300 flex items-center gap-1.5">
-                  <span>💡 Mẹo thao tác đúng & an toàn:</span>
+              {/* KHUNG QUY CHUẨN & NGUYÊN LÝ (CHẮT LỌC NGẮN GỌN, SÚC TÍCH) */}
+              <div className="mt-3 p-2.5 rounded-xl bg-slate-900/70 border border-cyan-500/30 backdrop-blur-md space-y-2 text-[10.5px]">
+                <div className="text-slate-200 leading-snug">
+                  <span className="text-cyan-300 font-bold">🎯 Thao tác: </span>
+                  <span>{selectedNode.description || 'Lắp ráp đúng trục và cắm tiếp điểm tương thích.'}</span>
                 </div>
-                <p className="text-[11px] text-amber-100/90 mt-1 leading-relaxed">
-                  {selectedNode.studentTip}
-                </p>
-              </div>
 
-              {/* Công thức */}
-              <div className="mt-3">
-                <label className="text-[11px] font-semibold uppercase text-slate-400">
-                  {userMode === 'student' ? 'Công thức SGK quen thuộc' : 'Phương trình toán học chuẩn'}
-                </label>
-                <div className="mt-1 px-3 py-2 bg-indigo-950/40 border border-indigo-500/30 rounded-xl font-mono text-xs text-indigo-200">
-                  {userMode === 'student' ? (selectedNode.sgkFormula || selectedNode.mathFormula) : selectedNode.mathFormula}
-                </div>
+                {selectedNode.studentTip && (
+                  <div className="text-amber-200/90 leading-snug">
+                    <span className="text-amber-300 font-bold">⚠️ Lưu ý: </span>
+                    <span>{selectedNode.studentTip}</span>
+                  </div>
+                )}
+
+                {(selectedNode.mathFormula || selectedNode.sgkFormula) && (
+                  <div className="p-1.5 rounded-lg bg-indigo-950/40 border border-indigo-500/25 font-mono text-[10px] text-indigo-200">
+                    <span className="text-indigo-300 font-sans font-bold text-[9.5px] block mb-0.5">📐 Định luật / Công thức:</span>
+                    <span>${selectedNode.mathFormula || selectedNode.sgkFormula}$</span>
+                  </div>
+                )}
               </div>
 
               {/* Cổng kết nối */}
+              {(selectedNode.studentPorts.length > 0 || selectedNode.ports.length > 0) && (
+                <div className="mt-3">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Cổng liên kết:
+                  </label>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {(userMode === 'student' ? selectedNode.studentPorts : selectedNode.ports).map(p => (
+                      <span
+                        key={p}
+                        className="text-[9.5px] px-2 py-0.5 rounded bg-slate-900 border border-slate-700/80 text-emerald-300"
+                      >
+                        {p}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Dòng chảy ra (Xanh Dương Neon) */}
               <div className="mt-3">
-                <label className="text-[11px] font-semibold uppercase text-slate-400">
-                  {userMode === 'student' ? 'Vị trí cắm & gá lắp trên dụng cụ' : 'Cổng Connector RWSS v1.1.1'}
+                <label className="text-[10.5px] font-bold uppercase tracking-wider text-[#0080ff] flex items-center gap-1.5">
+                  <span>➔</span>
+                  <span>Dòng Chảy Ra (Xanh Dương Neon):</span>
+                  <span className="text-[9.5px] opacity-80 font-normal">({selectedNodeDetails.outgoing.length})</span>
                 </label>
-                <div className="flex flex-wrap gap-1.5 mt-1">
-                  {(userMode === 'student' ? selectedNode.studentPorts : selectedNode.ports).map(p => (
-                    <span
-                      key={p}
-                      className="text-[10px] px-2 py-0.5 rounded bg-slate-900 border border-slate-700 text-emerald-300"
-                    >
-                      {p}
-                    </span>
-                  ))}
+                <div className="flex flex-col gap-1.5 mt-1">
+                  {selectedNodeDetails.outgoing.length === 0 ? (
+                    <div className="text-[10px] text-slate-500 italic p-1.5 rounded bg-slate-900/40">
+                      Không có kết nối phát tín hiệu đi
+                    </div>
+                  ) : (
+                    selectedNodeDetails.outgoing.map(edge => {
+                      const tgt = NEURAL_DEVICE_NODES.find(n => n.id === edge.target);
+                      const meta = SYNAPSE_META[edge.type];
+                      return (
+                        <div
+                          key={edge.id}
+                          onClick={() => tgt && setSelectedNode(tgt)}
+                          className="p-2 rounded-xl bg-blue-950/25 hover:bg-blue-950/50 border border-blue-500/35 hover:border-blue-400 text-xs cursor-pointer transition-all shadow-[0_0_10px_rgba(0,128,255,0.12)]"
+                          title="Nhấp để xem thiết bị này"
+                        >
+                          <div className="flex items-center justify-between font-bold text-blue-200 text-[11px]">
+                            <span>{userMode === 'student' ? tgt?.nameStudent : tgt?.nameVi}</span>
+                            <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-blue-500/20 border border-blue-400/40 text-blue-300">
+                              {userMode === 'student' ? meta.studentName : meta.name}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-300 mt-0.5 leading-tight">
+                            {distillCausal(userMode === 'student' ? edge.studentCausal : edge.causalRule)}
+                          </p>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
-              {/* Liên kết đầu ra */}
-              <div className="mt-4">
-                <label className="text-[11px] font-semibold uppercase text-indigo-400">
-                  {userMode === 'student' ? '→ Tác động truyền tới' : '→ Axon Output Synapses'} ({selectedNodeDetails.outgoing.length})
+              {/* Dòng chảy vào (Tím Neon) */}
+              <div className="mt-3">
+                <label className="text-[10.5px] font-bold uppercase tracking-wider text-[#b026ff] flex items-center gap-1.5">
+                  <span>➔</span>
+                  <span>Dòng Chảy Vào (Tím Neon):</span>
+                  <span className="text-[9.5px] opacity-80 font-normal">({selectedNodeDetails.incoming.length})</span>
                 </label>
-                <div className="flex flex-col gap-2 mt-1.5">
-                  {selectedNodeDetails.outgoing.map(edge => {
-                    const tgt = NEURAL_DEVICE_NODES.find(n => n.id === edge.target);
-                    const meta = SYNAPSE_META[edge.type];
-                    return (
-                      <div key={edge.id} className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
-                        <div className="flex items-center justify-between font-medium text-slate-200">
-                          <span>{userMode === 'student' ? tgt?.nameStudent : tgt?.nameVi}</span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ backgroundColor: `${meta.color}25`, color: meta.color }}>
-                            {userMode === 'student' ? meta.studentName : meta.name}
-                          </span>
+                <div className="flex flex-col gap-1.5 mt-1">
+                  {selectedNodeDetails.incoming.length === 0 ? (
+                    <div className="text-[10px] text-slate-500 italic p-1.5 rounded bg-slate-900/40">
+                      Không có kết nối nhận tín hiệu vào
+                    </div>
+                  ) : (
+                    selectedNodeDetails.incoming.map(edge => {
+                      const src = NEURAL_DEVICE_NODES.find(n => n.id === edge.source);
+                      const meta = SYNAPSE_META[edge.type];
+                      return (
+                        <div
+                          key={edge.id}
+                          onClick={() => src && setSelectedNode(src)}
+                          className="p-2 rounded-xl bg-purple-950/25 hover:bg-purple-950/50 border border-purple-500/35 hover:border-purple-400 text-xs cursor-pointer transition-all shadow-[0_0_10px_rgba(176,38,255,0.12)]"
+                          title="Nhấp để xem thiết bị này"
+                        >
+                          <div className="flex items-center justify-between font-bold text-purple-200 text-[11px]">
+                            <span>{userMode === 'student' ? src?.nameStudent : src?.nameVi}</span>
+                            <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-purple-500/20 border border-purple-400/40 text-purple-300">
+                              {userMode === 'student' ? meta.studentName : meta.name}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-300 mt-0.5 leading-tight">
+                            {distillCausal(userMode === 'student' ? edge.studentCausal : edge.causalRule)}
+                          </p>
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-1">
-                          {userMode === 'student' ? edge.studentCausal : edge.causalRule}
-                        </p>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Liên kết đầu vào */}
-              <div className="mt-4">
-                <label className="text-[11px] font-semibold uppercase text-emerald-400">
-                  {userMode === 'student' ? '← Nhận tương tác từ' : '← Dendrite Input Synapses'} ({selectedNodeDetails.incoming.length})
-                </label>
-                <div className="flex flex-col gap-2 mt-1.5">
-                  {selectedNodeDetails.incoming.map(edge => {
-                    const src = NEURAL_DEVICE_NODES.find(n => n.id === edge.source);
-                    const meta = SYNAPSE_META[edge.type];
-                    return (
-                      <div key={edge.id} className="p-2.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
-                        <div className="flex items-center justify-between font-medium text-slate-200">
-                          <span>{userMode === 'student' ? src?.nameStudent : src?.nameVi}</span>
-                          <span className="text-[9px] px-1.5 py-0.5 rounded" style={{ backgroundColor: `${meta.color}25`, color: meta.color }}>
-                            {userMode === 'student' ? meta.studentName : meta.name}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 mt-1">
-                          {userMode === 'student' ? edge.studentCausal : edge.causalRule}
-                        </p>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </div>
 
               {/* Nút nạp vào phòng lab 3D */}
               {onSelectDevice && (
-                <div className="mt-6 pt-4 border-t border-slate-800">
+                <div className="mt-4 pt-3 border-t border-slate-800">
                   <button
                     onClick={() => onSelectDevice(selectedNode.id)}
-                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
+                    className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-[11px] shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2"
                   >
                     <span>➕ Đưa vào Bàn Thí Nghiệm 3D</span>
                   </button>

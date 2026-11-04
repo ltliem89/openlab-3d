@@ -71,6 +71,7 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
 }) => {
   const [activeHelpPartId, setActiveHelpPartId] = useState<string | null>(null);
   const [isNeuralSectionOpen, setIsNeuralSectionOpen] = useState<boolean>(true);
+  const [showDetailedHelp, setShowDetailedHelp] = useState<boolean>(false);
   const [guideActive, setGuideActive] = useState<boolean>(() => isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled);
 
   useEffect(() => {
@@ -183,11 +184,11 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
       </div>
 
       {/* 🧠 MẠNG NƠ-RON NHÂN QUẢ (CAUSAL SYNAPSES & THAO TÁC LIÊN KẾT) */}
-      <div className="rounded-xl bg-gradient-to-br from-[#0c142b]/80 to-[#101c38]/90 border border-indigo-500/40 backdrop-blur-xl p-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.4)] space-y-2">
-        <div className="flex items-center justify-between border-b border-indigo-500/25 pb-1.5">
+      <div className="rounded-xl bg-gradient-to-br from-indigo-950/25 to-slate-900/35 border border-cyan-500/30 backdrop-blur-2xl p-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] space-y-2">
+        <div className="flex items-center justify-between border-b border-white/10 pb-1.5">
           <div className="flex items-center gap-1.5">
             <span className="text-sm">🧠</span>
-            <span className="text-[11.5px] font-black text-indigo-200 uppercase tracking-wider">
+            <span className="text-[11.5px] font-black text-cyan-200 uppercase tracking-wider">
               Mạng Nơ-ron Nhân Quả
             </span>
           </div>
@@ -211,7 +212,7 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
             <button
               type="button"
               onClick={() => setIsNeuralSectionOpen((v) => !v)}
-              className="text-[10px] text-indigo-300/70 hover:text-white px-1 cursor-pointer"
+              className="text-[10px] text-cyan-300/70 hover:text-white px-1 cursor-pointer"
             >
               {isNeuralSectionOpen ? '▲' : '▼'}
             </button>
@@ -221,15 +222,15 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
         {isNeuralSectionOpen && (
           <div className="space-y-2 animate-in fade-in duration-150">
             {!guideActive ? (
-              <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60 text-[10px] text-slate-400 italic leading-relaxed">
+              <div className="p-2 rounded-lg bg-black/40 border border-white/10 text-[10px] text-slate-400 italic leading-relaxed">
                 Chế độ tự do thực hành (Trợ lý Nơ-ron đang <strong>TẮT</strong>). Nhấp <strong>BẬT</strong> hoặc nhấn <strong>Alt + N</strong> để hiện tia sáng liên kết 3D và hướng dẫn thao tác.
               </div>
             ) : (
               <>
-                {/* 1. ĐIỀU KIỆN ĐẦU VÀO (DENDRITES) */}
+                {/* 1. ĐIỀU KIỆN ĐẦU VÀO (DENDRITES - TÍM NEON) */}
                 <div className="space-y-1">
-                  <div className="text-[10px] font-extrabold text-amber-300 uppercase flex items-center gap-1">
-                    <span>⚡ Điều kiện Cần (Dendrites):</span>
+                  <div className="text-[10px] font-extrabold text-[#b026ff] uppercase flex items-center gap-1">
+                    <span>⚡ Dòng Chảy Vào (Dendrites - Tím Neon):</span>
                   </div>
                   {causalChecklist.dendritesInput.length === 0 ? (
                     <div className="text-[10px] text-slate-400 italic pl-1">
@@ -242,8 +243,8 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
                           key={idx}
                           className={`p-1.5 rounded-lg border text-[10px] flex items-start gap-1.5 ${
                             dendrite.isSatisfiedOnTable
-                              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
-                              : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                              ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
+                              : 'bg-purple-950/25 border-purple-500/40 text-purple-200'
                           }`}
                         >
                           <span className="shrink-0 font-bold mt-0.5">
@@ -263,22 +264,22 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
                   )}
                 </div>
 
-                {/* 2. TÁC ĐỘNG TẠO RA (AXONS) */}
+                {/* 2. TÁC ĐỘNG TẠO RA (AXONS - XANH DƯƠNG NEON) */}
                 {causalChecklist.axonsOutput.length > 0 && (
                   <div className="space-y-1">
-                    <div className="text-[10px] font-extrabold text-sky-300 uppercase flex items-center gap-1">
-                      <span>🌟 Tác động Tạo ra (Axons):</span>
+                    <div className="text-[10px] font-extrabold text-[#0080ff] uppercase flex items-center gap-1">
+                      <span>🌟 Dòng Chảy Ra (Axons - Xanh Dương Neon):</span>
                     </div>
                     <div className="space-y-1">
                       {causalChecklist.axonsOutput.slice(0, 3).map((axon, idx) => (
                         <div
                           key={idx}
-                          className="p-1.5 rounded-lg bg-sky-950/30 border border-sky-500/30 text-sky-200 text-[10px] flex items-start gap-1.5"
+                          className="p-1.5 rounded-lg bg-blue-950/25 border border-blue-500/40 text-blue-200 text-[10px] flex items-start gap-1.5"
                         >
                           <span className="shrink-0 font-bold mt-0.5">➔</span>
                           <div className="min-w-0 flex-1">
                             <span className="font-bold">{axon.targetNameVi}:</span> {axon.actionVerbVi}
-                            <div className="text-[9px] text-sky-300/80 font-mono mt-0.5">
+                            <div className="text-[9px] text-blue-300/80 font-mono mt-0.5">
                               {axon.mathFormulaLatex}
                             </div>
                           </div>
@@ -295,6 +296,41 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
                     <span>{causalChecklist.missingPrerequisiteHint}</span>
                   </div>
                 )}
+
+                {/* XEM CHI TIẾT HƯỚNG DẪN THAO TÁC */}
+                <div className="pt-1 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowDetailedHelp((v) => !v)}
+                    className="w-full text-left text-[10px] font-bold text-cyan-300 hover:text-white flex items-center justify-between py-1 cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1">
+                      <span>📖</span>
+                      <span>Xem Chi Tiết Hướng Dẫn Thao Tác</span>
+                    </span>
+                    <span>{showDetailedHelp ? '▲' : '▼'}</span>
+                  </button>
+
+                  {showDetailedHelp && (
+                    <div className="space-y-1.5 text-[9.5px] text-slate-300 pt-1">
+                      <div className="p-1.5 rounded bg-black/40 border border-white/10">
+                        <strong className="text-cyan-300 block mb-0.5">🎯 Thao tác mẫu:</strong>
+                        <span>
+                          {causalChecklist.deviceNode.description ||
+                            profile.safetyRules[0] ||
+                            'Cắm dây hoặc gá lắp đúng cổng kết nối.'}
+                        </span>
+                      </div>
+                      <div className="p-1.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-200">
+                        <strong className="text-amber-300 block mb-0.5">⚠️ Chống sự cố:</strong>
+                        <span>
+                          {causalChecklist.deviceNode.studentTip ||
+                            'Không để chập điện hay rơi vỡ dụng cụ.'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </>
             )}
 
@@ -312,7 +348,7 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
                   );
                 }
               }}
-              className="w-full py-1.5 px-2.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/40 text-indigo-200 text-[10px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+              className="w-full py-1.5 px-2.5 rounded-lg bg-cyan-600/25 hover:bg-cyan-600/40 border border-cyan-400/40 text-cyan-200 text-[10px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-[0_0_12px_rgba(0,243,255,0.15)]"
             >
               <span>🌐</span>
               <span>Mở Sơ đồ Nơ-ron Toàn Cảnh (Focus thiết bị này)</span>

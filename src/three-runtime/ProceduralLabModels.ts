@@ -2243,39 +2243,170 @@ function createGlassMaterial(isSoftwareGl: boolean): THREE.MeshPhysicalMaterial 
   });
 }
 
-function createWaterMaterial(colorHex = 0x0ea5e9, opacity = 0.82): THREE.MeshPhysicalMaterial {
-  return new THREE.MeshPhysicalMaterial({
-    color: colorHex,
-    emissive: 0x0284c7,
-    emissiveIntensity: 0.14,
-    roughness: 0.02,
-    metalness: 0.03,
-    transmission: 0.85,
-    ior: 1.333,
-    thickness: 0.08,
-    specularIntensity: 0.95,
-    clearcoat: 1.0,
-    clearcoatRoughness: 0.02,
-    transparent: true,
-    opacity,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
+export type FluidKind =
+  | 'clean-water'
+  | 'copper-sulfate'
+  | 'permanganate'
+  | 'precipitate-cloudy';
+
+export interface FluidPhysicalProfile {
+  kind: FluidKind;
+  nameVi: string;
+  ior: number;
+  transmission: number;
+  roughness: number;
+  metalness: number;
+  thickness: number;
+  attenuationDistance: number;
+  attenuationColor: number;
+  baseColor: number;
+  specularIntensity: number;
+  clearcoat: number;
+  clearcoatRoughness: number;
+  opacity: number;
+  meniscusColor: number;
+  meniscusHighlight: number;
+  capillaryHeightFactor: number;
 }
 
-function createStreamMaterial(colorHex = 0x38bdf8, opacity = 0.90): THREE.MeshPhysicalMaterial {
-  return new THREE.MeshPhysicalMaterial({
-    color: colorHex,
-    emissive: 0x0284c7,
-    emissiveIntensity: 0.28,
-    roughness: 0.02,
-    metalness: 0.04,
-    transmission: 0.80,
+export const FLUID_PROFILES: Record<FluidKind, FluidPhysicalProfile> = {
+  'clean-water': {
+    kind: 'clean-water',
+    nameVi: 'Nước sạch tinh khiết',
     ior: 1.333,
-    thickness: 0.05,
+    transmission: 0.95,
+    roughness: 0.012,
+    metalness: 0.005,
+    thickness: 0.08,
+    attenuationDistance: 0.28,  // Hấp thụ Beer-Lambert: mỏng trong suốt, dày ánh xanh lơ tự nhiên
+    attenuationColor: 0x7dd3fc,
+    baseColor: 0xf0f9ff,        // Màu cơ bản gần như trong suốt tuyệt đối
+    specularIntensity: 1.0,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.01,
+    opacity: 0.52,              // Không quá trong làm biến mất nước, không quá đục như nhựa
+    meniscusColor: 0x7dd3fc,
+    meniscusHighlight: 0xf8fafc,
+    capillaryHeightFactor: 1.0,
+  },
+  'copper-sulfate': {
+    kind: 'copper-sulfate',
+    nameVi: 'Dung dịch đồng(II) sunfat CuSO4',
+    ior: 1.342,
+    transmission: 0.86,
+    roughness: 0.018,
+    metalness: 0.02,
+    thickness: 0.08,
+    attenuationDistance: 0.14,
+    attenuationColor: 0x0284c7,
+    baseColor: 0x0369a1,
     specularIntensity: 0.98,
     clearcoat: 1.0,
     clearcoatRoughness: 0.02,
+    opacity: 0.76,
+    meniscusColor: 0x38bdf8,
+    meniscusHighlight: 0xe0f2fe,
+    capillaryHeightFactor: 1.05,
+  },
+  'permanganate': {
+    kind: 'permanganate',
+    nameVi: 'Dung dịch thuốc tím KMnO4',
+    ior: 1.348,
+    transmission: 0.74,
+    roughness: 0.022,
+    metalness: 0.02,
+    thickness: 0.08,
+    attenuationDistance: 0.085,
+    attenuationColor: 0x701a75,
+    baseColor: 0x831843,
+    specularIntensity: 0.96,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.02,
+    opacity: 0.85,
+    meniscusColor: 0xa21caf,
+    meniscusHighlight: 0xfdf4ff,
+    capillaryHeightFactor: 0.95,
+  },
+  'precipitate-cloudy': {
+    kind: 'precipitate-cloudy',
+    nameVi: 'Huyền phù đục / Kết tủa trắng BaSO4',
+    ior: 1.365,
+    transmission: 0.32,
+    roughness: 0.22,
+    metalness: 0.0,
+    thickness: 0.05,
+    attenuationDistance: 0.04,
+    attenuationColor: 0xf8fafc,
+    baseColor: 0xf1f5f9,
+    specularIntensity: 0.82,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.08,
+    opacity: 0.92,
+    meniscusColor: 0xe2e8f0,
+    meniscusHighlight: 0xffffff,
+    capillaryHeightFactor: 0.82,
+  },
+};
+
+export function createWaterMaterial(
+  fluidKindOrColor: FluidKind | number = 'clean-water',
+  customOpacity?: number,
+): THREE.MeshPhysicalMaterial {
+  let profile: FluidPhysicalProfile;
+  if (typeof fluidKindOrColor === 'string' && FLUID_PROFILES[fluidKindOrColor]) {
+    profile = FLUID_PROFILES[fluidKindOrColor];
+  } else {
+    profile = { ...FLUID_PROFILES['clean-water'] };
+    if (typeof fluidKindOrColor === 'number') {
+      profile.attenuationColor = fluidKindOrColor;
+    }
+  }
+
+  const mat = new THREE.MeshPhysicalMaterial({
+    color: profile.baseColor,
+    attenuationColor: new THREE.Color(profile.attenuationColor),
+    attenuationDistance: profile.attenuationDistance,
+    transmission: profile.transmission,
+    ior: profile.ior,
+    thickness: profile.thickness,
+    roughness: profile.roughness,
+    metalness: profile.metalness,
+    specularIntensity: profile.specularIntensity,
+    clearcoat: profile.clearcoat,
+    clearcoatRoughness: profile.clearcoatRoughness,
+    transparent: true,
+    opacity: customOpacity ?? profile.opacity,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  mat.name = `fluid_mat_${profile.kind}`;
+  return mat;
+}
+
+export function createStreamMaterial(
+  fluidKindOrColor: FluidKind | number = 'clean-water',
+  opacity = 0.88,
+): THREE.MeshPhysicalMaterial {
+  let profile: FluidPhysicalProfile = FLUID_PROFILES['clean-water'];
+  if (typeof fluidKindOrColor === 'string' && FLUID_PROFILES[fluidKindOrColor]) {
+    profile = FLUID_PROFILES[fluidKindOrColor];
+  }
+  const colorVal =
+    typeof fluidKindOrColor === 'number'
+      ? fluidKindOrColor
+      : profile.attenuationColor;
+
+  return new THREE.MeshPhysicalMaterial({
+    color: 0xf0f9ff,
+    attenuationColor: new THREE.Color(colorVal),
+    attenuationDistance: 0.16,
+    transmission: 0.88,
+    roughness: 0.015,
+    metalness: 0.02,
+    ior: 1.333,
+    specularIntensity: 0.98,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.01,
     transparent: true,
     opacity,
     depthWrite: false,
@@ -2283,18 +2414,30 @@ function createStreamMaterial(colorHex = 0x38bdf8, opacity = 0.90): THREE.MeshPh
   });
 }
 
-function addConcaveMeniscusAndRipples(
+export function addConcaveMeniscusAndRipples(
   liquidGroup: THREE.Group,
   radius: number,
   waterHeight: number,
+  fluidKind: FluidKind = 'clean-water',
 ): void {
+  const profile = FLUID_PROFILES[fluidKind] || FLUID_PROFILES['clean-water'];
+
   // 1. Glossy top water surface cap (radial rings for smooth hydrostatic deformation)
   const surfaceCap = new THREE.Mesh(
-    new THREE.RingGeometry(0.0001, radius * 0.992, 36, 6).rotateX(-Math.PI / 2),
-    new THREE.MeshBasicMaterial({
-      color: 0x7dd3fc,
+    new THREE.RingGeometry(0.0001, radius * 0.992, 48, 6).rotateX(-Math.PI / 2),
+    new THREE.MeshPhysicalMaterial({
+      color: profile.baseColor,
+      attenuationColor: new THREE.Color(profile.attenuationColor),
+      attenuationDistance: profile.attenuationDistance * 1.2,
+      transmission: 0.92,
+      roughness: 0.01,
+      metalness: 0.0,
+      ior: profile.ior,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.01,
+      specularIntensity: 1.0,
       transparent: true,
-      opacity: 0.62,
+      opacity: 0.65,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
@@ -2305,13 +2448,23 @@ function addConcaveMeniscusAndRipples(
   liquidGroup.add(surfaceCap);
 
   // 2. 3D Concave Capillary Meniscus Wall (visible from side view for reading bottom of meniscus!)
-  const meniscusWallH = Math.min(0.0042, Math.max(0.0022, radius * 0.11));
+  const meniscusWallH = Math.min(
+    0.0038,
+    Math.max(0.0018, radius * 0.095 * profile.capillaryHeightFactor),
+  );
   const meniscusWall = new THREE.Mesh(
-    new THREE.CylinderGeometry(radius * 1.002, radius * 0.965, meniscusWallH, 36, 1, true),
-    new THREE.MeshBasicMaterial({
-      color: 0x7dd3fc,
+    new THREE.CylinderGeometry(radius * 1.001, radius * 0.968, meniscusWallH, 48, 1, true),
+    new THREE.MeshPhysicalMaterial({
+      color: profile.baseColor,
+      attenuationColor: new THREE.Color(profile.attenuationColor),
+      attenuationDistance: profile.attenuationDistance,
+      transmission: 0.88,
+      roughness: 0.015,
+      ior: profile.ior,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.01,
       transparent: true,
-      opacity: 0.68,
+      opacity: 0.72,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
@@ -2321,35 +2474,35 @@ function addConcaveMeniscusAndRipples(
   meniscusWall.renderOrder = 3;
   liquidGroup.add(meniscusWall);
 
-  // 3. Crisp outer meniscus contact ring highlight
+  // 3. Crisp outer meniscus contact ring highlight (capillary wetting edge)
   const meniscusRing = new THREE.Mesh(
-    new THREE.RingGeometry(radius * 0.72, radius * 1.004, 36, 2).rotateX(-Math.PI / 2),
+    new THREE.RingGeometry(radius * 0.78, radius * 1.002, 48, 2).rotateX(-Math.PI / 2),
     new THREE.MeshBasicMaterial({
-      color: 0xe0f2fe,
+      color: profile.meniscusHighlight,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.95,
+      opacity: 0.85,
       depthWrite: false,
     }),
   );
   meniscusRing.name = 'meniscus_ring';
-  meniscusRing.position.y = waterHeight + 0.0006;
+  meniscusRing.position.y = waterHeight + 0.0005;
   meniscusRing.renderOrder = 3;
   liquidGroup.add(meniscusRing);
 
   // 4. Inner concentric surface ripple ring (shimmers during pouring/dispensing)
   const rippleRing = new THREE.Mesh(
-    new THREE.RingGeometry(radius * 0.28, radius * 0.44, 32, 2).rotateX(-Math.PI / 2),
+    new THREE.RingGeometry(radius * 0.22, radius * 0.42, 36, 2).rotateX(-Math.PI / 2),
     new THREE.MeshBasicMaterial({
-      color: 0xbae6fd,
+      color: profile.meniscusColor,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.52,
+      opacity: 0.45,
       depthWrite: false,
     }),
   );
   rippleRing.name = 'surface_ripple';
-  rippleRing.position.y = waterHeight + 0.0007;
+  rippleRing.position.y = waterHeight + 0.0006;
   rippleRing.renderOrder = 3;
   liquidGroup.add(rippleRing);
 }
@@ -2500,8 +2653,46 @@ export function syncHydrostaticLiquidToGravity(
   liquidGroup.rotation.set(0, 0, 0);
   liquidGroup.scale.set(1, 1, 1);
 
-  const rotZ = instanceRoot.rotation.z + sloshAngleZ;
-  const rotX = instanceRoot.rotation.x;
+  // 2nd-Order Damped Harmonic Slosh Oscillator
+  // Mô phỏng quán tính dao động sóng và cản nhớt chất lỏng khi bình chứa bị nghiêng/chuyển động
+  const curRotZ = instanceRoot.rotation.z;
+  const curRotX = instanceRoot.rotation.x;
+  if (typeof liquidGroup.userData.lastSloshTimeMs !== 'number') {
+    liquidGroup.userData.lastSloshTimeMs = timeMs;
+    liquidGroup.userData.prevRotZ = curRotZ;
+    liquidGroup.userData.dynSloshAngle = 0;
+    liquidGroup.userData.dynSloshVel = 0;
+  }
+  const dtSlosh = THREE.MathUtils.clamp(
+    (timeMs - liquidGroup.userData.lastSloshTimeMs) / 1000,
+    0.001,
+    0.045,
+  );
+  liquidGroup.userData.lastSloshTimeMs = timeMs;
+
+  const angVelZ = (curRotZ - (liquidGroup.userData.prevRotZ ?? curRotZ)) / dtSlosh;
+  liquidGroup.userData.prevRotZ = curRotZ;
+
+  const omegaSlosh = 13.2; // Tần số dao động riêng sóng dừng ~ 2.1 Hz
+  const zetaSlosh = 0.24;  // Hệ số cản nhớt (viscous damping ratio)
+  const drivingAccel = -angVelZ * 0.38;
+  const kSpring = -omegaSlosh * omegaSlosh * (liquidGroup.userData.dynSloshAngle || 0);
+  const kDamp = -2 * zetaSlosh * omegaSlosh * (liquidGroup.userData.dynSloshVel || 0);
+  const totalAcc = kSpring + kDamp + drivingAccel;
+
+  liquidGroup.userData.dynSloshVel =
+    ((liquidGroup.userData.dynSloshVel || 0) + totalAcc * dtSlosh) * 0.985;
+  liquidGroup.userData.dynSloshAngle = THREE.MathUtils.clamp(
+    (liquidGroup.userData.dynSloshAngle || 0) +
+      liquidGroup.userData.dynSloshVel * dtSlosh,
+    -0.28,
+    0.28,
+  );
+
+  const effectiveSlosh =
+    (liquidGroup.userData.dynSloshAngle as number) + sloshAngleZ;
+  const rotZ = curRotZ + effectiveSlosh;
+  const rotX = curRotX;
   const clampedZ = THREE.MathUtils.clamp(rotZ, -1.43, 1.43);
   const clampedX = THREE.MathUtils.clamp(rotX, -1.43, 1.43);
 
@@ -2607,20 +2798,24 @@ export function syncHydrostaticLiquidToGravity(
         newY = localSurfH + offsetFromTop;
       }
 
+      // STRICT ZERO-CLIPPING BOUNDARY CONTAINMENT:
+      // Giới hạn bán kính đỉnh luôn nằm gọn trong lòng thành thủy tinh, loại bỏ hoàn toàn hiện tượng xuyên thành
+      let allowedR = rMean;
       if (isConical) {
-        // Taper radial (x, z) along the Erlenmeyer flask's conical wall so water never pokes outside the cone!
         const coneFrac = THREE.MathUtils.clamp(newY / 0.092, 0, 1);
-        const allowedR = THREE.MathUtils.lerp(rBot, rTop, coneFrac);
-        const origR = Math.hypot(x0, z0);
-        const radialScale =
-          origR > 0.0001 ? Math.min(1.15, allowedR / Math.max(0.016, origR)) : 1;
-        arr[idx] = x0 * radialScale;
-        arr[idx + 2] = z0 * radialScale;
-      } else {
-        arr[idx] = x0;
-        arr[idx + 2] = z0;
+        allowedR = THREE.MathUtils.lerp(rBot, rTop, coneFrac);
+      } else if (arch === 'porcelain-dish') {
+        const dishFrac = THREE.MathUtils.clamp(newY / 0.038, 0, 1);
+        allowedR = THREE.MathUtils.lerp(rBot, rTop, Math.sqrt(dishFrac));
       }
-      arr[idx + 1] = newY;
+
+      const origR = Math.hypot(x0, z0);
+      const safeRadius = allowedR * 0.992;
+      const radialScale =
+        origR > safeRadius && origR > 0.0001 ? safeRadius / origR : 1.0;
+      arr[idx] = x0 * radialScale;
+      arr[idx + 2] = z0 * radialScale;
+      arr[idx + 1] = THREE.MathUtils.clamp(newY, 0.0004, maxH);
     }
 
     posAttr.needsUpdate = true;
@@ -2983,7 +3178,7 @@ export function buildProceduralEquipmentGroup(
       // 5. Internal water column & 3D concave capillary meniscus (`liquid_surface`)
       const liquidGroup = new THREE.Group();
       liquidGroup.name = 'liquid_surface';
-      const waterMat = createWaterMaterial(0x0ea5e9, 0.78);
+      const waterMat = createWaterMaterial('clean-water');
       const waterHeight = 0.105; // ~50 ml default
       const waterGeo = new THREE.CylinderGeometry(0.0156, 0.0156, waterHeight, 36, 12);
       waterGeo.translate(0, waterHeight / 2, 0);
@@ -2992,7 +3187,7 @@ export function buildProceduralEquipmentGroup(
       waterMesh.renderOrder = 2;
       liquidGroup.add(waterMesh);
 
-      addConcaveMeniscusAndRipples(liquidGroup, 0.0156, waterHeight);
+      addConcaveMeniscusAndRipples(liquidGroup, 0.0156, waterHeight, 'clean-water');
 
       liquidGroup.position.y = 0.015;
       root.add(liquidGroup);
@@ -3057,13 +3252,13 @@ export function buildProceduralEquipmentGroup(
       liquidGroup.name = 'liquid_surface';
       const liquidGeo = new THREE.CylinderGeometry(0.0338, 0.0335, 0.038, 36, 12);
       liquidGeo.translate(0, 0.019, 0);
-      const liquidMat = createWaterMaterial(0x0ea5e9, 0.78);
+      const liquidMat = createWaterMaterial('clean-water');
       const liquidMesh = new THREE.Mesh(liquidGeo, liquidMat);
       liquidMesh.name = 'liquid_body';
       liquidMesh.renderOrder = 2;
       liquidGroup.add(liquidMesh);
 
-      addConcaveMeniscusAndRipples(liquidGroup, 0.0338, 0.038);
+      addConcaveMeniscusAndRipples(liquidGroup, 0.0338, 0.038, 'clean-water');
 
       liquidGroup.position.y = 0.004;
 
@@ -3210,13 +3405,13 @@ export function buildProceduralEquipmentGroup(
       const waterHeight = 0.045;
       const waterGeo = new THREE.CylinderGeometry(0.0384, 0.0384, waterHeight, 36, 12);
       waterGeo.translate(0, waterHeight / 2, 0);
-      const waterMat = createWaterMaterial(0x0ea5e9, 0.78);
+      const waterMat = createWaterMaterial('clean-water');
       const waterMesh = new THREE.Mesh(waterGeo, waterMat);
       waterMesh.name = 'liquid_body';
       waterMesh.renderOrder = 2;
       liquidGroup.add(waterMesh);
 
-      addConcaveMeniscusAndRipples(liquidGroup, 0.0384, waterHeight);
+      addConcaveMeniscusAndRipples(liquidGroup, 0.0384, waterHeight, 'clean-water');
 
       liquidGroup.position.y = elevY + 0.006;
       root.add(liquidGroup);
@@ -3915,12 +4110,12 @@ export function buildProceduralEquipmentGroup(
       liquidGroup.name = 'liquid_surface';
       const solGeo = new THREE.CylinderGeometry(0.031, 0.040, 0.036, 32, 12);
       solGeo.translate(0, 0.018, 0);
-      const solMat = createWaterMaterial(0x0ea5e9, 0.76);
+      const solMat = createWaterMaterial('copper-sulfate');
       const solMesh = new THREE.Mesh(solGeo, solMat);
       solMesh.name = 'liquid_body';
       solMesh.renderOrder = 2;
       liquidGroup.add(solMesh);
-      addConcaveMeniscusAndRipples(liquidGroup, 0.031, 0.036);
+      addConcaveMeniscusAndRipples(liquidGroup, 0.031, 0.036, 'copper-sulfate');
       liquidGroup.position.y = 0.003;
 
       root.add(liquidGroup);
@@ -5698,12 +5893,12 @@ export function buildProceduralEquipmentGroup(
       const waterHeight = 0.062;
       const waterGeo = new THREE.CylinderGeometry(0.050, 0.050, waterHeight, 36);
       waterGeo.translate(0, waterHeight / 2, 0);
-      const waterMat = createWaterMaterial(0x0ea5e9, 0.78);
+      const waterMat = createWaterMaterial('clean-water');
       const waterMesh = new THREE.Mesh(waterGeo, waterMat);
       waterMesh.renderOrder = 2;
       liquidGroup.add(waterMesh);
 
-      addConcaveMeniscusAndRipples(liquidGroup, 0.050, waterHeight);
+      addConcaveMeniscusAndRipples(liquidGroup, 0.050, waterHeight, 'clean-water');
 
       liquidGroup.position.y = standElevationY + 0.006;
       root.add(liquidGroup);
@@ -6789,7 +6984,7 @@ export function buildProceduralEquipmentGroup(
         metalness: 0.25,
       });
       const glassMat = createGlassMaterial(isSoftwareGl);
-      const waterMat = createWaterMaterial(0x0284c7, 0.82);
+      const waterMat = createWaterMaterial('clean-water');
 
       // 1. Đế nhựa đúc ABS phòng thí nghiệm chống lật (vát mép chamfer chuẩn)
       const baseMesh = new THREE.Mesh(

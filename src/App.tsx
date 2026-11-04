@@ -400,6 +400,15 @@ export default function App() {
     [],
   );
 
+  // Tự động đóng thông báo sau 8 giây nếu người dùng không bấm Đóng
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
   // Phím tắt Alt + N toàn cục để Bật/Tắt Trợ lý Nơ-ron Thần kinh
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -4860,32 +4869,57 @@ export default function App() {
         </div>
       )}
 
-      {/* Toast Feedback Notification — Glassmorphism with high-contrast text */}
+      {/* Toast Feedback Notification — Nền trong suốt glassmorphism & Tự tắt sau 10s */}
       {toast && (
         <div
-          className={`fixed bottom-4 right-4 z-50 max-w-md border-[1.5px] rounded-[12px] shadow-[0_14px_34px_rgba(0,0,0,0.45)] px-4 py-3 flex items-center gap-2.5 text-[14px] backdrop-blur-2xl ${
-            isDarkMode
-              ? 'bg-[#081528]/72 border-[#38BDF8] text-white'
-              : 'bg-white/75 border-[#1D63E8] text-[#051630]'
+          className={`fixed bottom-4 right-4 z-50 max-w-md rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] px-4 py-3 flex items-center gap-3 text-sm backdrop-blur-2xl border transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${
+            toast.tone === 'success'
+              ? 'bg-slate-950/45 border-emerald-500/40 text-emerald-100 shadow-[0_0_20px_rgba(16,185,129,0.15)]'
+              : toast.tone === 'warning'
+              ? 'bg-slate-950/45 border-amber-500/40 text-amber-100 shadow-[0_0_20px_rgba(245,158,11,0.15)]'
+              : toast.tone === 'error'
+              ? 'bg-slate-950/45 border-rose-500/40 text-rose-100 shadow-[0_0_20px_rgba(244,63,94,0.15)]'
+              : 'bg-slate-950/45 border-cyan-500/40 text-cyan-100 shadow-[0_0_20px_rgba(6,182,212,0.15)]'
           }`}
         >
           {toast.tone === 'success' && (
-            <CheckCircle2 className="w-4.5 h-4.5 text-[#16A34A] shrink-0" />
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           )}
           {toast.tone === 'warning' && (
-            <AlertTriangle className="w-4.5 h-4.5 text-[#D97706] shrink-0" />
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
           )}
-          {(toast.tone === 'info' || toast.tone === 'error') && (
-            <Info className="w-4.5 h-4.5 text-[#0284C7] shrink-0" />
+          {toast.tone === 'error' && (
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
           )}
-          <span className="font-extrabold flex-1">{toast.message}</span>
+          {toast.tone === 'info' && (
+            <Info className="w-5 h-5 text-cyan-400 shrink-0" />
+          )}
+          <span className="font-semibold text-slate-100 flex-1 leading-snug">{toast.message}</span>
           <button
             type="button"
             onClick={() => setToast(null)}
-            className="text-[12px] font-extrabold opacity-85 hover:opacity-100 ml-1 cursor-pointer"
+            className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white transition-all cursor-pointer shrink-0"
           >
             Đóng
           </button>
+          {/* Thanh đếm ngược 8 giây tự tắt */}
+          <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10 overflow-hidden rounded-b-2xl">
+            <div
+              key={toast.id}
+              className={`h-full ${
+                toast.tone === 'success'
+                  ? 'bg-emerald-400/80'
+                  : toast.tone === 'warning'
+                  ? 'bg-amber-400/80'
+                  : toast.tone === 'error'
+                  ? 'bg-rose-400/80'
+                  : 'bg-cyan-400/80'
+              }`}
+              style={{
+                animation: 'toastCountdown 8s linear forwards',
+              }}
+            />
+          </div>
         </div>
       )}
 

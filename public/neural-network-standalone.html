@@ -208,6 +208,9 @@
     <button onclick="exportDiagramPng()" class="px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-1 text-xs" title="Lưu ảnh sơ đồ để dán vào báo cáo thực hành">
       📸 Xuất PNG
     </button>
+    <button onclick="toggleTransparency()" id="btn-toggle-transparent" class="px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-1 text-xs" title="Bật/Tắt nền trong suốt">
+      🪟 Nền: Tối
+    </button>
     <button onclick="toggleLayout()" id="btn-toggle-layout" class="px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-1 text-xs">
       🔄 Bố cục: Vòng tròn
     </button>
@@ -512,6 +515,24 @@
     let searchKeyword = '';
     let challengeMode = false;
     let challengeScore = 0;
+    let isTransparentBg = false;
+
+    function toggleTransparency() {
+      isTransparentBg = !isTransparentBg;
+      const btn = document.getElementById('btn-toggle-transparent');
+      if (isTransparentBg) {
+        document.body.classList.remove('bg-[#050813]');
+        document.body.classList.add('bg-transparent');
+        btn.textContent = '🪟 Nền: Trong suốt';
+        btn.className = 'px-2.5 py-1 rounded-xl bg-cyan-600/30 border border-cyan-400 text-cyan-200 transition-colors flex items-center gap-1 text-xs';
+      } else {
+        document.body.classList.add('bg-[#050813]');
+        document.body.classList.remove('bg-transparent');
+        btn.textContent = '🪟 Nền: Tối';
+        btn.className = 'px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-1 text-xs';
+      }
+      playClickSound();
+    }
 
     // Camera ở tâm gốc (0, 0)
     const camera = { x: 0, y: 0, zoom: 1 };
@@ -658,12 +679,26 @@
       });
 
       // Update particles
-      if (isFiring && visibleEdges.length > 0 && particles.length < 180 && Math.random() < 0.4) {
+      if (isFiring && visibleEdges.length > 0 && particles.length < 240 && Math.random() < 0.45) {
         const edge = visibleEdges[Math.floor(Math.random() * visibleEdges.length)];
         const s = nodeSims.find(n => n.d.id === edge.source);
         const t = nodeSims.find(n => n.d.id === edge.target);
         if (s && t) {
-          particles.push({ s, t, edge, progress: 0, speed: 0.01 + Math.random() * 0.014 });
+          let pColor = '#6366f1'; // Mặc định lam tím neon
+          let pDir = 'bidirectional';
+          if (selectedNode) {
+            if (edge.source === selectedNode.id) {
+              pColor = '#0080ff'; // Dòng chảy ra: Xanh dương neon
+              pDir = 'outflow';
+            } else if (edge.target === selectedNode.id) {
+              pColor = '#b026ff'; // Dòng chảy vào: Tím neon (đổi từ cam sang tím)
+              pDir = 'inflow';
+            }
+          }
+          // Chuỗi 3 hạt nhỏ chảy thành dòng
+          for (let sIdx = 0; sIdx < 3; sIdx++) {
+            particles.push({ s, t, edge, progress: -sIdx * 0.08, speed: 0.012 + Math.random() * 0.012, color: pColor, direction: pDir });
+          }
         }
       }
 
@@ -672,9 +707,13 @@
         if (particles[i].progress >= 1) particles.splice(i, 1);
       }
 
-      // Draw background
-      ctx.fillStyle = '#050813';
-      ctx.fillRect(0, 0, W, H);
+      // Draw background - Đảm bảo nền trong suốt nếu bật transparent mode, hoặc nền mờ tối
+      if (isTransparentBg) {
+        ctx.clearRect(0, 0, W, H);
+      } else {
+        ctx.fillStyle = '#050813';
+        ctx.fillRect(0, 0, W, H);
+      }
 
       const cam = camera;
       const originX = getOriginX();
@@ -728,16 +767,31 @@
 
         if (meta.dash) ctx.setLineDash(meta.dash);
 
+        // Phân định chuẩn màu Neon nhân quả:
+        // Dòng chảy ra: Xanh dương neon (#0080ff) - Đổi từ Xanh sáng sang Xanh dương
+        // Dòng chảy vào: Tím neon (#b026ff) - Đổi từ Cam thành Tím
+        // Cùng cấp / gợi ý: Lam tím neon (#6366f1)
+        let strokeColor = '#6366f1';
+        if (selectedNode) {
+          if (e.source === selectedNode.id) {
+            strokeColor = '#0080ff';
+          } else if (e.target === selectedNode.id) {
+            strokeColor = '#b026ff';
+          }
+        }
+
         if (isHighlight) {
-          ctx.strokeStyle = meta.color;
-          ctx.lineWidth = 2.6 * cam.zoom;
-          ctx.shadowColor = meta.color;
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = 2.4 * cam.zoom;
+          ctx.shadowColor = strokeColor;
           ctx.shadowBlur = 12;
           ctx.globalAlpha = 1.0;
         } else {
-          ctx.strokeStyle = meta.color;
-          ctx.lineWidth = 1.0 * cam.zoom;
-          ctx.globalAlpha = selectedNode || selectedExp ? 0.08 : 0.28;
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = 1.2 * cam.zoom;
+          ctx.shadowColor = strokeColor;
+          ctx.shadowBlur = 4;
+          ctx.globalAlpha = selectedNode || selectedExp ? 0.12 : 0.38;
         }
         ctx.stroke();
 
@@ -751,7 +805,7 @@
         const adx = nax - ax;
         const ady = nay - ay;
         const adist = Math.sqrt(adx*adx + ady*ady) || 1;
-        const al = 6 * cam.zoom;
+        const al = 5.8 * cam.zoom;
 
         ctx.setLineDash([]);
         ctx.beginPath();
@@ -759,7 +813,7 @@
         ctx.lineTo(ax - (ady/adist)*(al*0.6) - (adx/adist)*al, ay + (adx/adist)*(al*0.6) - (ady/adist)*al);
         ctx.lineTo(ax + (ady/adist)*(al*0.6) - (adx/adist)*al, ay - (adx/adist)*(al*0.6) - (ady/adist)*al);
         ctx.closePath();
-        ctx.fillStyle = meta.color;
+        ctx.fillStyle = strokeColor;
         ctx.fill();
 
         ctx.restore();
@@ -778,18 +832,26 @@
         const cx = midX - (dy / dist) * curv;
         const cy = midY + (dx / dist) * curv;
 
-        const pr = p.progress;
+        if (p.progress < 0 || p.progress > 1) return;
+
+        let pr = p.progress;
+        if (p.direction === 'inflow') {
+          pr = 1 - p.progress; // Chảy ngược từ target vào source
+        } else if (p.direction === 'bidirectional') {
+          pr = 0.5 + 0.48 * Math.sin(p.progress * Math.PI * 2); // Chảy qua lại dao động hai chiều
+        }
+
         const px = (1-pr)*(1-pr)*sp.x + 2*(1-pr)*pr*cx + pr*pr*tp.x;
         const py = (1-pr)*(1-pr)*sp.y + 2*(1-pr)*pr*cy + pr*pr*tp.y;
-        const meta = SYNAPSES[p.edge.type] || { color: '#818cf8' };
+        const pCol = p.color || SYNAPSES[p.edge.type]?.color || '#818cf8';
 
         ctx.save();
-        ctx.globalAlpha = Math.sin(pr * Math.PI);
+        ctx.globalAlpha = Math.sin(p.progress * Math.PI);
         ctx.beginPath();
-        ctx.arc(px, py, 2.5 * cam.zoom, 0, Math.PI * 2);
-        ctx.fillStyle = meta.color;
-        ctx.shadowColor = meta.color;
-        ctx.shadowBlur = 10;
+        ctx.arc(px, py, (1.4 + (p.direction === 'bidirectional' ? 0.3 : 0)) * cam.zoom, 0, Math.PI * 2);
+        ctx.fillStyle = pCol;
+        ctx.shadowColor = pCol;
+        ctx.shadowBlur = 8;
         ctx.fill();
         ctx.restore();
       });
@@ -1082,7 +1144,7 @@
 
       const formLabel = document.getElementById('detailFormulaLabel');
       formLabel.textContent = userMode === 'student' ? 'Công thức SGK quen thuộc' : 'Phương trình toán học chuẩn';
-      document.getElementById('detailFormula').textContent = node.sgkFormula;
+      document.getElementById('detailFormula').textContent = '$' + (node.mathFormula || node.sgkFormula) + '$';
 
       const portsLabel = document.getElementById('detailPortsLabel');
       portsLabel.textContent = userMode === 'student' ? 'Vị trí cắm & gá lắp trên dụng cụ' : 'Cổng Connector RWSS';
@@ -1145,28 +1207,10 @@
             <span class="font-semibold text-slate-100 text-[11px]">${exp.title}</span>
             <span class="text-[9px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 font-mono">${exp.grade}</span>
           </div>
-          <p class="text-[10px] text-slate-400 mt-1">${exp.studentGoal}</p>
+          <div class="flex items-center gap-1.5 mt-1.5">
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">${exp.deviceIds ? exp.deviceIds.length : 4} dụng cụ</span>
+          </div>
         `;
-
-        if (isSel && exp.steps && exp.steps.length > 0) {
-          const step = exp.steps[currentStepIdx];
-          inner += `
-            <div class="mt-2 pt-2 border-t border-indigo-500/30">
-              <div class="flex items-center justify-between text-[10px] text-amber-300 font-semibold mb-1">
-                <span>Tiến trình từng bước:</span>
-                <span>${currentStepIdx + 1} / ${exp.steps.length}</span>
-              </div>
-              <div class="p-2 rounded-lg bg-black/50 border border-indigo-500/30 mb-1.5">
-                <div class="font-medium text-white text-[11px]">${step.title}</div>
-                <p class="text-[10px] text-slate-300 mt-0.5">${step.desc}</p>
-              </div>
-              <div class="flex items-center justify-between gap-1.5">
-                <button onclick="event.stopPropagation(); prevStep()" class="px-2 py-0.5 rounded bg-slate-800 text-[10px] text-slate-200">◀ Lùi bước</button>
-                <button onclick="event.stopPropagation(); nextStep()" class="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-[10px] text-white font-medium">Bước tiếp ▶</button>
-              </div>
-            </div>
-          `;
-        }
 
         card.innerHTML = inner;
         card.onclick = () => {

@@ -1352,7 +1352,9 @@ export function buildWorldCoordinatesAndGridHelper(
   const benchW = roomConfig.bench.widthM; // 2.40 m (cạnh dài X)
   const benchD = roomConfig.bench.depthM; // 0.75 m (cạnh rộng Y)
   const benchY = roomConfig.bench.topY; // 0.82 m (mặt bàn Z = 0)
-  const zHeightM = 0.85; // Chiều cao trục đứng Z = 0.85 m
+  const axisLenX = Number((benchW - 0.10).toFixed(2)); // 2.30 m (giảm 0.1m để nằm gọn trên mặt bàn)
+  const axisLenY = Number((benchD - 0.10).toFixed(2)); // 0.65 m (giảm 0.1m để nằm gọn trên mặt bàn)
+  const zHeightM = 0.60; // 0.60 m (giảm 0.1m từ 0.70m để nằm gọn hoàn toàn trong màn hình mô phỏng)
 
   // Tọa độ gốc cố định O(0,0,0) tại góc sau-trái của mặt bàn
   const ox = -benchW / 2; // -1.20 m
@@ -1436,7 +1438,7 @@ export function buildWorldCoordinatesAndGridHelper(
   spaceGridGroup.visible = settings.showSpaceGrid;
 
   const spaceGridPts: number[] = [];
-  const spaceMaxZ = 0.8; // Độ cao lưới không gian 0.80 m trên mặt bàn
+  const spaceMaxZ = zHeightM; // Độ cao lưới không gian đồng bộ 0.70 m trên mặt bàn
 
   // Mặt phẳng đứng XZ (dọc theo cạnh dài phía sau bàn: Y = 0, X = 0..2.40m, Z = 0..0.80m)
   for (let dx = 0; dx <= benchW + 0.0001; dx += 0.1) {
@@ -1483,39 +1485,39 @@ export function buildWorldCoordinatesAndGridHelper(
   axesGroup.name = 'coord_world_axes';
   axesGroup.visible = settings.showWorldAxes;
 
-  const axisRadius = 0.0026; // Thanh trục mảnh 2.6 mm nằm sát mép bàn
+  const axisRadius = 0.0020; // Thanh trục mảnh thanh thoát 2.0 mm
 
-  // Trục +X (Đỏ): Thuộc cạnh dài phía sau mặt bàn (từ O sang phải 2.40 m)
+  // Trục +X (Đỏ): Giảm 0.1m xuống 2.30 m để nằm gọn trên mặt bàn
   const xMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
   const xShaft = new THREE.Mesh(
-    new THREE.CylinderGeometry(axisRadius, axisRadius, benchW, 12),
+    new THREE.CylinderGeometry(axisRadius, axisRadius, axisLenX, 12),
     xMat,
   );
   xShaft.rotation.z = -Math.PI / 2;
-  xShaft.position.set(ox + benchW / 2, oy + 0.001, oz);
+  xShaft.position.set(ox + axisLenX / 2, oy + 0.001, oz);
   axesGroup.add(xShaft);
 
-  const xCone = new THREE.Mesh(new THREE.ConeGeometry(0.009, 0.028, 14), xMat);
+  const xCone = new THREE.Mesh(new THREE.ConeGeometry(0.0075, 0.024, 14), xMat);
   xCone.rotation.z = -Math.PI / 2;
-  xCone.position.set(ox + benchW + 0.014, oy + 0.001, oz);
+  xCone.position.set(ox + axisLenX + 0.012, oy + 0.001, oz);
   axesGroup.add(xCone);
 
-  // Trục +Y (Xanh lá): Thuộc cạnh rộng bên trái mặt bàn (từ O ra phía trước 0.75 m)
+  // Trục +Y (Xanh lá): Giảm 0.1m xuống 0.65 m để nằm gọn trên mặt bàn
   const yMat = new THREE.MeshBasicMaterial({ color: 0x22c55e });
   const yShaft = new THREE.Mesh(
-    new THREE.CylinderGeometry(axisRadius, axisRadius, benchD, 12),
+    new THREE.CylinderGeometry(axisRadius, axisRadius, axisLenY, 12),
     yMat,
   );
   yShaft.rotation.x = Math.PI / 2;
-  yShaft.position.set(ox, oy + 0.001, oz + benchD / 2);
+  yShaft.position.set(ox, oy + 0.001, oz + axisLenY / 2);
   axesGroup.add(yShaft);
 
-  const yCone = new THREE.Mesh(new THREE.ConeGeometry(0.009, 0.028, 14), yMat);
+  const yCone = new THREE.Mesh(new THREE.ConeGeometry(0.0075, 0.024, 14), yMat);
   yCone.rotation.x = Math.PI / 2;
-  yCone.position.set(ox, oy + 0.001, oz + benchD + 0.014);
+  yCone.position.set(ox, oy + 0.001, oz + axisLenY + 0.012);
   axesGroup.add(yCone);
 
-  // Trục +Z (Xanh dương): Dựng thẳng đứng tại góc bàn cố định O (cao 0.85 m)
+  // Trục +Z (Xanh dương): Dựng thẳng đứng tại góc bàn O (cao 0.60 m nằm gọn trong màn hình)
   const zMat = new THREE.MeshBasicMaterial({ color: 0x3b82f6 });
   const zShaft = new THREE.Mesh(
     new THREE.CylinderGeometry(axisRadius, axisRadius, zHeightM, 12),
@@ -1524,8 +1526,8 @@ export function buildWorldCoordinatesAndGridHelper(
   zShaft.position.set(ox, oy + zHeightM / 2, oz);
   axesGroup.add(zShaft);
 
-  const zCone = new THREE.Mesh(new THREE.ConeGeometry(0.009, 0.028, 14), zMat);
-  zCone.position.set(ox, oy + zHeightM + 0.014, oz);
+  const zCone = new THREE.Mesh(new THREE.ConeGeometry(0.0075, 0.024, 14), zMat);
+  zCone.position.set(ox, oy + zHeightM + 0.012, oz);
   axesGroup.add(zCone);
 
   root.add(axesGroup);
@@ -1546,54 +1548,54 @@ export function buildWorldCoordinatesAndGridHelper(
   root.add(originGroup);
 
   // ===========================================================================
-  // 5. NHÃN TRỤC O, +X (Cạnh dài), +Y (Cạnh rộng), +Z (Đứng) (`coord_axis_labels`)
+  // 5. NHÃN TRỤC O, X, Y, Z (GỌN GÀNG, CHỈ ĐỂ TÊN TRỤC) (`coord_axis_labels`)
   // ===========================================================================
   const labelsGroup = new THREE.Group();
   labelsGroup.name = 'coord_axis_labels';
   labelsGroup.visible = settings.showAxisLabels;
 
   const lblO = createCompactCoordSprite(
-    'Gốc Bàn O(0,0,0)',
+    'O(0,0,0)',
     'rgba(11, 27, 54, 0.38)',
     '#FACC15',
     '#FACC15',
-    0.18,
-    0.052,
+    0.11,
+    0.042,
   );
-  lblO.position.set(ox - 0.02, oy + 0.045, oz - 0.02);
+  lblO.position.set(ox - 0.02, oy + 0.04, oz - 0.02);
   labelsGroup.add(lblO);
 
   const lblX = createCompactCoordSprite(
-    '+X (Cạnh bàn)',
+    'X',
     'rgba(11, 27, 54, 0.38)',
     '#EF4444',
     '#FCA5A5',
-    0.17,
-    0.05,
+    0.072,
+    0.042,
   );
-  lblX.position.set(ox + benchW + 0.05, oy + 0.04, oz);
+  lblX.position.set(ox + axisLenX + 0.038, oy + 0.035, oz);
   labelsGroup.add(lblX);
 
   const lblY = createCompactCoordSprite(
-    'Oy (Rộng bàn)',
+    'Y',
     'rgba(11, 27, 54, 0.38)',
     '#22C55E',
     '#86EFAC',
-    0.17,
-    0.05,
+    0.072,
+    0.042,
   );
-  lblY.position.set(ox, oy + 0.04, oz + benchD + 0.05);
+  lblY.position.set(ox, oy + 0.035, oz + axisLenY + 0.038);
   labelsGroup.add(lblY);
 
   const lblZ = createCompactCoordSprite(
-    '+Z (Trục đứng)',
+    'Z',
     'rgba(11, 27, 54, 0.38)',
     '#3B82F6',
     '#93C5FD',
-    0.17,
-    0.05,
+    0.072,
+    0.042,
   );
-  lblZ.position.set(ox, oy + zHeightM + 0.055, oz);
+  lblZ.position.set(ox, oy + zHeightM + 0.038, oz);
   labelsGroup.add(lblZ);
 
   root.add(labelsGroup);
@@ -1606,20 +1608,20 @@ export function buildWorldCoordinatesAndGridHelper(
   ticksGroup.visible = settings.showNumericTicks;
 
   const tickPts: number[] = [];
-  // Vạch chia mỗi 10 cm dọc cạnh dài X (0 .. 2.40 m)
-  for (let dx = 0.1; dx <= benchW + 0.001; dx += 0.1) {
+  // Vạch chia mỗi 10 cm dọc cạnh dài X (0 .. axisLenX m)
+  for (let dx = 0.1; dx <= axisLenX + 0.001; dx += 0.1) {
     const wx = ox + dx;
     const tickLen = Math.abs((dx * 10) % 2) < 0.01 ? 0.018 : 0.01;
     tickPts.push(wx, oy + 0.002, oz, wx, oy + 0.002, oz + tickLen);
   }
-  // Vạch chia mỗi 10 cm dọc cạnh rộng Y (0 .. 0.75 m)
-  for (let dy = 0.1; dy <= benchD + 0.001; dy += 0.1) {
+  // Vạch chia mỗi 10 cm dọc cạnh rộng Y (0 .. axisLenY m)
+  for (let dy = 0.1; dy <= axisLenY + 0.001; dy += 0.1) {
     const wz = oz + dy;
     const tickLen = Math.abs((dy * 10) % 2) < 0.01 ? 0.018 : 0.01;
     tickPts.push(ox, oy + 0.002, wz, ox + tickLen, oy + 0.002, wz);
   }
-  // Vạch chia mỗi 10 cm dọc trục đứng Z (0 .. 0.80 m)
-  for (let dz = 0.1; dz <= 0.801; dz += 0.1) {
+  // Vạch chia mỗi 10 cm dọc trục đứng Z (0 .. zHeightM m)
+  for (let dz = 0.1; dz <= zHeightM + 0.001; dz += 0.1) {
     const wy = oy + dz;
     const tickLen = Math.abs((dz * 10) % 2) < 0.01 ? 0.018 : 0.01;
     tickPts.push(ox, wy, oz, ox + tickLen, wy, oz);
@@ -1638,8 +1640,8 @@ export function buildWorldCoordinatesAndGridHelper(
     ),
   );
 
-  // Nhãn số nhỏ dọc cạnh dài X (0.4m, 0.8m, 1.2m, 1.6m, 2.0m, 2.4m)
-  for (const dx of [0.4, 0.8, 1.2, 1.6, 2.0, 2.4]) {
+  // Nhãn số nhỏ dọc cạnh dài X (0.4m, 0.8m, 1.2m, 1.6m, 2.0m)
+  for (const dx of [0.4, 0.8, 1.2, 1.6, 2.0]) {
     const sp = createCompactCoordSprite(
       `${dx.toFixed(1)}m`,
       'rgba(11, 27, 54, 0.32)',
@@ -1652,8 +1654,8 @@ export function buildWorldCoordinatesAndGridHelper(
     ticksGroup.add(sp);
   }
 
-  // Nhãn số nhỏ dọc cạnh rộng Y (0.2m, 0.4m, 0.6m, 0.75m)
-  for (const dy of [0.2, 0.4, 0.6, 0.75]) {
+  // Nhãn số nhỏ dọc cạnh rộng Y (0.2m, 0.4m, 0.6m)
+  for (const dy of [0.2, 0.4, 0.6]) {
     const sp = createCompactCoordSprite(
       `${dy.toFixed(2).replace(/0$/, '')}m`,
       'rgba(11, 27, 54, 0.32)',
@@ -1666,8 +1668,8 @@ export function buildWorldCoordinatesAndGridHelper(
     ticksGroup.add(sp);
   }
 
-  // Nhãn số nhỏ dọc trục đứng Z (0.2m, 0.4m, 0.6m, 0.8m)
-  for (const dz of [0.2, 0.4, 0.6, 0.8]) {
+  // Nhãn số nhỏ dọc trục đứng Z (0.2m, 0.4m)
+  for (const dz of [0.2, 0.4]) {
     const sp = createCompactCoordSprite(
       `${dz.toFixed(1)}m`,
       'rgba(11, 27, 54, 0.32)',
@@ -1871,21 +1873,39 @@ export function buildStandardLabRoomV2(
     const shelfCenterZ = shelfBackZ + shelfD / 2; // -0.337 m
     const tierDeckLocalYs = [0.135]; // Duy nhất 1 tầng nâng cao (13.5 cm trên mặt bàn)
 
-    const frostedGlassMat = new THREE.MeshPhysicalMaterial({
+    // 1. Tấm kính sau lưng kệ: Kính mờ chân thật (Frosted Glass), đã tăng độ trong suốt lên 50%
+    const backFrostedGlassMat = new THREE.MeshPhysicalMaterial({
+      color: 0xc7e4f8,
+      emissive: 0x0284c7,
+      emissiveIntensity: 0.025,
+      roughness: 0.32,        // Độ nhám bề mặt tạo hiệu ứng kính mờ (frosted)
+      metalness: 0.02,
+      transmission: 0.85,     // Độ truyền sáng cao giúp nhìn xuyên rõ ràng
+      ior: 1.45,              // Chiết suất quang học kính
+      reflectivity: 0.45,     // Phản xạ mờ chân thật
+      transparent: true,
+      opacity: 0.21,          // Tăng độ trong suốt 50% (giảm opacity từ 0.42 xuống 0.21)
+      depthWrite: false,      // Giúp hòa trộn alpha mượt mà với không gian phía sau
+      side: THREE.DoubleSide,
+    });
+    backFrostedGlassMat.name = 'display_zone_back_glass_mat';
+
+    // 2. Vật liệu kính mờ cho 2 vách kính bên hông kệ (giữ nguyên hiệu ứng 3D như cũ)
+    const sideGlassMat = new THREE.MeshPhysicalMaterial({
       color: 0xbae6fd,
       emissive: 0x0284c7,
-      emissiveIntensity: 0.12,
-      roughness: 0.2,
+      emissiveIntensity: 0.10,
+      roughness: 0.22,
       metalness: 0.04,
-      transmission: 0.62,
+      transmission: 0.65,
       ior: 1.46,
-      reflectivity: 0.86,
+      reflectivity: 0.80,
       transparent: true,
-      opacity: 0.24,
+      opacity: 0.26,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
-    frostedGlassMat.name = 'display_zone_glass_mat';
+    sideGlassMat.name = 'display_zone_glass_mat';
 
     const shelfFrameMat = new THREE.MeshStandardMaterial({
       color: 0x1e293b,
@@ -1893,13 +1913,15 @@ export function buildStandardLabRoomV2(
       metalness: 0.78,
     });
 
-    // Tấm lưng kính mờ sát trục X (Z = -0.375 m, rộng 1.38 m, cao 0.32 m)
+    // Tấm kính sau lưng sát trục X (Z = -0.375 m, rộng 1.38 m, cao 0.32 m)
+    // renderOrder = 0 và depthWrite = true để tấm kính sau luôn làm nền phía sau cho các thiết bị
     const backGlassMesh = new THREE.Mesh(
       new THREE.BoxGeometry(shelfW, shelfH, 0.004),
-      frostedGlassMat,
+      backFrostedGlassMat,
     );
     backGlassMesh.position.set(0, benchTopY + shelfH / 2, shelfBackZ + 0.002);
-    backGlassMesh.renderOrder = 2;
+    backGlassMesh.renderOrder = 0;
+    backGlassMesh.visible = true; // Hiển thị lớp kính mờ sau lưng để tăng độ chân thật
     displayShelfGroup.add(backGlassMesh);
 
     // 4 Trụ đứng mảnh ở 4 góc kệ
@@ -1917,8 +1939,8 @@ export function buildStandardLabRoomV2(
       displayShelfGroup.add(pillar);
     });
 
-    // Mặt đợt kệ kính mờ Tầng 1 nâng cao kèm nẹp chắn mép trước và viền LED mảnh
-    const deckGlassMat = frostedGlassMat.clone();
+    // Mặt đợt kệ kính mờ Tầng 1 nâng cao kèm nẹp chắn mép trước và viền LED mảnh (giữ nguyên hiệu ứng kính)
+    const deckGlassMat = sideGlassMat.clone();
     deckGlassMat.opacity = 0.35;
     deckGlassMat.name = 'display_zone_deck_mat';
 
@@ -1964,9 +1986,9 @@ export function buildStandardLabRoomV2(
       displayShelfGroup.add(ledStrip);
     });
 
-    // Hai vách kính mờ mỏng 2 bên đầu kệ
+    // Hai vách kính mờ mỏng 2 bên đầu kệ (giữ nguyên hiệu ứng kính)
     const sideGlassGeo = new THREE.BoxGeometry(0.004, shelfH, shelfD);
-    const leftSideMesh = new THREE.Mesh(sideGlassGeo, frostedGlassMat);
+    const leftSideMesh = new THREE.Mesh(sideGlassGeo, sideGlassMat);
     leftSideMesh.position.set(
       -shelfW / 2 + 0.002,
       benchTopY + shelfH / 2,
@@ -1975,7 +1997,7 @@ export function buildStandardLabRoomV2(
     leftSideMesh.renderOrder = 2;
     displayShelfGroup.add(leftSideMesh);
 
-    const rightSideMesh = new THREE.Mesh(sideGlassGeo, frostedGlassMat);
+    const rightSideMesh = new THREE.Mesh(sideGlassGeo, sideGlassMat);
     rightSideMesh.position.set(
       shelfW / 2 - 0.002,
       benchTopY + shelfH / 2,

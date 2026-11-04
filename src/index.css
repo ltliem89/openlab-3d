@@ -81,3 +81,13 @@
   scrollbar-width: none;
 }
 
+@keyframes toastCountdown {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+

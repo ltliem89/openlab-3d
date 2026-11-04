@@ -1441,9 +1441,9 @@ function buildDaylightScienceClassroom(
   windowGroup.add(mullionH);
   roomGroup.add(windowGroup);
 
-  // Tủ gỗ đựng dụng cụ thí nghiệm đặt trực tiếp trên mặt sàn y = 0 ở hậu cảnh
+  // Tủ gỗ đựng dụng cụ thí nghiệm ở hậu cảnh (giảm độ dày 0.1m xuống còn 0.28m)
   const cabinetGroup = new THREE.Group();
-  cabinetGroup.position.set(1.55, 0.9, -3.65);
+  cabinetGroup.position.set(1.55, 0.9, -3.70);
 
   const woodMat = new THREE.MeshStandardMaterial({
     color: 0x6e4726,
@@ -1451,7 +1451,7 @@ function buildDaylightScienceClassroom(
     metalness: 0.05,
   });
   const cabBody = new THREE.Mesh(
-    new THREE.BoxGeometry(1.2, 1.8, 0.38),
+    new THREE.BoxGeometry(1.2, 1.8, 0.28),
     woodMat,
   );
   cabinetGroup.add(cabBody);
@@ -1575,6 +1575,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     liveTargetMl: number;
     initialTargetMl: number;
     pouredTotalMl: number;
+    spilledTotalMl: number;
     lastTapElevateMs: number;
     lastObjectTapMs: number;
     lastTappedInstanceId: string | null;
@@ -1595,6 +1596,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     liveTargetMl: 0,
     initialTargetMl: 0,
     pouredTotalMl: 0,
+    spilledTotalMl: 0,
     lastTapElevateMs: 0,
     lastObjectTapMs: 0,
     lastTappedInstanceId: null,
@@ -3033,21 +3035,23 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     pouringStreamGroup.visible = false;
 
     const pourOuterMat = new THREE.MeshPhysicalMaterial({
-      color: 0x38bdf8,
-      emissive: 0x0284c7,
-      emissiveIntensity: 0.24,
-      roughness: 0.04,
-      metalness: 0.05,
+      color: 0xf0f9ff,
+      attenuationColor: new THREE.Color(0x38bdf8),
+      attenuationDistance: 0.16,
+      transmission: 0.92,
+      roughness: 0.02,
+      metalness: 0.01,
       ior: 1.333,
       reflectivity: 0.96,
       clearcoat: 1.0,
-      clearcoatRoughness: 0.03,
+      clearcoatRoughness: 0.01,
       transparent: true,
-      opacity: 0.88,
+      opacity: 0.86,
       depthWrite: false,
     });
+    // Dòng nước co thắt khí động học: phần đỉnh dày 3.6mm, phần đuôi thon nhỏ 1.8mm do gia tốc trọng trường
     const pourOuterMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.0024, 0.0038, 0.14, 18),
+      new THREE.CylinderGeometry(0.0018, 0.0036, 0.14, 20),
       pourOuterMat,
     );
     pourOuterMesh.name = 'pour_outer';
@@ -3055,11 +3059,11 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     pouringStreamGroup.add(pourOuterMesh);
 
     const pourCoreMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.0012, 0.0018, 0.14, 12),
+      new THREE.CylinderGeometry(0.0010, 0.0020, 0.14, 14),
       new THREE.MeshBasicMaterial({
-        color: 0xe0f2fe,
+        color: 0xf8fafc,
         transparent: true,
-        opacity: 0.94,
+        opacity: 0.95,
         depthWrite: false,
       }),
     );
@@ -3076,14 +3080,15 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       pouringStreamGroup.add(drop);
     }
 
-    for (let r = 0; r < 2; r++) {
+    // 3 Vòng sóng va chạm đồng tâm đa pha khi dòng nước tiếp xúc mặt chất lỏng
+    for (let r = 0; r < 3; r++) {
       const splash = new THREE.Mesh(
-        new THREE.RingGeometry(0.004 + r * 0.005, 0.009 + r * 0.007, 24).rotateX(-Math.PI / 2),
+        new THREE.RingGeometry(0.003 + r * 0.006, 0.007 + r * 0.008, 28).rotateX(-Math.PI / 2),
         new THREE.MeshBasicMaterial({
-          color: r === 0 ? 0xe0f2fe : 0x7dd3fc,
+          color: r === 0 ? 0xf0f9ff : (r === 1 ? 0xbae6fd : 0x7dd3fc),
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.88 - r * 0.25,
+          opacity: 0.88 - r * 0.22,
           depthWrite: false,
         }),
       );
@@ -3091,6 +3096,29 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       splash.renderOrder = 7;
       pouringStreamGroup.add(splash);
     }
+
+    // Vũng nước loang tràn trên mặt bàn khi rót ra ngoài (spill puddle)
+    const spillPuddleGeo = new THREE.CircleGeometry(0.045, 36);
+    spillPuddleGeo.rotateX(-Math.PI / 2);
+    const spillPuddleMat = new THREE.MeshPhysicalMaterial({
+      color: 0xf0f9ff,
+      attenuationColor: new THREE.Color(0x7dd3fc),
+      attenuationDistance: 0.12,
+      transmission: 0.90,
+      roughness: 0.02,
+      ior: 1.333,
+      specularIntensity: 1.0,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.01,
+      transparent: true,
+      opacity: 0.75,
+      depthWrite: false,
+    });
+    const spillPuddleMesh = new THREE.Mesh(spillPuddleGeo, spillPuddleMat);
+    spillPuddleMesh.name = 'bench_spill_puddle';
+    spillPuddleMesh.position.set(0, BENCH_SURFACE_Y + 0.0006, 0);
+    spillPuddleMesh.visible = false;
+    scene.add(spillPuddleMesh);
 
     scene.add(pouringStreamGroup);
     pouringStreamRef.current = pouringStreamGroup;
@@ -3347,14 +3375,18 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       };
     }
 
+    let lastResetTime = 0;
+
     // Cancel scripted camera preset transition if user manually orbits or scrolls mouse wheel
     orbit.addEventListener('start', () => {
+      if (performance.now() - lastResetTime < 450) return;
       cameraGoalPosRef.current = null;
       cameraGoalTargetRef.current = null;
     });
     renderer.domElement.addEventListener(
       'wheel',
       () => {
+        if (performance.now() - lastResetTime < 450) return;
         cameraGoalPosRef.current = null;
         cameraGoalTargetRef.current = null;
       },
@@ -4203,16 +4235,16 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                               );
                             }
                           }
-                          for (let r = 0; r < 2; r++) {
+                          for (let r = 0; r < 3; r++) {
                             const splash = streamGrp.getObjectByName(
                               `pour_splash_${r}`,
                             ) as THREE.Mesh | undefined;
                             if (splash) {
-                              const rPhase = (now * 0.0035 + r * 0.5) % 1;
-                              const sScale = 0.65 + rPhase * 1.15;
+                              const rPhase = (now * 0.0038 + r * 0.33) % 1;
+                              const sScale = 0.55 + rPhase * 1.35;
                               splash.position.set(
                                 targetX,
-                                dstSurfaceWorldY + 0.0015 + r * 0.001,
+                                dstSurfaceWorldY + 0.0012 + r * 0.0006,
                                 targetZ,
                               );
                               splash.scale.set(sScale, sScale, 1);
@@ -4224,10 +4256,14 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                               }
                             }
                           }
+                          const puddle = scene.getObjectByName(
+                            'bench_spill_puddle',
+                          ) as THREE.Mesh | undefined;
+                          if (puddle) puddle.visible = false;
                         }
 
                         setActiveDockHint(
-                          `🌊 Đang rót sang ${bestReceiver.asset.name.vi}: +${tcDrag.pouredTotalMl.toFixed(1)} ml (Còn ${tcDrag.liveSourceMl.toFixed(0)} ml → Bình nhận: ${tcDrag.liveTargetMl.toFixed(0)} / ${dstCap} ml)`,
+                          `🌊 Đang rót sang ${bestReceiver.asset.name.vi}: +${tcDrag.pouredTotalMl.toFixed(1)} ml (Còn ${tcDrag.liveSourceMl.toFixed(0)} ml → Nhận: ${tcDrag.liveTargetMl.toFixed(0)} / ${dstCap} ml) [Bảo toàn thể tích: 100%]`,
                         );
                       } else {
                         if (pouringStreamRef.current) {
@@ -4250,7 +4286,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                       );
                     }
                   } else {
-                    // No receiving vessel in proximity zone: pour water out onto workbench surface
+                    // No receiving vessel in proximity zone: pour water out onto workbench surface (V_spilled)
                     const dSpill = Math.min(
                       tcDrag.liveSourceMl,
                       flowRateMlPerSec * dt,
@@ -4260,6 +4296,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                       tcDrag.liveSourceMl - dSpill,
                     );
                     tcDrag.pouredTotalMl += dSpill;
+                    tcDrag.spilledTotalMl =
+                      (tcDrag.spilledTotalMl || 0) + dSpill;
                     const sScaleY = THREE.MathUtils.clamp(
                       tcDrag.liveSourceMl / srcCap / 0.5,
                       0,
@@ -4312,24 +4350,48 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                           );
                         }
                       }
-                      for (let r = 0; r < 2; r++) {
+                      for (let r = 0; r < 3; r++) {
                         const splash = streamGrp.getObjectByName(
                           `pour_splash_${r}`,
                         ) as THREE.Mesh | undefined;
                         if (splash) {
-                          const rPhase = (now * 0.0035 + r * 0.5) % 1;
-                          const sScale = 0.65 + rPhase * 1.15;
+                          const rPhase = (now * 0.0038 + r * 0.33) % 1;
+                          const sScale = 0.55 + rPhase * 1.35;
                           splash.position.set(
                             targetX,
-                            BENCH_SURFACE_Y + 0.002 + r * 0.001,
+                            BENCH_SURFACE_Y + 0.0012 + r * 0.0006,
                             targetZ,
                           );
                           splash.scale.set(sScale, sScale, 1);
+                          if (
+                            splash.material instanceof
+                            THREE.MeshBasicMaterial
+                          ) {
+                            splash.material.opacity = (1 - rPhase) * 0.88;
+                          }
                         }
+                      }
+
+                      // Hiện vũng nước tràn trên mặt bàn
+                      const puddle = scene.getObjectByName(
+                        'bench_spill_puddle',
+                      ) as THREE.Mesh | undefined;
+                      if (puddle) {
+                        puddle.visible = true;
+                        puddle.position.set(
+                          targetX,
+                          BENCH_SURFACE_Y + 0.0006,
+                          targetZ,
+                        );
+                        const pRadius = Math.min(
+                          0.09,
+                          0.02 + Math.sqrt(tcDrag.spilledTotalMl) * 0.008,
+                        );
+                        puddle.scale.set(pRadius / 0.045, pRadius / 0.045, 1);
                       }
                     }
                     setActiveDockHint(
-                      `💧 Đang nghiêng đổ nước ra ngoài (${Math.round((absTilt * 180) / Math.PI)}°) — Còn lại: ${tcDrag.liveSourceMl.toFixed(0)} ml`,
+                      `💧 Đang nghiêng đổ nước ra ngoài bàn (${Math.round((absTilt * 180) / Math.PI)}°) — Đã tràn: ${tcDrag.spilledTotalMl.toFixed(1)} ml | Còn lại: ${tcDrag.liveSourceMl.toFixed(0)} ml [Bảo toàn thể tích: 100%]`,
                     );
                   }
                 } else {
@@ -4767,6 +4829,40 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             if (!isSoftwareGl) {
               needsMoreFrames = true;
             }
+          }
+        }
+
+        // Animate 3D Live Contextual Neural Synapse Photon Particles at 60fps
+        const neuralGrp = neuralSynapseBeamGroupRef.current;
+        if (neuralGrp && neuralGrp.children.length > 0) {
+          const nowSec = performance.now() * 0.001;
+          let hasParticles = false;
+          for (const ch of neuralGrp.children) {
+            if (ch.name === 'neural_photon_particle' && ch.userData && ch.userData.curve) {
+              hasParticles = true;
+              const uData = ch.userData as {
+                curve: THREE.QuadraticBezierCurve3;
+                direction: 'input' | 'output' | 'bidirectional';
+                offset: number;
+                speed: number;
+              };
+              let t = 0;
+              if (uData.direction === 'output') {
+                // Dòng chảy ra: Xanh dương neon chảy từ Selected ra Target
+                t = ((nowSec * uData.speed + uData.offset) % 1 + 1) % 1;
+              } else if (uData.direction === 'input') {
+                // Dòng chảy vào: Tím neon chảy từ Target vào Selected
+                t = (1 - ((nowSec * uData.speed + uData.offset) % 1 + 1) % 1);
+              } else {
+                // Cùng cấp / Gợi ý: Lam tím neon chảy qua lại dao động hai chiều
+                t = 0.5 + 0.48 * Math.sin(nowSec * uData.speed * 2.8 + uData.offset * 6.28);
+              }
+              const pt = uData.curve.getPointAt(Math.max(0, Math.min(1, t)));
+              ch.position.copy(pt);
+            }
+          }
+          if (hasParticles && !isSoftwareGl) {
+            needsMoreFrames = true;
           }
         }
 
@@ -5632,6 +5728,47 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       return false;
     };
 
+    let lastLeftClickTime = 0;
+    let lastLeftClickPos = { x: 0, y: 0 };
+    let lastRightClickTime = 0;
+    let lastRightClickPos = { x: 0, y: 0 };
+
+    const resetSimulationToDefaultView = () => {
+      const now = performance.now();
+      if (now - lastResetTime < 280) return;
+      lastResetTime = now;
+
+      labSoundEngine.play('camera-zoom', 0.85);
+      setIsTopViewActive(false);
+
+      // 1. Tính toán góc nhìn mặc định toàn bàn chuẩn xác theo aspect ratio
+      const aspect = camera && camera.aspect > 0.1 ? camera.aspect : 1.55;
+      const tanHalfVFov = Math.tan(THREE.MathUtils.degToRad(21)); // fov = 42 deg
+      const tanHalfHFov = tanHalfVFov * Math.max(0.65, aspect);
+      const dist = THREE.MathUtils.clamp(1.26 / tanHalfHFov + 0.34, 1.85, 3.35);
+
+      cameraGoalPosRef.current = new THREE.Vector3(
+        0.0,
+        BENCH_SURFACE_Y + 0.08 + dist * 0.4,
+        -0.02 + dist * 0.915,
+      );
+      cameraGoalTargetRef.current = new THREE.Vector3(0.0, BENCH_SURFACE_Y + 0.08, -0.02);
+
+      // 2. Bỏ chọn thiết bị và đóng mọi menu/bảng điều khiển đang mở
+      selectedInstanceIdRef.current = null;
+      onSelectInstanceRef.current(null);
+      setViewportContextMenu(null);
+      transformControls.detach();
+      emptyTapStart = null;
+      cancelActiveOrPendingDrag();
+
+      onNotifyRef.current(
+        'Đã đưa màn hình mô phỏng về Mặc định (Toàn bàn).',
+        'info',
+      );
+      requestRender();
+    };
+
     const handlePointerDown = (e: PointerEvent) => {
       if (viewModeRef.current === 'single-asset') return;
       activePointerIds.add(e.pointerId);
@@ -5643,7 +5780,30 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         return;
       }
 
-      if (e.button !== 0) return;
+      // 🎯 Xử lý Double Click chuột trái (button 0) hoặc chuột phải (button 2) đưa về Mặc định toàn bàn
+      const now = performance.now();
+      if (e.button === 0) {
+        const distLeft = Math.hypot(e.clientX - lastLeftClickPos.x, e.clientY - lastLeftClickPos.y);
+        if (now - lastLeftClickTime < 420 && distLeft < 28) {
+          lastLeftClickTime = 0;
+          resetSimulationToDefaultView();
+          return;
+        }
+        lastLeftClickTime = now;
+        lastLeftClickPos = { x: e.clientX, y: e.clientY };
+      } else if (e.button === 2) {
+        const distRight = Math.hypot(e.clientX - lastRightClickPos.x, e.clientY - lastRightClickPos.y);
+        if (now - lastRightClickTime < 420 && distRight < 28) {
+          lastRightClickTime = 0;
+          resetSimulationToDefaultView();
+          return;
+        }
+        lastRightClickTime = now;
+        lastRightClickPos = { x: e.clientX, y: e.clientY };
+        return;
+      } else {
+        return;
+      }
 
       const rect = renderer.domElement.getBoundingClientRect();
       mouseNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -5762,6 +5922,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
               liveTargetMl: 0,
               initialTargetMl: 0,
               pouredTotalMl: 0,
+              spilledTotalMl: 0,
               lastTapElevateMs: tinkercadDragRef.current.lastTapElevateMs,
               lastObjectTapMs: tinkercadDragRef.current.lastObjectTapMs,
               lastTappedInstanceId: tinkercadDragRef.current.lastTappedInstanceId,
@@ -6132,6 +6293,14 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
 
     const handleContextMenu = (e: MouseEvent) => {
       if (viewModeRef.current === 'single-asset') return;
+
+      // 🎯 Chặn mở context menu nếu vừa kích hoạt double-click chuột phải để đưa về Mặc định toàn bàn
+      if (performance.now() - lastResetTime < 450) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+
       const rect = renderer.domElement.getBoundingClientRect();
       mouseNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
       mouseNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
@@ -7034,11 +7203,17 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         tcDrag.instanceId = null;
         tcDrag.pointerId = null;
         tcDrag.targetTiltRad = 0;
+        tcDrag.pouredTotalMl = 0;
+        tcDrag.spilledTotalMl = 0;
         orbit.enabled = true;
         renderer.domElement.style.cursor = 'grab';
         setActiveDockHint(null);
         if (pouringStreamRef.current) {
           pouringStreamRef.current.visible = false;
+        }
+        const puddle = scene.getObjectByName('bench_spill_puddle') as THREE.Mesh | undefined;
+        if (puddle) {
+          puddle.visible = false;
         }
 
         const tcObj = instanceObjectsRef.current.get(finishedInstId);
@@ -7542,8 +7717,14 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       cancelActiveOrPendingDrag();
     };
 
+    const handleDblClick = (e: MouseEvent) => {
+      e.preventDefault();
+      resetSimulationToDefaultView();
+    };
+
     renderer.domElement.addEventListener('pointerdown', handlePointerDown);
     renderer.domElement.addEventListener('contextmenu', handleContextMenu);
+    renderer.domElement.addEventListener('dblclick', handleDblClick);
     window.addEventListener('pointermove', handlePointerMove);
     window.addEventListener('pointerup', handlePointerUp);
     window.addEventListener('pointercancel', handlePointerCancel);
@@ -7610,6 +7791,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       resizeObserver.disconnect();
       renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
       renderer.domElement.removeEventListener('contextmenu', handleContextMenu);
+      renderer.domElement.removeEventListener('dblclick', handleDblClick);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
       window.removeEventListener('pointercancel', handlePointerCancel);
@@ -8111,10 +8293,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             p2: THREE.Vector3,
             coreColor: string | number,
             glowColor: string | number,
-            coreRadius = 0.0020,
-            glowRadius = 0.0062,
+            coreRadius = 0.0014,
+            glowRadius = 0.0043,
             coreOpacity = 0.95,
-            glowOpacity = 0.40,
+            glowOpacity = 0.38,
           ) => {
             const dist = p1.distanceTo(p2);
             if (dist < 0.0015) return;
@@ -8353,8 +8535,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 new THREE.Vector3(pFrontX, pMidY, pMidZ),
                 0xfffbeb,
                 0xfef08a,
-                0.0022,
-                0.0055,
+                0.0015,
+                0.0038,
                 0.95,
                 0.35,
               );
@@ -8364,8 +8546,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 new THREE.Vector3(pBackX, pMidY - 0.003, pMidZ),
                 0xfef08a,
                 0x38bdf8,
-                0.002,
-                0.0045,
+                0.0014,
+                0.0031,
                 0.9,
                 0.28,
               );
@@ -8390,8 +8572,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                   endPos,
                   col.hex,
                   col.glow,
-                  0.0016,
-                  0.0042,
+                  0.0011,
+                  0.0029,
                   0.92,
                   0.28,
                 );
@@ -8412,8 +8594,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                   new THREE.Vector3(pFrontX, pMidY + dy, pMidZ),
                   rayColor,
                   rayColor,
-                  0.0014,
-                  0.0042,
+                  0.0010,
+                  0.0029,
                   0.88,
                   0.22,
                 );
@@ -8423,8 +8605,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                   new THREE.Vector3(pBackX, pMidY + dy - 0.003, pMidZ),
                   '#e0f2fe',
                   '#38bdf8',
-                  0.0016,
-                  0.0038,
+                  0.0011,
+                  0.0026,
                   0.94,
                   0.28,
                 );
@@ -8439,8 +8621,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                   endPos,
                   rayColor,
                   rayColor,
-                  0.0014,
-                  0.0042,
+                  0.0010,
+                  0.0029,
                   0.88,
                   0.22,
                 );
@@ -8460,8 +8642,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             if (experimentMode === 'f_object' && fObjInst && sourceWorldX > lampApertureX + 0.01) {
               const lampToFDist = sourceWorldX - lampApertureX;
               const beamGeo = new THREE.CylinderGeometry(
-                0.018,
-                0.026,
+                0.0126,
+                0.0182,
                 lampToFDist,
                 16,
               );
@@ -8482,8 +8664,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
               optGroup.add(beamMesh);
 
               const coreGeo = new THREE.CylinderGeometry(
-                0.006,
-                0.009,
+                0.0042,
+                0.0063,
                 lampToFDist,
                 12,
               );
@@ -8530,10 +8712,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 ray.entryHit,
                 ray.color,
                 ray.color,
-                0.0020,
-                0.0062,
+                0.0014,
+                0.0043,
                 0.95,
-                0.38,
+                0.36,
               );
               // Segment 2: Refracted ray inside optical glass (front surface entryHit -> rear surface exitHit)
               addVolumetricRaySegment(
@@ -8541,10 +8723,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 ray.exitHit,
                 '#e0f2fe',
                 '#38bdf8',
-                0.0022,
-                0.0055,
+                0.0015,
+                0.0038,
                 0.98,
-                0.45,
+                0.42,
               );
               // Segment 3: Emergent ray in air (rear surface exitHit -> screen refractedEnd)
               addVolumetricRaySegment(
@@ -8552,10 +8734,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 ray.refractedEnd,
                 ray.color,
                 ray.color,
-                0.0020,
-                0.0062,
+                0.0014,
+                0.0043,
                 0.95,
-                0.38,
+                0.36,
               );
 
               // Segment 4: Dashed virtual ray extension (when virtual image or diverging focus)
@@ -8568,11 +8750,11 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 [0, 0.5].forEach((basePhase, pIdx) => {
                   const phGroup = new THREE.Group();
                   const coreSphere = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.0026, 10, 10),
+                    new THREE.SphereGeometry(0.0018, 10, 10),
                     new THREE.MeshBasicMaterial({ color: 0xffffff }),
                   );
                   const haloSphere = new THREE.Mesh(
-                    new THREE.SphereGeometry(0.0052, 10, 10),
+                    new THREE.SphereGeometry(0.0036, 10, 10),
                     new THREE.MeshBasicMaterial({
                       color: ray.color,
                       transparent: true,
@@ -8743,7 +8925,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             assetsMap,
           );
 
-          candidates.slice(0, 5).forEach((cand) => {
+          candidates.slice(0, 5).forEach((cand, idx) => {
             const targetObj = instanceObjectsRef.current.get(cand.targetInstance.instanceId);
             if (!targetObj) return;
 
@@ -8758,28 +8940,63 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             const points = curve.getPoints(24);
             const geom = new THREE.BufferGeometry().setFromPoints(points);
 
-            const isClose = cand.isAlreadyConnected;
-            const lineColor = isClose ? 0x10b981 : 0x6366f1;
+            // Phân định chuẩn màu sắc Neon nhân quả:
+            // 1. Dòng chảy ra: Xanh dương neon (0x0080ff) - Đổi từ Xanh sáng sang Xanh dương
+            // 2. Dòng chảy vào: Tím neon (0xb026ff)
+            // 3. Cùng cấp / Gợi ý hai chiều: Lam tím neon (0x6366f1)
+            let neonColor = 0x6366f1; // Lam tím neon
+            if (cand.link.direction === 'output') {
+              neonColor = 0x0080ff; // Xanh dương neon
+            } else if (cand.link.direction === 'input') {
+              neonColor = 0xb026ff; // Tím neon
+            }
 
-            const lineMat = new THREE.LineDashedMaterial({
-              color: lineColor,
-              dashSize: 0.03,
-              gapSize: 0.02,
+            // Ống dẫn 3D phát sáng Neon mảnh mai (Độ dày mỏng còn 1.2, đường kính ~3.0mm)
+            const tubeGeom = new THREE.TubeGeometry(curve, 32, 0.0015, 8, false);
+            const tubeMat = new THREE.MeshBasicMaterial({
+              color: neonColor,
               transparent: true,
-              opacity: 0.85,
+              opacity: 0.88,
+            });
+            const tubeMesh = new THREE.Mesh(tubeGeom, tubeMat);
+            neuralGroup.add(tubeMesh);
+
+            // Lõi phát sáng trung tâm rực rỡ
+            const coreGeom = new THREE.TubeGeometry(curve, 32, 0.0006, 8, false);
+            const coreMat = new THREE.MeshBasicMaterial({
+              color: 0xffffff,
+              transparent: true,
+              opacity: 0.95,
+            });
+            const coreMesh = new THREE.Mesh(coreGeom, coreMat);
+            neuralGroup.add(coreMesh);
+
+            // Thêm chuỗi hạt photon chạy thành dòng nhỏ lại còn 50% (Bán kính 0.0045m)
+            const photonGeom = new THREE.SphereGeometry(0.0045, 12, 12);
+            const photonMat = new THREE.MeshBasicMaterial({
+              color: neonColor,
             });
 
-            const line = new THREE.Line(geom, lineMat);
-            line.computeLineDistances();
-            neuralGroup.add(line);
+            // 4 hạt photon phân bổ nối đuôi nhau thành dòng chảy liên tục
+            for (let pIdx = 0; pIdx < 4; pIdx++) {
+              const photon = new THREE.Mesh(photonGeom, photonMat);
+              photon.name = 'neural_photon_particle';
+              photon.userData = {
+                curve,
+                direction: cand.link.direction,
+                offset: (idx * 0.12 + pIdx * 0.25) % 1,
+                speed: 0.72,
+              };
+              neuralGroup.add(photon);
+            }
 
-            // Target Halo Ring under candidate
-            const haloGeom = new THREE.RingGeometry(0.045, 0.07, 32);
+            // Target Halo Ring under candidate (vòng mỏng đồng bộ)
+            const haloGeom = new THREE.RingGeometry(0.045, 0.065, 32);
             haloGeom.rotateX(-Math.PI / 2);
             const haloMat = new THREE.MeshBasicMaterial({
-              color: isClose ? 0x10b981 : 0xa855f7,
+              color: neonColor,
               transparent: true,
-              opacity: 0.7,
+              opacity: 0.82,
               side: THREE.DoubleSide,
             });
             const haloMesh = new THREE.Mesh(haloGeom, haloMat);
@@ -8887,6 +9104,9 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         const fullPose = computeFullBenchCameraPose();
         cameraGoalPosRef.current = fullPose.pos;
         cameraGoalTargetRef.current = fullPose.target;
+        selectedInstanceIdRef.current = null;
+        onSelectInstanceRef.current(null);
+        setViewportContextMenu(null);
         onNotify(
           'Đã đưa góc nhìn về Mặc định chính giữa — hiển thị trọn vẹn toàn bộ bàn thí nghiệm (2.40 × 0.75 m) trong khung mô phỏng.',
           'info',
