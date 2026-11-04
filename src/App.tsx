@@ -52,6 +52,8 @@ import {
 } from './components/student/StudentModalsAndSubViews';
 import { HtmlModuleImporterModal } from './components/modals/HtmlModuleImporterModal';
 import { MicroscopeSimulationModal } from './components/microscope/MicroscopeSimulationModal';
+import { NeuralDeviceNetworkModal } from './components/modals/NeuralDeviceNetworkModal';
+import { neuralConnectionEngine } from './domain/neuralConnectionEngine';
 import {
   EquipmentPreviewPanel,
   EquipmentRealPhotoUpdaterModal,
@@ -95,11 +97,32 @@ export default function App() {
     useState<AssetDefinition | null>(null);
   const [showMicroscopeModal, setShowMicroscopeModal] = useState<boolean>(false);
 
+  // Trạng thái Trợ lý Nơ-ron Thần kinh (Bật/Tắt hướng dẫn thao tác & tia liên kết 3D)
+  const [isNeuralGuideEnabled, setIsNeuralGuideEnabled] = useState<boolean>(
+    () => neuralConnectionEngine.isGuideEnabled,
+  );
+  const [showNeuralNetworkModal, setShowNeuralNetworkModal] = useState<boolean>(false);
+  const [neuralModalTargetDeviceId, setNeuralModalTargetDeviceId] = useState<string | null>(null);
+
   useEffect(() => {
     const handleOpenMic = () => setShowMicroscopeModal(true);
     window.addEventListener('openlab:open-microscope', handleOpenMic);
     return () =>
       window.removeEventListener('openlab:open-microscope', handleOpenMic);
+  }, []);
+
+  useEffect(() => {
+    const handleOpenNeural = (e?: any) => {
+      if (e?.detail?.deviceId) {
+        setNeuralModalTargetDeviceId(e.detail.deviceId);
+      } else {
+        setNeuralModalTargetDeviceId(null);
+      }
+      setShowNeuralNetworkModal(true);
+    };
+    window.addEventListener('openlab:open-neural-modal', handleOpenNeural);
+    return () =>
+      window.removeEventListener('openlab:open-neural-modal', handleOpenNeural);
   }, []);
 
   // Tự động đồng bộ khi các module từ thư viện ổ cứng C:\Users\ltlie\Documents\libraries3DLab được nạp/cập nhật
@@ -376,6 +399,28 @@ export default function App() {
     },
     [],
   );
+
+  // Phím tắt Alt + N toàn cục để Bật/Tắt Trợ lý Nơ-ron Thần kinh
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.altKey && (e.key === 'n' || e.key === 'N')) ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'n' || e.key === 'N'))
+      ) {
+        e.preventDefault();
+        const next = neuralConnectionEngine.toggleGuideEnabled();
+        setIsNeuralGuideEnabled(next);
+        notify(
+          next
+            ? '🧠 Trợ lý Nơ-ron: ĐÃ BẬT (Hiện tia liên kết 3D & hướng dẫn thao tác)'
+            : '🧠 Trợ lý Nơ-ron: ĐÃ TẮT (Chế độ tự do / Đánh giá thi)',
+          next ? 'success' : 'info',
+        );
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [notify]);
 
   // Toggle Fullscreen for 3D Experiment Viewport (combines workspace expansion + browser fullscreen if permitted)
   const handleToggleViewportFullscreen = useCallback(() => {
@@ -910,8 +955,15 @@ export default function App() {
 
       // Giải mạch điện vật lý theo CIA v1.0 & định luật Ohm (P01, P02, P08)
       const circuitState = solveElectricalCircuit(optPsu, optLamp);
-      const isLampLit = circuitState.isLampLit;
-      const activeSupplyVoltageV = circuitState.voltageAtLampV;
+      const hasPsuOnBench = Boolean(optPsu);
+      const isLampSwitchOn = optLamp?.instanceState.isPoweredOn !== false;
+      const isLampLit = hasPsuOnBench ? circuitState.isLampLit : isLampSwitchOn;
+      const activeSupplyVoltageV =
+        circuitState.voltageAtLampV > 0
+          ? circuitState.voltageAtLampV
+          : circuitState.voltageSettingV > 0
+            ? circuitState.voltageSettingV
+            : 12.0;
 
       // Synchronize active lens profile & focal length between Lens Holder and Lens Box
       const selectedLensProfileId =
@@ -1162,7 +1214,7 @@ export default function App() {
               isCablesConnected: circuitState.isCablesConnected,
               supplyVoltageV: activeSupplyVoltageV,
               // P01: Giữ nguyên trạng thái công tắc riêng của đèn, không ghi đè chéo
-              isPoweredOn: inst.instanceState.isPoweredOn === true,
+              isPoweredOn: inst.instanceState.isPoweredOn !== false,
               railCoordCm: railCm,
             },
           };
@@ -1215,13 +1267,23 @@ export default function App() {
         }
 
         if (arch === 'optical-power-supply') {
+          const effectivePsuV =
+            typeof inst.instanceState.voltageStepV === 'number' && inst.instanceState.voltageStepV > 0
+              ? inst.instanceState.voltageStepV
+              : typeof inst.instanceState.voltageSetting === 'number' && inst.instanceState.voltageSetting > 0
+                ? inst.instanceState.voltageSetting
+                : typeof inst.instanceState.supplyVoltageV === 'number' && inst.instanceState.supplyVoltageV > 0
+                  ? inst.instanceState.supplyVoltageV
+                  : (circuitState.voltageSettingV > 0 ? circuitState.voltageSettingV : 12.0);
           return {
             ...inst,
             instanceState: {
               ...inst.instanceState,
               // P01: Giữ nguyên trạng thái công tắc nguồn riêng của PSU
-              isPoweredOn: inst.instanceState.isPoweredOn === true,
-              supplyVoltageV: circuitState.voltageSettingV,
+              isPoweredOn: inst.instanceState.isPoweredOn !== false,
+              supplyVoltageV: effectivePsuV,
+              voltageStepV: effectivePsuV,
+              voltageSetting: effectivePsuV,
             },
           };
         }
@@ -4297,6 +4359,21 @@ export default function App() {
         isLibraryOpen={!isExplorerCollapsed}
         isGuideOpen={isStudentGuideOpen}
         isFullscreen={isViewportFullscreen}
+        isNeuralGuideEnabled={isNeuralGuideEnabled}
+        onToggleNeuralGuide={() => {
+          const next = neuralConnectionEngine.toggleGuideEnabled();
+          setIsNeuralGuideEnabled(next);
+          notify(
+            next
+              ? '🧠 Trợ lý Nơ-ron: ĐÃ BẬT (Hiện tia liên kết & chỉ dẫn thao tác)'
+              : '🧠 Trợ lý Nơ-ron: ĐÃ TẮT (Chế độ tự do / Đánh giá thi)',
+            next ? 'success' : 'info',
+          );
+        }}
+        onOpenNeuralModal={() => {
+          setNeuralModalTargetDeviceId(null);
+          setShowNeuralNetworkModal(true);
+        }}
         onToggleDarkMode={() => setIsDarkMode((v) => !v)}
         onToggleLibraryPanel={handleToggleLibrarySidebar}
         onToggleGuidePanel={handleToggleStudentGuide}
@@ -4464,6 +4541,7 @@ export default function App() {
                       environment={activeEnvironment}
                       environments={environments}
                       isStudentMode={true}
+                      isNeuralGuideEnabled={isNeuralGuideEnabled}
                       toolMode={toolMode}
                       viewMode={
                         studentScreen === 'explore-equipment'
@@ -4672,6 +4750,7 @@ export default function App() {
               environment={activeEnvironment}
               environments={environments}
               isStudentMode={false}
+              isNeuralGuideEnabled={isNeuralGuideEnabled}
               toolMode={toolMode}
               viewMode={viewMode}
               showGrid={showGrid}
@@ -4769,6 +4848,8 @@ export default function App() {
                 <InspectorPanel
                   selectedInstance={selectedInstance}
                   selectedAsset={activeInspectedAsset}
+                  instances={scene.instances}
+                  assetsMap={assetsMap}
                   onUpdateInstanceTransform={handleUpdateInstanceTransform}
                   onUpdateInstanceState={handleUpdateInstanceState}
                   onAddAssetToScene={(assetId) => handleAddAssetToScene(assetId)}
@@ -5023,6 +5104,34 @@ export default function App() {
           }}
         />
       )}
+
+      {/* Sơ đồ Mạng Nơ-ron Thần kinh Thiết bị KHTN THCS & Causal Studio Modal */}
+      <NeuralDeviceNetworkModal
+        isOpen={showNeuralNetworkModal}
+        initialDeviceId={neuralModalTargetDeviceId}
+        onClose={() => {
+          setShowNeuralNetworkModal(false);
+          setNeuralModalTargetDeviceId(null);
+        }}
+        onSelectDevice={(deviceId) => {
+          const node = neuralConnectionEngine.getNode(deviceId);
+          const targetAssetId = node?.assetId || deviceId;
+          handleAddAssetToScene(targetAssetId);
+          setShowNeuralNetworkModal(false);
+          notify(`Đã nạp "${node?.nameVi || targetAssetId}" vào bàn thí nghiệm 3D`, 'success');
+        }}
+        onTriggerMacroCluster={(cluster) => {
+          cluster.deviceIds.forEach((devSlug) => {
+            const node = neuralConnectionEngine.getNode(devSlug);
+            if (node) {
+              handleAddAssetToScene(node.assetId);
+            }
+          });
+          setShowNeuralNetworkModal(false);
+          notify(`Đã nạp trọn bộ bài thực hành "${cluster.title}" lên bàn 3D`, 'success');
+        }}
+        activeSceneDeviceIds={scene.instances.map((i) => i.assetId)}
+      />
     </div>
   );
 }

@@ -51,9 +51,14 @@ export class CircuitSolver {
 
     const psuPoweredOn = Boolean(state.isPoweredOn ?? state.psuPoweredOn ?? false);
     const lampSwitchOn = state.lampSwitchOn !== false && state.isLampSwitchOn !== false;
-    const voltageSettingV = typeof state.voltageSetting === 'number'
-      ? state.voltageSetting
-      : (typeof state.supplyVoltageV === 'number' ? state.supplyVoltageV : 12.0);
+    const voltageSettingV =
+      typeof state.voltageSetting === 'number' && state.voltageSetting > 0
+        ? state.voltageSetting
+        : typeof state.voltageStepV === 'number' && state.voltageStepV > 0
+          ? state.voltageStepV
+          : typeof state.supplyVoltageV === 'number' && state.supplyVoltageV > 0
+            ? state.supplyVoltageV
+            : 12.0;
 
     let isCircuitClosed = false;
     let voltageAtLampV = 0.0;

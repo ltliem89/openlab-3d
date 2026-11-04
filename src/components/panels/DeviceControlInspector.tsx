@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AssetDefinition, SceneInstance } from '../../domain/types';
 import { deviceControlEngine } from '../../device-control/DeviceControlEngine';
+import { neuralConnectionEngine } from '../../domain/neuralConnectionEngine';
 import {
   Sliders,
   RotateCcw,
@@ -19,6 +20,11 @@ interface DeviceControlInspectorProps {
     patch: Partial<SceneInstance['instanceState']>,
   ) => void;
   isDarkMode?: boolean;
+  allSceneInstances?: SceneInstance[];
+  assetsMap?: Map<string, AssetDefinition>;
+  isNeuralGuideEnabled?: boolean;
+  onToggleNeuralGuide?: () => void;
+  onOpenNeuralModalForDevice?: (assetId: string) => void;
 }
 
 /**
@@ -56,8 +62,44 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
   selectedAsset,
   selectedInstance,
   onUpdateInstanceState,
+  isDarkMode,
+  allSceneInstances,
+  assetsMap,
+  isNeuralGuideEnabled,
+  onToggleNeuralGuide,
+  onOpenNeuralModalForDevice,
 }) => {
   const [activeHelpPartId, setActiveHelpPartId] = useState<string | null>(null);
+  const [isNeuralSectionOpen, setIsNeuralSectionOpen] = useState<boolean>(true);
+  const [guideActive, setGuideActive] = useState<boolean>(() => isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled);
+
+  useEffect(() => {
+    if (isNeuralGuideEnabled !== undefined) {
+      setGuideActive(isNeuralGuideEnabled);
+    }
+  }, [isNeuralGuideEnabled]);
+
+  useEffect(() => {
+    const handler = (e: any) => {
+      setGuideActive(e.detail.enabled);
+    };
+    window.addEventListener('openlab:neural-guide-toggle', handler);
+    return () => window.removeEventListener('openlab:neural-guide-toggle', handler);
+  }, []);
+
+  const handleToggleGuide = () => {
+    const next = neuralConnectionEngine.toggleGuideEnabled();
+    setGuideActive(next);
+    if (onToggleNeuralGuide) onToggleNeuralGuide();
+  };
+
+  const causalChecklist = useMemo(() => {
+    return neuralConnectionEngine.getCausalChecklist(
+      selectedInstance,
+      allSceneInstances || [selectedInstance],
+      assetsMap || new Map([[selectedAsset.assetId, selectedAsset]]),
+    );
+  }, [selectedInstance, allSceneInstances, assetsMap, selectedAsset]);
 
   // Lấy Profile chuẩn của thiết bị từ Registry
   const profile = useMemo(() => {
@@ -138,6 +180,145 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
             <span>Đặt lại</span>
           </button>
         </div>
+      </div>
+
+      {/* 🧠 MẠNG NƠ-RON NHÂN QUẢ (CAUSAL SYNAPSES & THAO TÁC LIÊN KẾT) */}
+      <div className="rounded-xl bg-gradient-to-br from-[#0c142b]/80 to-[#101c38]/90 border border-indigo-500/40 backdrop-blur-xl p-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.4)] space-y-2">
+        <div className="flex items-center justify-between border-b border-indigo-500/25 pb-1.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">🧠</span>
+            <span className="text-[11.5px] font-black text-indigo-200 uppercase tracking-wider">
+              Mạng Nơ-ron Nhân Quả
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {/* Nút Bật/Tắt Trợ lý Nơ-ron */}
+            <button
+              type="button"
+              onClick={handleToggleGuide}
+              className={`text-[9.5px] font-bold px-2 py-0.5 rounded-full border cursor-pointer transition-all ${
+                guideActive
+                  ? 'bg-emerald-500/25 border-emerald-400 text-emerald-300 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                  : 'bg-slate-800 border-slate-600 text-slate-400 hover:text-white'
+              }`}
+              title="Bật/Tắt chế độ Trợ lý Nơ-ron thần kinh (Phím tắt Alt + N)"
+            >
+              {guideActive ? '● BẬT' : '○ TẮT'}
+            </button>
+
+            {/* Thu gọn / Mở rộng */}
+            <button
+              type="button"
+              onClick={() => setIsNeuralSectionOpen((v) => !v)}
+              className="text-[10px] text-indigo-300/70 hover:text-white px-1 cursor-pointer"
+            >
+              {isNeuralSectionOpen ? '▲' : '▼'}
+            </button>
+          </div>
+        </div>
+
+        {isNeuralSectionOpen && (
+          <div className="space-y-2 animate-in fade-in duration-150">
+            {!guideActive ? (
+              <div className="p-2 rounded-lg bg-slate-900/80 border border-slate-700/60 text-[10px] text-slate-400 italic leading-relaxed">
+                Chế độ tự do thực hành (Trợ lý Nơ-ron đang <strong>TẮT</strong>). Nhấp <strong>BẬT</strong> hoặc nhấn <strong>Alt + N</strong> để hiện tia sáng liên kết 3D và hướng dẫn thao tác.
+              </div>
+            ) : (
+              <>
+                {/* 1. ĐIỀU KIỆN ĐẦU VÀO (DENDRITES) */}
+                <div className="space-y-1">
+                  <div className="text-[10px] font-extrabold text-amber-300 uppercase flex items-center gap-1">
+                    <span>⚡ Điều kiện Cần (Dendrites):</span>
+                  </div>
+                  {causalChecklist.dendritesInput.length === 0 ? (
+                    <div className="text-[10px] text-slate-400 italic pl-1">
+                      Thiết bị độc lập, không yêu cầu nguồn cấp tín hiệu ngoài.
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {causalChecklist.dendritesInput.map((dendrite, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-1.5 rounded-lg border text-[10px] flex items-start gap-1.5 ${
+                            dendrite.isSatisfiedOnTable
+                              ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-200'
+                              : 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                          }`}
+                        >
+                          <span className="shrink-0 font-bold mt-0.5">
+                            {dendrite.isSatisfiedOnTable ? '✔' : '✖'}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold">
+                              {dendrite.sourceNameVi}: {dendrite.actionVerbVi}
+                            </div>
+                            <div className="text-[9px] opacity-80 mt-0.5">
+                              {dendrite.safetyTipVi}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. TÁC ĐỘNG TẠO RA (AXONS) */}
+                {causalChecklist.axonsOutput.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-extrabold text-sky-300 uppercase flex items-center gap-1">
+                      <span>🌟 Tác động Tạo ra (Axons):</span>
+                    </div>
+                    <div className="space-y-1">
+                      {causalChecklist.axonsOutput.slice(0, 3).map((axon, idx) => (
+                        <div
+                          key={idx}
+                          className="p-1.5 rounded-lg bg-sky-950/30 border border-sky-500/30 text-sky-200 text-[10px] flex items-start gap-1.5"
+                        >
+                          <span className="shrink-0 font-bold mt-0.5">➔</span>
+                          <div className="min-w-0 flex-1">
+                            <span className="font-bold">{axon.targetNameVi}:</span> {axon.actionVerbVi}
+                            <div className="text-[9px] text-sky-300/80 font-mono mt-0.5">
+                              {axon.mathFormulaLatex}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Gợi ý nếu thiếu điều kiện */}
+                {causalChecklist.missingPrerequisiteHint && (
+                  <div className="p-2 rounded-lg bg-amber-500/15 border border-amber-400/40 text-amber-200 text-[10px] flex items-start gap-1.5">
+                    <span className="text-amber-400 font-bold">⚠️</span>
+                    <span>{causalChecklist.missingPrerequisiteHint}</span>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Nút Mở Sơ đồ Nơ-ron Toàn cảnh */}
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenNeuralModalForDevice) {
+                  onOpenNeuralModalForDevice(selectedAsset.assetId);
+                } else {
+                  window.dispatchEvent(
+                    new CustomEvent('openlab:open-neural-modal', {
+                      detail: { deviceId: selectedAsset.assetId },
+                    })
+                  );
+                }
+              }}
+              className="w-full py-1.5 px-2.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/40 text-indigo-200 text-[10px] font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+            >
+              <span>🌐</span>
+              <span>Mở Sơ đồ Nơ-ron Toàn Cảnh (Focus thiết bị này)</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 2. BẢNG THÔNG SỐ ĐO & KẾT QUẢ QUAN SÁT */}

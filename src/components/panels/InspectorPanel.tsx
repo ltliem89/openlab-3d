@@ -39,6 +39,8 @@ export type InspectorTabId =
 interface InspectorPanelProps {
   selectedInstance: SceneInstance | null;
   selectedAsset: AssetDefinition | null;
+  instances?: SceneInstance[];
+  assetsMap?: Map<string, AssetDefinition>;
   onUpdateInstanceTransform: (
     instanceId: string,
     positionM: [number, number, number],
@@ -65,6 +67,8 @@ const TABS: Array<{ id: InspectorTabId; label: string; icon: React.ReactNode }> 
 export const InspectorPanel: React.FC<InspectorPanelProps> = ({
   selectedInstance,
   selectedAsset,
+  instances,
+  assetsMap,
   onUpdateInstanceTransform,
   onUpdateInstanceState,
   onAddAssetToScene,
@@ -714,6 +718,8 @@ export const InspectorPanel: React.FC<InspectorPanelProps> = ({
                 selectedInstance={selectedInstance}
                 onUpdateInstanceState={onUpdateInstanceState}
                 isDarkMode={true}
+                allSceneInstances={instances}
+                assetsMap={assetsMap}
               />
             )}
 

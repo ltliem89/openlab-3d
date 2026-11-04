@@ -71,6 +71,9 @@ interface TopNavBarProps {
   isLibraryOpen?: boolean;
   isGuideOpen?: boolean;
   isFullscreen?: boolean;
+  isNeuralGuideEnabled?: boolean;
+  onToggleNeuralGuide?: () => void;
+  onOpenNeuralModal?: () => void;
   onToggleDarkMode?: () => void;
   onToggleLibraryPanel?: () => void;
   onToggleGuidePanel?: () => void;
@@ -129,6 +132,9 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   isLibraryOpen = true,
   isGuideOpen = true,
   isFullscreen = false,
+  isNeuralGuideEnabled = true,
+  onToggleNeuralGuide,
+  onOpenNeuralModal,
   onToggleDarkMode,
   onToggleLibraryPanel,
   onToggleGuidePanel,
@@ -866,6 +872,40 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <BookOpen className="w-3.5 h-3.5 text-white shrink-0" />
             <span>{isGuideOpen ? 'Ẩn HD' : 'Mở HD'}</span>
           </button>
+
+          {/* Nút Bật/Tắt Trợ lý Nơ-ron Thần kinh (Alt + N) */}
+          {onToggleNeuralGuide && (
+            <button
+              type="button"
+              onClick={onToggleNeuralGuide}
+              className={`h-9 px-2.5 rounded-[8px] border flex items-center gap-1.5 transition-all cursor-pointer font-bold text-xs ${
+                isNeuralGuideEnabled
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-400 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]'
+                  : 'bg-[#133F7E]/70 hover:bg-[#1952A3] border-[#275AA3] text-slate-300'
+              }`}
+              title="Trợ lý Nơ-ron Thần kinh (Bật/Tắt tia liên kết 3D & chỉ dẫn thao tác - Phím tắt Alt + N)"
+              aria-label="Trợ lý Nơ-ron"
+            >
+              <span className="text-sm">🧠</span>
+              <span className="hidden lg:inline">
+                {isNeuralGuideEnabled ? 'Nơ-ron: BẬT' : 'Nơ-ron: TẮT'}
+              </span>
+            </button>
+          )}
+
+          {/* Nút Mở Sơ đồ Nơ-ron Toàn cảnh */}
+          {onOpenNeuralModal && (
+            <button
+              type="button"
+              onClick={onOpenNeuralModal}
+              className="h-9 px-2.5 rounded-[8px] bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/50 text-indigo-100 flex items-center gap-1.5 transition-colors cursor-pointer text-xs font-semibold"
+              title="Mở Sơ đồ Mạng Nơ-ron Toàn cảnh KHTN THCS"
+              aria-label="Sơ đồ Nơ-ron"
+            >
+              <span className="text-sm">🌐</span>
+              <span className="hidden xl:inline">Sơ đồ Nơ-ron</span>
+            </button>
+          )}
 
           {/* Icon phóng to toàn màn hình vùng thí nghiệm */}
           {onToggleFullscreen && (

@@ -790,6 +790,15 @@ export function solveElectricalCircuit(
 ): ElectricalCircuitState {
   const maxReach = options?.maxCableLengthM ?? MAX_ELECTRICAL_CABLE_LENGTH_M;
 
+  const configuredVoltageV =
+    typeof psuInstance?.instanceState.voltageSetting === 'number' && psuInstance.instanceState.voltageSetting > 0
+      ? psuInstance.instanceState.voltageSetting
+      : typeof psuInstance?.instanceState.voltageStepV === 'number' && psuInstance.instanceState.voltageStepV > 0
+        ? psuInstance.instanceState.voltageStepV
+        : typeof psuInstance?.instanceState.supplyVoltageV === 'number' && psuInstance.instanceState.supplyVoltageV > 0
+          ? psuInstance.instanceState.supplyVoltageV
+          : 12.0;
+
   if (!psuInstance || !lampInstance) {
     return {
       isCircuitClosed: false,
@@ -798,7 +807,7 @@ export function solveElectricalCircuit(
       isWithinMaxReach: false,
       psuPoweredOn: false,
       lampSwitchOn: false,
-      voltageSettingV: 0,
+      voltageSettingV: configuredVoltageV,
       voltageAtLampV: 0,
       isLampLit: false,
       reasonVi: 'Thiếu nguồn hoặc đèn trong phòng thí nghiệm',
@@ -821,9 +830,7 @@ export function solveElectricalCircuit(
   // 3. Trạng thái máy độc lập của PSU và Đèn (Decoupled Device State)
   const psuPoweredOn = Boolean(psuInstance.instanceState.isPoweredOn);
   const lampSwitchOn = lampInstance.instanceState.isPoweredOn !== false;
-  const voltageSettingV = typeof psuInstance.instanceState.voltageSetting === 'number'
-    ? psuInstance.instanceState.voltageSetting
-    : (typeof psuInstance.instanceState.supplyVoltageV === 'number' ? psuInstance.instanceState.supplyVoltageV : 12.0);
+  const voltageSettingV = configuredVoltageV;
 
   // 4. Kiểm tra điều kiện đóng mạch
   if (!isCablesConnected) {

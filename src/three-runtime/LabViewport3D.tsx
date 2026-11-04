@@ -23,6 +23,7 @@ import {
 } from './ProceduralLabModels';
 import { htmlEquipmentModuleRegistry } from './HtmlEquipmentModuleRegistry';
 import { equipmentImagePreviewController } from './EquipmentImagePreviewController';
+import { neuralConnectionEngine } from '../domain/neuralConnectionEngine';
 import { EquipmentThumbnailSvg } from '../components/common/EquipmentThumbnailSvg';
 import { DeviceControlInspector } from '../components/panels/DeviceControlInspector';
 import { labSoundEngine } from './LabSoundEngine';
@@ -416,13 +417,18 @@ function computeLiveEquipmentReadout(
     };
   }
   if (arch === 'optical-lamp') {
-    const isOn = inst.instanceState.isPoweredOn !== false;
+    const isLit = inst.instanceState.isLampLit === true;
+    const isSwitchOn = inst.instanceState.isPoweredOn !== false;
     const mode = inst.instanceState.beamMode ?? 'f_rays';
     const modeLabel =
       mode === 'f_rays' ? 'Chùm F' : mode === 'triple' ? '3 Tia' : '1 Tia';
     return {
-      readoutBadge: isOn ? `ĐÈN BẬT (${modeLabel})` : 'ĐÈN TẮT',
-      isDigitalScale: isOn,
+      readoutBadge: isLit
+        ? `🔦 ĐÈN SÁNG (${modeLabel})`
+        : isSwitchOn
+          ? `🔦 ĐÈN CHỜ (${modeLabel})`
+          : 'ĐÈN TẮT',
+      isDigitalScale: isLit,
       interactionHint:
         '(1) Đèn chiếu sáng Halogen: Lắp ở đầu trái Giá quang học (x ≈ -32 cm), chọn chế độ Chùm sáng chữ F / Khe 3 tia / Khe 1 tia',
     };
@@ -455,9 +461,14 @@ function computeLiveEquipmentReadout(
   }
   if (arch === 'optical-power-supply') {
     const isOn = inst.instanceState.isPoweredOn !== false;
-    const v = inst.instanceState.supplyVoltageV ?? 6.0;
+    const v =
+      typeof inst.instanceState.voltageStepV === 'number' && inst.instanceState.voltageStepV > 0
+        ? inst.instanceState.voltageStepV
+        : typeof inst.instanceState.supplyVoltageV === 'number' && inst.instanceState.supplyVoltageV > 0
+          ? inst.instanceState.supplyVoltageV
+          : 12.0;
     return {
-      readoutBadge: isOn ? `DC ${v.toFixed(1)} V (ON)` : 'NGUỒN TẮT (OFF)',
+      readoutBadge: isOn ? `⚡ DC ${v.toFixed(1)} V (ON)` : '⚡ NGUỒN TẮT (OFF)',
       isDigitalScale: true,
       interactionHint:
         '(6) Nguồn điện hạ áp 3V–12V: Bấm công tắc trên nóc để BẬT/TẮT cấp điện cho Đèn chiếu sáng (1)',
@@ -578,6 +589,7 @@ interface LabViewport3DProps {
   isFullscreen: boolean;
   isDarkMode?: boolean;
   isGuideOpen?: boolean;
+  isNeuralGuideEnabled?: boolean;
   onToggleGuide?: () => void;
   onSelectInstance: (instanceId: string | null) => void;
   onUpdateInstanceTransform: (
@@ -1466,6 +1478,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
   isFullscreen,
   isDarkMode = false,
   isGuideOpen = true,
+  isNeuralGuideEnabled,
   onToggleGuide,
   onSelectInstance,
   onUpdateInstanceTransform,
@@ -1508,6 +1521,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
   const tinkercadGizmoRef = useRef<THREE.Group | null>(null);
   const vesselZonesGroupRef = useRef<THREE.Group | null>(null);
   const opticalAssemblyGroupRef = useRef<THREE.Group | null>(null);
+  const neuralSynapseBeamGroupRef = useRef<THREE.Group | null>(null);
   const transporterPortalRef = useRef<THREE.Group | null>(null);
   const dynamicWireDragGroupRef = useRef<THREE.Group | null>(null);
   const wireDragRef = useRef<{
@@ -3297,6 +3311,12 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     dynamicWireGroup.name = 'dynamic_wire_drag_group';
     scene.add(dynamicWireGroup);
     dynamicWireDragGroupRef.current = dynamicWireGroup;
+
+    // 1G. Live 3D Contextual Neural Synapse Beams Group (AR Neural Guide)
+    const neuralSynapseBeamGroup = new THREE.Group();
+    neuralSynapseBeamGroup.name = 'neural_synapse_beam_group';
+    scene.add(neuralSynapseBeamGroup);
+    neuralSynapseBeamGroupRef.current = neuralSynapseBeamGroup;
 
     // OrbitControls: Bật chế độ Phóng to / Thu nhỏ lấy con trỏ chuột làm tâm (zoomToCursor = true)
     const orbit = new OrbitControls(camera, renderer.domElement);
@@ -7166,15 +7186,18 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
               );
             }
           } else if (tappedOpticalAction === 'cycle-psu-voltage') {
-            const curV = tappedInst.instanceState.supplyVoltageV ?? 6;
+            const curV =
+              typeof tappedInst.instanceState.voltageStepV === 'number' && tappedInst.instanceState.voltageStepV > 0
+                ? tappedInst.instanceState.voltageStepV
+                : (tappedInst.instanceState.supplyVoltageV ?? 12);
             const steps = [3, 6, 9, 12];
             const nextV =
-              steps[(steps.findIndex((v) => Math.abs(v - curV) < 1.2) + 1) % steps.length] ?? 6;
+              steps[(steps.findIndex((v) => Math.abs(v - curV) < 1.2) + 1) % steps.length] ?? 12;
             labSoundEngine.play('caliper-slide', 0.85);
             onUpdateInstanceStateRef.current(
               tappedInst.instanceId,
-              { supplyVoltageV: nextV, isPoweredOn: true },
-              `Biến áp nguồn (5): Đã vặn núm chỉnh điện áp sang ${nextV}.0 V DC`,
+              { supplyVoltageV: nextV, voltageStepV: nextV, voltageSetting: nextV, isPoweredOn: true },
+              `Biến áp nguồn (6): Đã vặn núm chỉnh điện áp sang ${nextV}.0 V DC`,
             );
           } else if (
             tappedOpticalAction === 'cycle-beam-mode' ||
@@ -7969,18 +7992,22 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
 
         // Đèn phát sáng ngay lập tức khi mạch kín và nguồn bật (P01, P02, P08)
         const isPsuOn = Boolean(
-          psuInst && psuInst.instanceState.isPoweredOn === true,
+          psuInst && psuInst.instanceState.isPoweredOn !== false,
         );
         const isLampSwitchOn = Boolean(
           lampInst && lampInst.instanceState.isPoweredOn !== false,
         );
-        const psuVoltage = psuInst ? (psuInst.instanceState.supplyVoltageV ?? 12) : 12;
+        const psuVoltage =
+          psuInst && typeof psuInst.instanceState.voltageStepV === 'number' && psuInst.instanceState.voltageStepV > 0
+            ? psuInst.instanceState.voltageStepV
+            : psuInst && typeof psuInst.instanceState.supplyVoltageV === 'number' && psuInst.instanceState.supplyVoltageV > 0
+              ? psuInst.instanceState.supplyVoltageV
+              : 12.0;
+        const hasPsuOnBench = Boolean(psuInst);
         const isLampLit = Boolean(
           lampInst &&
-            areCablesConnected &&
-            isPsuOn &&
             isLampSwitchOn &&
-            psuVoltage >= 2.5,
+            (!hasPsuOnBench || (areCablesConnected && isPsuOn && psuVoltage >= 2.5)),
         );
 
         if (lampInst && isLampLit) {
@@ -8084,10 +8111,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             p2: THREE.Vector3,
             coreColor: string | number,
             glowColor: string | number,
-            coreRadius = 0.0014,
-            glowRadius = 0.0042,
-            coreOpacity = 0.88,
-            glowOpacity = 0.24,
+            coreRadius = 0.0020,
+            glowRadius = 0.0062,
+            coreOpacity = 0.95,
+            glowOpacity = 0.40,
           ) => {
             const dist = p1.distanceTo(p2);
             if (dist < 0.0015) return;
@@ -8429,6 +8456,54 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
               ? Math.max(lensX + 0.03, screenX)
               : Math.max(lampApertureX + 0.55, screenX);
 
+            // Volumetric illuminating beam from Lamp Aperture to Frosted F Object (Chiếu sáng khoảng giữa đèn và chữ F)
+            if (experimentMode === 'f_object' && fObjInst && sourceWorldX > lampApertureX + 0.01) {
+              const lampToFDist = sourceWorldX - lampApertureX;
+              const beamGeo = new THREE.CylinderGeometry(
+                0.018,
+                0.026,
+                lampToFDist,
+                16,
+              );
+              beamGeo.rotateZ(-Math.PI / 2);
+              const beamMat = new THREE.MeshBasicMaterial({
+                color: 0xffedd5,
+                transparent: true,
+                opacity: 0.40 * powerBrightness,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+              });
+              const beamMesh = new THREE.Mesh(beamGeo, beamMat);
+              beamMesh.position.set(
+                lampApertureX + lampToFDist * 0.5,
+                axisY,
+                axisZ,
+              );
+              optGroup.add(beamMesh);
+
+              const coreGeo = new THREE.CylinderGeometry(
+                0.006,
+                0.009,
+                lampToFDist,
+                12,
+              );
+              coreGeo.rotateZ(-Math.PI / 2);
+              const coreMat = new THREE.MeshBasicMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.70 * powerBrightness,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+              });
+              const coreMesh = new THREE.Mesh(coreGeo, coreMat);
+              coreMesh.position.set(
+                lampApertureX + lampToFDist * 0.5,
+                axisY,
+                axisZ,
+              );
+              optGroup.add(coreMesh);
+            }
+
             const tracedRays = traceOpticalBenchRays({
               experimentMode,
               beamMode,
@@ -8455,10 +8530,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 ray.entryHit,
                 ray.color,
                 ray.color,
-                0.0014,
-                0.0042,
-                0.88,
-                0.22,
+                0.0020,
+                0.0062,
+                0.95,
+                0.38,
               );
               // Segment 2: Refracted ray inside optical glass (front surface entryHit -> rear surface exitHit)
               addVolumetricRaySegment(
@@ -8466,10 +8541,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 ray.exitHit,
                 '#e0f2fe',
                 '#38bdf8',
-                0.0016,
-                0.0038,
-                0.94,
-                0.28,
+                0.0022,
+                0.0055,
+                0.98,
+                0.45,
               );
               // Segment 3: Emergent ray in air (rear surface exitHit -> screen refractedEnd)
               addVolumetricRaySegment(
@@ -8477,10 +8552,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 ray.refractedEnd,
                 ray.color,
                 ray.color,
-                0.0014,
-                0.0042,
-                0.88,
-                0.22,
+                0.0020,
+                0.0062,
+                0.95,
+                0.38,
               );
 
               // Segment 4: Dashed virtual ray extension (when virtual image or diverging focus)
@@ -8650,10 +8725,82 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       } else {
         transformControls.detach();
       }
+
+      // Live 3D Contextual Neural Synapse Beams (Chỉ dẫn Nơ-ron Ngữ cảnh AR)
+      const neuralGroup = neuralSynapseBeamGroupRef.current;
+      if (neuralGroup) {
+        while (neuralGroup.children.length > 0) {
+          const ch = neuralGroup.children[0];
+          neuralGroup.remove(ch);
+          OpenLabAssetLoader.disposeObject3D(ch);
+        }
+
+        const isGuideActive = isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled;
+        if (isGuideActive && selectedInst && selectedObj && selectedInst.visible) {
+          const candidates = neuralConnectionEngine.getCompatibleCandidates(
+            selectedInst,
+            instances,
+            assetsMap,
+          );
+
+          candidates.slice(0, 5).forEach((cand) => {
+            const targetObj = instanceObjectsRef.current.get(cand.targetInstance.instanceId);
+            if (!targetObj) return;
+
+            const p1 = new THREE.Vector3(selectedObj.position.x, selectedObj.position.y + 0.08, selectedObj.position.z);
+            const p2 = new THREE.Vector3(targetObj.position.x, targetObj.position.y + 0.08, targetObj.position.z);
+
+            const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+            const dist = p1.distanceTo(p2);
+            mid.y += Math.min(0.35, Math.max(0.12, dist * 0.35));
+
+            const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
+            const points = curve.getPoints(24);
+            const geom = new THREE.BufferGeometry().setFromPoints(points);
+
+            const isClose = cand.isAlreadyConnected;
+            const lineColor = isClose ? 0x10b981 : 0x6366f1;
+
+            const lineMat = new THREE.LineDashedMaterial({
+              color: lineColor,
+              dashSize: 0.03,
+              gapSize: 0.02,
+              transparent: true,
+              opacity: 0.85,
+            });
+
+            const line = new THREE.Line(geom, lineMat);
+            line.computeLineDistances();
+            neuralGroup.add(line);
+
+            // Target Halo Ring under candidate
+            const haloGeom = new THREE.RingGeometry(0.045, 0.07, 32);
+            haloGeom.rotateX(-Math.PI / 2);
+            const haloMat = new THREE.MeshBasicMaterial({
+              color: isClose ? 0x10b981 : 0xa855f7,
+              transparent: true,
+              opacity: 0.7,
+              side: THREE.DoubleSide,
+            });
+            const haloMesh = new THREE.Mesh(haloGeom, haloMat);
+            haloMesh.position.set(targetObj.position.x, BENCH_SURFACE_Y + 0.003, targetObj.position.z);
+            neuralGroup.add(haloMesh);
+          });
+        }
+      }
     } else {
       boxHelper.visible = false;
       ring.visible = false;
       transformControls.detach();
+
+      const neuralGroup = neuralSynapseBeamGroupRef.current;
+      if (neuralGroup) {
+        while (neuralGroup.children.length > 0) {
+          const ch = neuralGroup.children[0];
+          neuralGroup.remove(ch);
+          OpenLabAssetLoader.disposeObject3D(ch);
+        }
+      }
     }
 
     updateProjectedOverlays();
@@ -8661,10 +8808,12 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
   }, [
     selectedInstanceId,
     instances,
+    assetsMap,
     toolMode,
     viewMode,
     showDimensions,
     isStudentMode,
+    isNeuralGuideEnabled,
     updateProjectedOverlays,
   ]);
 
