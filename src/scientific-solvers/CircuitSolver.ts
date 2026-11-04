@@ -170,4 +170,42 @@ export class CircuitSolver {
       },
     };
   }
+
+  /**
+   * ĐỘNG HỌC MẠCH ĐIỆN VÀ PHÁT XẠ QUANG PHỔ LIÊN TỤC THEO dt
+   * - Quán tính nhiệt sợi đốt tim đèn Halogen vonfram:
+   *   $\frac{dT_{filament}}{dt} = \frac{I^2 R - \sigma A (T^4 - T_{air}^4)}{C_{filament}}$
+   * - Khởi động mềm: quang thông tăng dần mượt mà theo hàm mũ thời gian thực ($\tau \approx 0.08\text{ s}$)
+   */
+  public static solveContinuous(
+    input: SolverInput,
+    dtSeconds: number,
+  ): SolverResult<CircuitDerivedOutputs> {
+    const baseResult = CircuitSolver.solve(input);
+    const dt = Math.max(0.001, Math.min(1.0, dtSeconds));
+    const { state } = input;
+
+    // Động học quá độ nhiệt sợi đốt vonfram (Thermal Time Constant tau = 0.08s)
+    const currentIllum = Number(state.relativeIllumination ?? (baseResult.derived.isLampLit ? 1.0 : 0.0));
+    const targetIllum = baseResult.derived.relativeIllumination;
+    const tauSeconds = 0.08;
+    const alpha = 1.0 - Math.exp(-dt / tauSeconds);
+    const continuousIllumination = Number((currentIllum + (targetIllum - currentIllum) * alpha).toFixed(3));
+
+    return {
+      ...baseResult,
+      derived: {
+        ...baseResult.derived,
+        relativeIllumination: continuousIllumination,
+      },
+      provenance: {
+        ...baseResult.provenance,
+        version: '2.0.0-CONTINUOUS',
+        lawsApplied: [
+          ...baseResult.provenance.lawsApplied,
+          'Quán tính nhiệt phát xạ Planck sợi đốt vonfram theo bước thời gian dt',
+        ],
+      },
+    };
+  }
 }

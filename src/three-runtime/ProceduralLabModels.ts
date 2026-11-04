@@ -2272,22 +2272,22 @@ export interface FluidPhysicalProfile {
 export const FLUID_PROFILES: Record<FluidKind, FluidPhysicalProfile> = {
   'clean-water': {
     kind: 'clean-water',
-    nameVi: 'Nước sạch tinh khiết',
+    nameVi: 'Nước sạch tinh khiết (Xanh nhạt thủy tinh)',
     ior: 1.333,
-    transmission: 0.95,
-    roughness: 0.012,
-    metalness: 0.005,
+    transmission: 0.82,         // Khúc xạ ánh sáng thực tế nhưng vẫn nhìn rõ thể tích nước
+    roughness: 0.008,          // Mặt nước cực kỳ phẳng bóng
+    metalness: 0.01,
     thickness: 0.08,
-    attenuationDistance: 0.28,  // Hấp thụ Beer-Lambert: mỏng trong suốt, dày ánh xanh lơ tự nhiên
-    attenuationColor: 0x7dd3fc,
-    baseColor: 0xf0f9ff,        // Màu cơ bản gần như trong suốt tuyệt đối
+    attenuationDistance: 0.12,  // Hấp thụ Beer-Lambert sâu lắng: góc mỏng ánh xanh lơ dịu, khối dày có chiều sâu
+    attenuationColor: 0x0284c7, // Xanh biển sâu khi ánh sáng đi qua chiều dày khối nước
+    baseColor: 0x7dd3fc,        // Màu xanh nhạt tươi mát tự nhiên đặc trưng của nước trong phòng thí nghiệm
     specularIntensity: 1.0,
     clearcoat: 1.0,
     clearcoatRoughness: 0.01,
-    opacity: 0.52,              // Không quá trong làm biến mất nước, không quá đục như nhựa
-    meniscusColor: 0x7dd3fc,
-    meniscusHighlight: 0xf8fafc,
-    capillaryHeightFactor: 1.0,
+    opacity: 0.72,              // Độ mờ đục hoàn hảo: vừa thấy xuyên qua vừa nhận diện rõ mực nước
+    meniscusColor: 0x38bdf8,    // Viền căng bề mặt mao dẫn ánh xanh rõ nét
+    meniscusHighlight: 0xe0f2fe, // Điểm sáng phản chiếu ánh sáng phòng
+    capillaryHeightFactor: 1.15,
   },
   'copper-sulfate': {
     kind: 'copper-sulfate',
@@ -2397,14 +2397,14 @@ export function createStreamMaterial(
       : profile.attenuationColor;
 
   return new THREE.MeshPhysicalMaterial({
-    color: 0xf0f9ff,
+    color: 0xbae6fd,
     attenuationColor: new THREE.Color(colorVal),
-    attenuationDistance: 0.16,
-    transmission: 0.88,
-    roughness: 0.015,
-    metalness: 0.02,
+    attenuationDistance: 0.12,
+    transmission: 0.84,
+    roughness: 0.010,
+    metalness: 0.01,
     ior: 1.333,
-    specularIntensity: 0.98,
+    specularIntensity: 1.0,
     clearcoat: 1.0,
     clearcoatRoughness: 0.01,
     transparent: true,

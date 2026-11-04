@@ -3,3 +3,4 @@
  */
 
 export * from './ExperimentWorkflows';
+export * from './ExperimentWorkflowEngine';

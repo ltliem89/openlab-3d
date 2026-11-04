@@ -3035,18 +3035,18 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     pouringStreamGroup.visible = false;
 
     const pourOuterMat = new THREE.MeshPhysicalMaterial({
-      color: 0xf0f9ff,
-      attenuationColor: new THREE.Color(0x38bdf8),
-      attenuationDistance: 0.16,
-      transmission: 0.92,
-      roughness: 0.02,
+      color: 0xbae6fd, // Xanh nhạt trong suốt thủy tinh
+      attenuationColor: new THREE.Color(0x0284c7),
+      attenuationDistance: 0.12,
+      transmission: 0.84,
+      roughness: 0.010,
       metalness: 0.01,
       ior: 1.333,
-      reflectivity: 0.96,
+      reflectivity: 0.98,
       clearcoat: 1.0,
       clearcoatRoughness: 0.01,
       transparent: true,
-      opacity: 0.86,
+      opacity: 0.90,
       depthWrite: false,
     });
     // Dòng nước co thắt khí động học: phần đỉnh dày 3.6mm, phần đuôi thon nhỏ 1.8mm do gia tốc trọng trường
@@ -4181,7 +4181,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                           }
                         }
 
-                        // Render pouring stream into receiving vessel
+                        // Render pouring stream into receiving vessel with Parabolic Gravitational Curve
                         if (pouringStreamRef.current) {
                           const spoutX = _lipWorldPos.x;
                           const spoutY = Math.max(
@@ -4195,44 +4195,54 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                             0.035,
                             spoutY - dstSurfaceWorldY,
                           );
-                          const midX = (spoutX + targetX) * 0.5;
-                          const midY = dstSurfaceWorldY + len * 0.5;
-                          const midZ = (spoutZ + targetZ) * 0.5;
-                          const dx = targetX - spoutX;
-                          const tiltAng = Math.atan2(dx, len);
 
                           const streamGrp = pouringStreamRef.current;
                           streamGrp.visible = true;
                           streamGrp.position.set(0, 0, 0);
 
                           const pulse = 0.88 + 0.18 * Math.sin(now * 0.032);
-                          const outerM = streamGrp.getObjectByName('pour_outer');
-                          const coreM = streamGrp.getObjectByName('pour_core');
+                          const outerM = streamGrp.getObjectByName('pour_outer') as THREE.Mesh | undefined;
+                          const coreM = streamGrp.getObjectByName('pour_core') as THREE.Mesh | undefined;
+
+                          // Gravitational Parabolic Curve Points
+                          const p0 = new THREE.Vector3(spoutX, spoutY, spoutZ);
+                          const p1 = new THREE.Vector3(
+                            spoutX + (targetX - spoutX) * 0.28,
+                            spoutY - len * 0.12,
+                            spoutZ + (targetZ - spoutZ) * 0.28,
+                          );
+                          const p2 = new THREE.Vector3(
+                            spoutX + (targetX - spoutX) * 0.70,
+                            spoutY - len * 0.55,
+                            spoutZ + (targetZ - spoutZ) * 0.70,
+                          );
+                          const p3 = new THREE.Vector3(targetX, dstSurfaceWorldY + 0.002, targetZ);
+                          const curve = new THREE.CatmullRomCurve3([p0, p1, p2, p3]);
+
                           if (outerM) {
-                            outerM.position.set(midX, midY, midZ);
-                            outerM.rotation.z = -tiltAng;
-                            outerM.scale.set(pulse, len / 0.14, pulse);
+                            outerM.geometry.dispose();
+                            outerM.geometry = new THREE.TubeGeometry(curve, 18, 0.0024 * pulse, 8, false);
+                            outerM.position.set(0, 0, 0);
+                            outerM.rotation.set(0, 0, 0);
+                            outerM.scale.set(1, 1, 1);
                           }
                           if (coreM) {
-                            coreM.position.set(midX, midY, midZ);
-                            coreM.rotation.z = -tiltAng;
-                            coreM.scale.set(
-                              pulse * 0.9,
-                              len / 0.14,
-                              pulse * 0.9,
-                            );
+                            coreM.geometry.dispose();
+                            coreM.geometry = new THREE.TubeGeometry(curve, 18, 0.0011 * pulse, 6, false);
+                            coreM.position.set(0, 0, 0);
+                            coreM.rotation.set(0, 0, 0);
+                            coreM.scale.set(1, 1, 1);
                           }
+
                           for (let d = 0; d < 6; d++) {
                             const drop = streamGrp.getObjectByName(
                               `pour_drop_${d}`,
                             );
                             if (drop) {
                               const tDrop = (now * 0.0042 + d / 6) % 1;
-                              drop.position.set(
-                                THREE.MathUtils.lerp(spoutX, targetX, tDrop),
-                                spoutY - tDrop * tDrop * len,
-                                THREE.MathUtils.lerp(spoutZ, targetZ, tDrop),
-                              );
+                              const dropPos = curve.getPoint(tDrop);
+                              drop.position.copy(dropPos);
+                              drop.scale.set(0.85 * pulse, 1.4 * pulse, 0.85 * pulse);
                             }
                           }
                           for (let r = 0; r < 3; r++) {
@@ -4255,6 +4265,9 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                                 splash.material.opacity = (1 - rPhase) * 0.88;
                               }
                             }
+                          }
+                          if (Math.random() < 0.04) {
+                            labSoundEngine.play('water-pour', 0.6);
                           }
                           const puddle = scene.getObjectByName(
                             'bench_spill_puddle',
@@ -4314,40 +4327,50 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                       const spoutX = _lipWorldPos.x;
                       const spoutY = _lipWorldPos.y;
                       const spoutZ = _lipWorldPos.z;
-                      const targetX = spoutX + tiltDir * 0.028;
+                      const targetX = spoutX + tiltDir * 0.035;
                       const targetZ = spoutZ;
                       const len = Math.max(0.03, spoutY - BENCH_SURFACE_Y);
-                      const midX = (spoutX + targetX) * 0.5;
-                      const midY = BENCH_SURFACE_Y + len * 0.5;
-                      const midZ = spoutZ;
-                      const dx = targetX - spoutX;
-                      const tiltAng = Math.atan2(dx, len);
 
                       const streamGrp = pouringStreamRef.current;
                       streamGrp.visible = true;
                       streamGrp.position.set(0, 0, 0);
                       const pulse = 0.88 + 0.18 * Math.sin(now * 0.032);
-                      const outerM = streamGrp.getObjectByName('pour_outer');
-                      const coreM = streamGrp.getObjectByName('pour_core');
+                      const outerM = streamGrp.getObjectByName('pour_outer') as THREE.Mesh | undefined;
+                      const coreM = streamGrp.getObjectByName('pour_core') as THREE.Mesh | undefined;
+
+                      const p0 = new THREE.Vector3(spoutX, spoutY, spoutZ);
+                      const p1 = new THREE.Vector3(
+                        spoutX + (targetX - spoutX) * 0.35,
+                        spoutY - len * 0.15,
+                        spoutZ,
+                      );
+                      const p2 = new THREE.Vector3(
+                        spoutX + (targetX - spoutX) * 0.75,
+                        spoutY - len * 0.60,
+                        spoutZ,
+                      );
+                      const p3 = new THREE.Vector3(targetX, BENCH_SURFACE_Y + 0.001, targetZ);
+                      const curve = new THREE.CatmullRomCurve3([p0, p1, p2, p3]);
+
                       if (outerM) {
-                        outerM.position.set(midX, midY, midZ);
-                        outerM.rotation.z = -tiltAng;
-                        outerM.scale.set(pulse, len / 0.14, pulse);
+                        outerM.geometry.dispose();
+                        outerM.geometry = new THREE.TubeGeometry(curve, 18, 0.0024 * pulse, 8, false);
+                        outerM.position.set(0, 0, 0);
+                        outerM.rotation.set(0, 0, 0);
+                        outerM.scale.set(1, 1, 1);
                       }
                       if (coreM) {
-                        coreM.position.set(midX, midY, midZ);
-                        coreM.rotation.z = -tiltAng;
-                        coreM.scale.set(pulse * 0.9, len / 0.14, pulse * 0.9);
+                        coreM.geometry.dispose();
+                        coreM.geometry = new THREE.TubeGeometry(curve, 18, 0.0011 * pulse, 6, false);
+                        coreM.position.set(0, 0, 0);
+                        coreM.rotation.set(0, 0, 0);
+                        coreM.scale.set(1, 1, 1);
                       }
                       for (let d = 0; d < 6; d++) {
                         const drop = streamGrp.getObjectByName(`pour_drop_${d}`);
                         if (drop) {
                           const tDrop = (now * 0.0042 + d / 6) % 1;
-                          drop.position.set(
-                            THREE.MathUtils.lerp(spoutX, targetX, tDrop),
-                            spoutY - tDrop * tDrop * len,
-                            spoutZ,
-                          );
+                          drop.position.copy(curve.getPoint(tDrop));
                         }
                       }
                       for (let r = 0; r < 3; r++) {
