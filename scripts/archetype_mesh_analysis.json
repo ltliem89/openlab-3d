@@ -1,0 +1,562 @@
+{
+  "electronic-balance": {
+    "nodeNames": [
+      "body",
+      "scale_display",
+      "tare_button_3d",
+      "weighing_pan",
+      "pan_plate",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshPhysicalMaterial",
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "ExtrudeGeometry with Bevel",
+      "Torus Chamfered Edge Reflectors",
+      "State Sync via userData",
+      "Optical Ray Tracing & Refraction"
+    ]
+  },
+  "graduated-cylinder": {
+    "nodeNames": [
+      "body",
+      "pouring_lip",
+      "scale_marks",
+      "liquid_surface",
+      "liquid_body"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "Torus Chamfered Edge Reflectors",
+      "Dynamic Liquid Level & Meniscus"
+    ]
+  },
+  "beaker-250": {
+    "nodeNames": [
+      "body",
+      "pouring_lip",
+      "scale_marks",
+      "liquid_surface",
+      "liquid_body"
+    ],
+    "materials": [
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "Torus Chamfered Edge Reflectors",
+      "Dynamic Liquid Level & Meniscus"
+    ]
+  },
+  "overflow-can": {
+    "nodeNames": [
+      "body",
+      "scale_marks",
+      "spout_water",
+      "liquid_surface",
+      "liquid_body",
+      "spout_stream",
+      "stream_outer",
+      "stream_core",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "Torus Chamfered Edge Reflectors",
+      "Dynamic Liquid Level & Meniscus"
+    ]
+  },
+  "spring-dynamometer": {
+    "nodeNames": [
+      "body",
+      "scale_marks",
+      "scale_marks_cross",
+      "spring_coil",
+      "plunger"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "Torus Chamfered Edge Reflectors"
+    ]
+  },
+  "vernier-caliper": {
+    "nodeNames": [
+      "body",
+      "scale_marks",
+      "plunger",
+      "scale_display",
+      "scale_display_front",
+      "scale_display_rear",
+      "depth_rod",
+      "jaw_measure_guide"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "State Sync via userData"
+    ]
+  },
+  "calibration-weight": {
+    "nodeNames": [
+      "body",
+      "handle"
+    ],
+    "materials": [
+      "MeshPhysicalMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors"
+    ]
+  },
+  "solid-cylinder": {
+    "nodeNames": [
+      "body",
+      "handle"
+    ],
+    "materials": [
+      "MeshPhysicalMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors"
+    ]
+  },
+  "solid-sphere": {
+    "nodeNames": [
+      "body"
+    ],
+    "materials": [
+      "MeshStandardMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors"
+    ]
+  },
+  "solid-block": {
+    "nodeNames": [
+      "body"
+    ],
+    "materials": [],
+    "features": [
+      "ExtrudeGeometry with Bevel"
+    ]
+  },
+  "hollow-cylinder": {
+    "nodeNames": [
+      "body"
+    ],
+    "materials": [
+      "MeshStandardMaterial"
+    ],
+    "features": []
+  },
+  "erlenmeyer-flask": {
+    "nodeNames": [
+      "body",
+      "pouring_lip",
+      "liquid_surface",
+      "liquid_body"
+    ],
+    "materials": [],
+    "features": [
+      "Torus Chamfered Edge Reflectors",
+      "Dynamic Liquid Level & Meniscus"
+    ]
+  },
+  "retort-stand": {
+    "nodeNames": [
+      "body",
+      "handle",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors"
+    ]
+  },
+  "optical-lens": {
+    "nodeNames": [
+      "body",
+      "scale_display",
+      "scale_display_rear",
+      "lens_element",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "Torus Chamfered Edge Reflectors",
+      "State Sync via userData"
+    ]
+  },
+  "laser-source": {
+    "nodeNames": [
+      "body",
+      "laser_beams"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": []
+  },
+  "semicircular-slab": {
+    "nodeNames": [
+      "body",
+      "handle",
+      "incident_ray",
+      "ray_paths",
+      "reflected_ray",
+      "refracted_ray",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "ExtrudeGeometry with Bevel",
+      "Optical Ray Tracing & Refraction"
+    ]
+  },
+  "optical-prism": {
+    "nodeNames": [
+      "body"
+    ],
+    "materials": [
+      "MeshStandardMaterial"
+    ],
+    "features": []
+  },
+  "magnifying-glass": {
+    "nodeNames": [
+      "body",
+      "lens_element"
+    ],
+    "materials": [
+      "MeshStandardMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors"
+    ]
+  },
+  "galvanometer": {
+    "nodeNames": [
+      "body",
+      "scale_marks",
+      "scale_marks_rear",
+      "plunger",
+      "plunger_rear"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout"
+    ]
+  },
+  "digital-multimeter": {
+    "nodeNames": [
+      "body",
+      "scale_display",
+      "scale_display_rear",
+      "handle"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "State Sync via userData"
+    ]
+  },
+  "induction-coil-led": {
+    "nodeNames": [
+      "body",
+      "led_1",
+      "led_2",
+      "plunger"
+    ],
+    "materials": [
+      "MeshStandardMaterial"
+    ],
+    "features": []
+  },
+  "porcelain-dish": {
+    "nodeNames": [
+      "body",
+      "liquid_surface",
+      "flame_group"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors",
+      "Dynamic Liquid Level & Meniscus"
+    ]
+  },
+  "separatory-funnel": {
+    "nodeNames": [
+      "body",
+      "handle",
+      "liquid_surface",
+      "aq_layer",
+      "org_layer",
+      "spout_stream",
+      "stream_outer",
+      "splash_ring_0"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors",
+      "Dynamic Liquid Level & Meniscus"
+    ]
+  },
+  "distillation-flask": {
+    "nodeNames": [
+      "body",
+      "flame_group",
+      "liquid_surface"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors",
+      "Dynamic Liquid Level & Meniscus"
+    ]
+  },
+  "optical-microscope": {
+    "nodeNames": [
+      "body",
+      "stageGroup",
+      "plunger"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors"
+    ]
+  },
+  "dna-double-helix": {
+    "nodeNames": [
+      "body",
+      "handle"
+    ],
+    "materials": [
+      "MeshStandardMaterial"
+    ],
+    "features": []
+  },
+  "thermometer": {
+    "nodeNames": [
+      "body",
+      "plunger",
+      "scale_marks"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout"
+    ]
+  },
+  "water-dispenser": {
+    "nodeNames": [
+      "body",
+      "dispenser_dock_tray",
+      "dispenser_dock_ring",
+      "scale_marks",
+      "scale_display",
+      "scale_display_rear",
+      "plunger",
+      "liquid_surface",
+      "spout_stream",
+      "stream_outer",
+      "stream_core",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "Torus Chamfered Edge Reflectors",
+      "State Sync via userData",
+      "Dynamic Liquid Level & Meniscus",
+      "Optical Ray Tracing & Refraction"
+    ]
+  },
+  "optical-bench": {
+    "nodeNames": [
+      "body",
+      "optical_axis_line",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": []
+  },
+  "optical-lamp": {
+    "nodeNames": [
+      "body",
+      "power_cord_socket",
+      "terminal_pos",
+      "terminal_neg",
+      "terminal_pos_hitbox",
+      "terminal_neg_hitbox",
+      "beam_mode_knob",
+      "knob_hitbox_3d",
+      "scale_display",
+      "lamp_point_light",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "State Sync via userData",
+      "Optical Ray Tracing & Refraction",
+      "Electrical Terminal / Wiring"
+    ]
+  },
+  "frosted-f-object": {
+    "nodeNames": [
+      "body",
+      "scale_display",
+      "scale_display_rear",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "State Sync via userData"
+    ]
+  },
+  "optical-screen": {
+    "nodeNames": [
+      "body",
+      "scale_display",
+      "scale_display_rear",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "State Sync via userData",
+      "Optical Ray Tracing & Refraction"
+    ]
+  },
+  "optical-power-supply": {
+    "nodeNames": [
+      "body",
+      "scale_display",
+      "toggle_switch",
+      "plunger",
+      "handle",
+      "led_indicator",
+      "terminal_pos",
+      "terminal_neg",
+      "terminal_pos_hitbox",
+      "terminal_neg_hitbox",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "State Sync via userData",
+      "Electrical Terminal / Wiring"
+    ]
+  },
+  "optical-lens-box": {
+    "nodeNames": [
+      "body",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "CanvasTexture Dynamic Readout",
+      "Torus Chamfered Edge Reflectors",
+      "State Sync via userData",
+      "Optical Ray Tracing & Refraction"
+    ]
+  },
+  "lever-balance-apparatus": {
+    "nodeNames": [
+      "body",
+      "scale_display",
+      "plunger",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial",
+      "MeshBasicMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors"
+    ]
+  },
+  "communicating-vessels-3way": {
+    "nodeNames": [
+      "body",
+      "liquid_surface",
+      "measurement_anchor"
+    ],
+    "materials": [
+      "MeshStandardMaterial"
+    ],
+    "features": [
+      "Torus Chamfered Edge Reflectors",
+      "Dynamic Liquid Level & Meniscus"
+    ]
+  }
+}

@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  --ol-navy: #07224D;
+  --ol-primary: #1557D6;
+  --ol-bg-panel: #C5D5E8;
+  --ol-card: #FFFFFF;
+  --ol-bg-soft: #DCE8F6;
+  --ol-cyan: #00BCEB;
+  --ol-green: #16A34A;
+  --ol-yellow: #EAB308;
+  --ol-coral: #F43F5E;
+  --ol-text-main: #091E3A;
+  --ol-text-sub: #284263;
+  --ol-border: #8CAFD6;
+}
+
+@layer base {
+  body {
+    font-family: 'Inter', 'Segoe UI', Roboto, system-ui, -apple-system, sans-serif;
+    background-color: var(--ol-bg-panel);
+    color: var(--ol-text-main);
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Lock WebGL canvas display to prevent flex/inline layout distortion */
+  canvas {
+    display: block;
+  }
+}
+
+/* Custom high-contrast scrollbars for panels */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: #D5E2F2;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #7A9CC6;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4E76A8;
+}
+
+/* Mobile-first 100dvh shell & safe-area utilities (OPENLAB3D_MOBILE_UX_IMPROVEMENT_SPEC) */
+.ol3d-app-shell {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

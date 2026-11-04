@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix Remix Remix OpenLab 3D",
+  "description": "Nền tảng quản lý tài sản 3D khoa học và không gian thực hành thí nghiệm số mở rộng.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

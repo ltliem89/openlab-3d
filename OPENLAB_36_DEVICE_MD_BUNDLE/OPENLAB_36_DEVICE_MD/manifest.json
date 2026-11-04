@@ -1,0 +1,294 @@
+{
+  "source": "BAO_CAO_RA_SOAT_TOAN_DIEN_THANH_PHAN_MO_PHONG_THIET_BI_VA_MOI_TRUONG.md",
+  "deviceCount": 36,
+  "devices": [
+    {
+      "order": 1,
+      "deviceId": "OL3D-EQP-BAL-0001",
+      "title": "Cân điện tử hiện số 500 g",
+      "group": "G02",
+      "file": "devices/01_OL3D-EQP-BAL-0001.md",
+      "testCount": 5
+    },
+    {
+      "order": 2,
+      "deviceId": "OL3D-EQP-CYL-0001",
+      "title": "Ống đong thủy tinh 100 ml",
+      "group": "G04",
+      "file": "devices/02_OL3D-EQP-CYL-0001.md",
+      "testCount": 5
+    },
+    {
+      "order": 3,
+      "deviceId": "OL3D-EQP-BKR-0001",
+      "title": "Cốc thủy tinh chia độ 250 ml",
+      "group": "G04/G05",
+      "file": "devices/03_OL3D-EQP-BKR-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 4,
+      "deviceId": "OL3D-EQP-OVF-0001",
+      "title": "Bình tràn Eureka 250 ml",
+      "group": "G02/G04",
+      "file": "devices/04_OL3D-EQP-OVF-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 5,
+      "deviceId": "OL3D-EQP-DYN-0001",
+      "title": "Lực kế lò xo ống trụ 5 N",
+      "group": "G02",
+      "file": "devices/05_OL3D-EQP-DYN-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 6,
+      "deviceId": "OL3D-EQP-CAL-0001",
+      "title": "Thước cặp du xích 150 mm (0.02 mm)",
+      "group": "G01",
+      "file": "devices/06_OL3D-EQP-CAL-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 7,
+      "deviceId": "OL3D-EQP-WGT-0001",
+      "title": "Quả cân chuẩn bằng đồng 50 g",
+      "group": "G02",
+      "file": "devices/07_OL3D-EQP-WGT-0001.md",
+      "testCount": 3
+    },
+    {
+      "order": 8,
+      "deviceId": "OL3D-EQP-SLD-0001",
+      "title": "Vật rắn hình trụ hợp kim nhôm",
+      "group": "G02/G01",
+      "file": "devices/08_OL3D-EQP-SLD-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 9,
+      "deviceId": "OL3D-EQP-SPH-0001",
+      "title": "Vật rắn hình cầu thép không gỉ",
+      "group": "G02/G01",
+      "file": "devices/09_OL3D-EQP-SPH-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 10,
+      "deviceId": "OL3D-EQP-BLK-0001",
+      "title": "Vật rắn hình hộp chữ nhật đồng thau",
+      "group": "G02/G01",
+      "file": "devices/10_OL3D-EQP-BLK-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 11,
+      "deviceId": "OL3D-EQP-HLW-0001",
+      "title": "Ống trụ kim loại rỗng có khoang kín",
+      "group": "G02/G04",
+      "file": "devices/11_OL3D-EQP-HLW-0001.md",
+      "testCount": 3
+    },
+    {
+      "order": 12,
+      "deviceId": "OL3D-EQP-FLK-0001",
+      "title": "Bình tam giác Erlenmeyer 250 ml",
+      "group": "G04/G05",
+      "file": "devices/12_OL3D-EQP-FLK-0001.md",
+      "testCount": 3
+    },
+    {
+      "order": 13,
+      "deviceId": "OL3D-EQP-STD-0001",
+      "title": "Giá đỡ thí nghiệm kèm khớp nối & tay kẹp",
+      "group": "G05/G06",
+      "file": "devices/13_OL3D-EQP-STD-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 14,
+      "deviceId": "OL3D-EQP-OPT-0001",
+      "title": "(3) Thấu kính trên đế trượt quang học (f = +10 cm)",
+      "group": "G06",
+      "file": "devices/14_OL3D-EQP-OPT-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 15,
+      "deviceId": "OL3D-EQP-OBN-0001",
+      "title": "(5) Giá quang học 90 cm có thước chia độ (-45 .. 0 .. +45 cm)",
+      "group": "G06",
+      "file": "devices/15_OL3D-EQP-OBN-0001.md",
+      "testCount": 3
+    },
+    {
+      "order": 16,
+      "deviceId": "OL3D-EQP-OLP-0001",
+      "title": "(1) Đèn chiếu sáng Halogen kèm Đầu chắn khe sáng",
+      "group": "G06",
+      "file": "devices/16_OL3D-EQP-OLP-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 17,
+      "deviceId": "OL3D-EQP-FOB-0001",
+      "title": "(2) Vật sáng bằng kính mờ hình chữ F",
+      "group": "G06",
+      "file": "devices/17_OL3D-EQP-FOB-0001.md",
+      "testCount": 3
+    },
+    {
+      "order": 18,
+      "deviceId": "OL3D-EQP-SCR-0001",
+      "title": "(4) Màn chắn hứng ảnh trên Giá quang học",
+      "group": "G06",
+      "file": "devices/18_OL3D-EQP-SCR-0001.md",
+      "testCount": 3
+    },
+    {
+      "order": 19,
+      "deviceId": "OL3D-EQP-PSU-0001",
+      "title": "(6) Nguồn điện hạ áp thí nghiệm 3V–12V",
+      "group": "G03/G07",
+      "file": "devices/19_OL3D-EQP-PSU-0001.md",
+      "testCount": 5
+    },
+    {
+      "order": 20,
+      "deviceId": "OL3D-EQP-LBX-0001",
+      "title": "Hộp bộ 6 Thấu kính tiêu chuẩn (+5, +10, +15, -10, -20, ∞)",
+      "group": "G06",
+      "file": "devices/20_OL3D-EQP-LBX-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 21,
+      "deviceId": "OL3D-EQP-THM-0001",
+      "title": "Nhiệt kế chất lỏng -10°C đến 110°C",
+      "group": "G03",
+      "file": "devices/21_OL3D-EQP-THM-0001.md",
+      "testCount": 3
+    },
+    {
+      "order": 22,
+      "deviceId": "OL3D-EQP-LSR-0001",
+      "title": "Nguồn sáng Đèn Laser 3 tia song song (SGK KHTN 9)",
+      "group": "G06",
+      "file": "devices/22_OL3D-EQP-LSR-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 23,
+      "deviceId": "OL3D-EQP-SLB-0001",
+      "title": "Bản bán trụ thuỷ tinh & Bảng chia độ 360° (SGK KHTN 9)",
+      "group": "G06",
+      "file": "devices/23_OL3D-EQP-SLB-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 24,
+      "deviceId": "OL3D-EQP-PRM-0001",
+      "title": "Lăng kính tam giác trên giá đỡ — Tán sắc ánh sáng (SGK KHTN 9)",
+      "group": "G06",
+      "file": "devices/24_OL3D-EQP-PRM-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 25,
+      "deviceId": "OL3D-EQP-MAG-0001",
+      "title": "Kính lúp cầm tay độ bội giác 5x (SGK KHTN 9)",
+      "group": "G06",
+      "file": "devices/25_OL3D-EQP-MAG-0001.md",
+      "testCount": 3
+    },
+    {
+      "order": 26,
+      "deviceId": "OL3D-EQP-GLV-0001",
+      "title": "Điện kế nhạy vạch 0 ở giữa — Galvanometer (SGK KHTN 9)",
+      "group": "G07",
+      "file": "devices/26_OL3D-EQP-GLV-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 27,
+      "deviceId": "OL3D-EQP-DMM-0001",
+      "title": "Đồng hồ đo điện đa năng hiện số (SGK KHTN 9)",
+      "group": "G03/G07",
+      "file": "devices/27_OL3D-EQP-DMM-0001.md",
+      "testCount": 5
+    },
+    {
+      "order": 28,
+      "deviceId": "OL3D-EQP-COIL-0001",
+      "title": "Cuộn dây dẫn kín có 2 đèn LED & Thanh nam châm (SGK KHTN 9)",
+      "group": "G07",
+      "file": "devices/28_OL3D-EQP-COIL-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 29,
+      "deviceId": "OL3D-EQP-DSH-0001",
+      "title": "Bát sứ chịu nhiệt — Cô đặc & Đốt cháy cồn (SGK KHTN 9)",
+      "group": "G05",
+      "file": "devices/29_OL3D-EQP-DSH-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 30,
+      "deviceId": "OL3D-EQP-SEP-0001",
+      "title": "Phễu chiết có khoá & Phễu lọc trên giá đỡ (SGK KHTN 9)",
+      "group": "G04/G05",
+      "file": "devices/30_OL3D-EQP-SEP-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 31,
+      "deviceId": "OL3D-EQP-DST-0001",
+      "title": "Bình cầu có nhánh 250 mL, Lưới tản nhiệt & Đèn cồn (SGK KHTN 9)",
+      "group": "G05",
+      "file": "devices/31_OL3D-EQP-DST-0001.md",
+      "testCount": 5
+    },
+    {
+      "order": 32,
+      "deviceId": "OL3D-EQP-MIC-0001",
+      "title": "Kính hiển vi quang học (10x, 40x, 100x) & Tiêu bản NST (SGK KHTN 9)",
+      "group": "G09",
+      "file": "devices/32_OL3D-EQP-MIC-0001.md",
+      "testCount": 6
+    },
+    {
+      "order": 33,
+      "deviceId": "OL3D-EQP-DNA-0001",
+      "title": "Mô hình cấu trúc phân tử DNA xoắn kép (SGK KHTN 9)",
+      "group": "G09",
+      "file": "devices/33_OL3D-EQP-DNA-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 34,
+      "deviceId": "OL3D-EQP-WDP-1000",
+      "title": "Bình chứa nước có van xả định lượng 1000 ml",
+      "group": "G04",
+      "file": "devices/34_OL3D-EQP-WDP-1000.md",
+      "testCount": 5
+    },
+    {
+      "order": 35,
+      "deviceId": "OL3D-EQP-LEV-0001",
+      "title": "Bộ đòn bẩy thăng bằng chia vạch đối xứng kèm giá đỡ",
+      "group": "G02",
+      "file": "devices/35_OL3D-EQP-LEV-0001.md",
+      "testCount": 4
+    },
+    {
+      "order": 36,
+      "deviceId": "OL3D-EQP-HYD-0001",
+      "title": "Bình thông nhau 3 nhánh dị hình trên đế",
+      "group": "G04",
+      "file": "devices/36_OL3D-EQP-HYD-0001.md",
+      "testCount": 4
+    }
+  ]
+}
