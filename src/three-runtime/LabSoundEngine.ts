@@ -37,6 +37,7 @@
 
 export type LabSoundPhenomenonType =
   | 'water-pour'
+  | 'water-drip'
   | 'water-splash'
   | 'water-overflow'
   | 'scale-place'
@@ -232,6 +233,23 @@ class LabSoundEngineImpl {
             osc.start(now + offset);
             osc.stop(now + offset + 0.1);
           });
+          break;
+        }
+
+        case 'water-drip': {
+          // Tiếng giọt nước tí tách nhỏ giọt "tong tong" thanh mảnh dưới trọng lực
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          const baseFreq = 1620 + Math.random() * 260;
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.52, now + 0.042);
+          gain.gain.setValueAtTime(0.14 * (ratio || 0.8), now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.065);
+          osc.connect(gain);
+          gain.connect(out);
+          osc.start(now);
+          osc.stop(now + 0.07);
           break;
         }
 

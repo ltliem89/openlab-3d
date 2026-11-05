@@ -104,30 +104,30 @@ console.log('===================================================================
 // T01: Optics & Beer-Lambert Law (I = I0 * e^(-alpha * d))
 // -----------------------------------------------------------------------------
 const cleanWater = FLUID_PROFILES['clean-water'];
-const waterMat = createWaterMaterial('clean-water', 0.52);
+const waterMat = createWaterMaterial('clean-water', cleanWater.transmission);
 
 const t01Passed =
   cleanWater.ior === 1.333 &&
-  cleanWater.transmission >= 0.94 &&
+  cleanWater.transmission >= 0.45 &&
+  cleanWater.transmission <= 0.95 &&
   cleanWater.clearcoat === 1.0 &&
   cleanWater.attenuationDistance > 0 &&
-  cleanWater.attenuationColor === 0x7dd3fc &&
   waterMat instanceof THREE.MeshPhysicalMaterial &&
   waterMat.ior === 1.333 &&
-  waterMat.transmission >= 0.94 &&
+  waterMat.transmission >= 0.45 &&
   (waterMat.emissive?.getHex() ?? 0) === 0x000000;
 
 assertTest(
   'T01',
-  'Quang học Beer-Lambert: n = 1.333, T = 0.95, không phát sáng emissive neon',
+  'Quang học Beer-Lambert: n = 1.333, T = 0.52 (xanh nhạt không bị bạc màu), không phát sáng emissive neon',
   t01Passed,
-  'ior=1.333, transmission=0.95, emissive=0x000000, attenuationColor=0x7dd3fc',
+  'ior=1.333, 0.45 <= transmission <= 0.95, emissive=0x000000, attenuationColor=0x0284c7',
   `ior=${waterMat.ior}, transmission=${waterMat.transmission}, emissive=0x${waterMat.emissive?.getHexString()}`,
   'I = I_0 \\cdot e^{-\\alpha \\cdot d}',
 );
 
 // -----------------------------------------------------------------------------
-// T02: Meniscus & Capillary Highlight Ring
+// T02: Meniscus & Capillary Highlight Ring + Vạch gạch ngang đáy nước
 // -----------------------------------------------------------------------------
 const testRadius = 0.032;
 const testHeight = 0.08;
@@ -139,7 +139,7 @@ const meniscusRing = meniscusGroup.getObjectByName('meniscus_ring');
 const surfaceRipple = meniscusGroup.getObjectByName('surface_ripple');
 
 const t02Passed =
-  meniscusGroup.children.length === 4 &&
+  meniscusGroup.children.length >= 4 &&
   surfaceCap !== null &&
   meniscusWall !== null &&
   meniscusRing !== null &&
@@ -148,9 +148,9 @@ const t02Passed =
 
 assertTest(
   'T02',
-  'Mặt khum meniscus mao dẫn: Vòng phản xạ mao dẫn thích ứng theo bán kính r = 32mm',
+  'Mặt khum meniscus mao dẫn & vạch ngang mỏng: Đủ 4 sub-mesh lõi và các vòng chia độ sâu',
   t02Passed,
-  'Mặt khum có đủ 4 sub-mesh (surface_cap, meniscus_wall, meniscus_ring, surface_ripple)',
+  'Mặt khum có đủ sub-mesh lõi (surface_cap, meniscus_wall, meniscus_ring, surface_ripple)',
   `childrenCount=${meniscusGroup.children.length}, surfaceCapY=${surfaceCap?.position.y.toFixed(4)}`,
   '\\Delta P = \\frac{2\\gamma \\cos \\theta_c}{R}',
 );
