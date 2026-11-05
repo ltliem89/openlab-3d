@@ -270,8 +270,9 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
     const nodes = nodesRef.current;
     if (nodes.length === 0) return;
 
-    // Bán kính quỹ đạo tròn ổn định, căn cứ theo chiều cao modal để không bao giờ bị méo dẹt
-    const R_orbit = Math.max(220, Math.min(270, (height - 120) * 0.42));
+    // Tự động mở rộng bán kính theo khung hình thực tế của canvas, tạo không gian thoáng đãng
+    const maxR = Math.min((_width - 160) * 0.38, (height - 80) * 0.44);
+    const R_orbit = Math.max(260, Math.min(380, maxR));
 
     if (mode === 'circular') {
       const categories = Object.keys(CATEGORY_META) as DeviceCategory[];
@@ -280,36 +281,59 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
 
       activeCats.forEach((cat, gIndex) => {
         const angle = (gIndex / groupCount) * Math.PI * 2 - Math.PI / 2;
-        // Tọa độ tròn cân đối 1:1, không nhân hệ số làm dẹt
-        const gx = R_orbit * Math.cos(angle);
-        const gy = R_orbit * Math.sin(angle);
-
         const inCat = nodes.filter(n => n.device.category === cat);
+
         if (inCat.length === 1) {
-          inCat[0].tx = gx;
-          inCat[0].ty = gy;
+          inCat[0].tx = R_orbit * Math.cos(angle);
+          inCat[0].ty = R_orbit * Math.sin(angle);
+        } else if (inCat.length === 2) {
+          // 2 thiết bị: Tách nhẹ theo cung với bán kính so le
+          const halfSpan = 0.16;
+          inCat[0].tx = (R_orbit * 0.92) * Math.cos(angle - halfSpan);
+          inCat[0].ty = (R_orbit * 0.92) * Math.sin(angle - halfSpan);
+          inCat[1].tx = (R_orbit * 1.16) * Math.cos(angle + halfSpan);
+          inCat[1].ty = (R_orbit * 1.16) * Math.sin(angle + halfSpan);
         } else {
-          const fanSpan = Math.PI * 0.38;
-          const startAngle = angle - fanSpan / 2;
-          inCat.forEach((node, idx) => {
-            const a = startAngle + (idx / Math.max(1, inCat.length - 1)) * fanSpan;
-            const rOffset = idx % 2 === 0 ? 0.90 : 1.10;
-            node.tx = gx + (R_orbit * 0.28 * rOffset) * Math.cos(a);
-            node.ty = gy + (R_orbit * 0.28 * rOffset) * Math.sin(a);
+          // BIỆN PHÁP 3: TÁCH TẦNG ĐA BÁN KÍNH (CONCENTRIC TIERING)
+          // Tầng Lõi (Core Tier, R * 0.78): 1-2 thiết bị đo trung tâm (nhiều kết nối nhất)
+          // Tầng Vệ tinh (Satellite Tier, R * 1.25): Các mẫu vật & phụ kiện xòe rộng ra ngoài
+          const sortedInCat = [...inCat].sort((a, b) => b.connections - a.connections);
+          const coreCount = sortedInCat.length >= 6 ? 2 : 1;
+          const coreNodes = sortedInCat.slice(0, coreCount);
+          const satNodes = sortedInCat.slice(coreCount);
+
+          if (coreNodes.length === 1) {
+            coreNodes[0].tx = (R_orbit * 0.78) * Math.cos(angle);
+            coreNodes[0].ty = (R_orbit * 0.78) * Math.sin(angle);
+          } else {
+            const coreSpan = 0.32;
+            coreNodes.forEach((cn, cIdx) => {
+              const ca = angle - coreSpan / 2 + (cIdx / (coreNodes.length - 1)) * coreSpan;
+              cn.tx = (R_orbit * 0.78) * Math.cos(ca);
+              cn.ty = (R_orbit * 0.78) * Math.sin(ca);
+            });
+          }
+
+          const satSpan = Math.PI * 0.44; // Cung xòe rộng 79 độ
+          satNodes.forEach((sn, sIdx) => {
+            const sa = angle - satSpan / 2 + (sIdx / Math.max(1, satNodes.length - 1)) * satSpan;
+            const satRadius = R_orbit * (1.20 + (sIdx % 2 === 0 ? 0.14 : -0.04));
+            sn.tx = satRadius * Math.cos(sa);
+            sn.ty = satRadius * Math.sin(sa);
           });
         }
       });
 
-      // KHỬ TRÙNG LẶP & ĐÈ NHÃN CÂN BẰNG TỶ LỆ (KHÔNG GÂY DẸT HẸP CHIỀU NGANG)
-      for (let iter = 0; iter < 45; iter++) {
+      // KHỬ TRÙNG LẶP & ĐÈ NHÃN CÂN BẰNG TỶ LỆ HỘP CHỮ NHẬT THỰC TẾ (AABB)
+      for (let iter = 0; iter < 50; iter++) {
         for (let i = 0; i < nodes.length; i++) {
           for (let j = i + 1; j < nodes.length; j++) {
             const a = nodes[i];
             const b = nodes[j];
             const dx = b.tx - a.tx;
             const dy = b.ty - a.ty;
-            const rx = 65;
-            const ry = 42;
+            const rx = 105;
+            const ry = 46;
             const nx = dx / rx;
             const ny = dy / ry;
             const d2 = nx * nx + ny * ny;
@@ -347,15 +371,16 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         layers[layerIdx].push(n);
       });
 
-      const totalW = 660;
+      const totalW = Math.min(_width * 0.75, 820);
       const spacingX = totalW / 5;
-      const totalH = Math.min(height * 0.65, 480);
+      const totalH = Math.min(height * 0.70, 520);
 
       layers.forEach((layerNodes, lIdx) => {
         const lx = -totalW / 2 + lIdx * spacingX;
         const count = layerNodes.length;
         layerNodes.forEach((node, nIdx) => {
-          node.tx = lx;
+          const xStagger = (nIdx % 2 === 0 ? -12 : 12);
+          node.tx = lx + xStagger;
           node.ty = -totalH / 2 + ((nIdx + 0.5) / (count || 1)) * totalH;
         });
       });
@@ -710,15 +735,56 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
 
-          const label = userMode === 'student' ? n.device.nameStudent : n.device.nameVi;
+          // BIỆN PHÁP 1: RÚT GỌN TỪ KHÓA NHÃN (PILL-TAGS THÔNG MINH)
+          // Mặc định: Hiển thị shortKeyword ngắn gọn (6-12 ký tự, rộng 60-90px)
+          // Khi chọn hoặc hover hoặc trong bài thực hành đang mở: Hiển thị tên đầy đủ
+          const isExpanded = isSelected || isHovered || isInCurrentExperiment;
+          const label = isExpanded
+            ? (userMode === 'student' ? n.device.nameStudent : n.device.nameVi)
+            : (n.device.shortKeyword || (userMode === 'student' ? n.device.nameStudent : n.device.nameVi));
+
           const labelWidth = ctx.measureText(label).width;
-          const padH = 7 * cam.zoom;
-          const bx = pos.x - labelWidth / 2 - padH;
-          const by = pos.y + r + 5 * cam.zoom;
+          const padH = 6 * cam.zoom;
           const bw = labelWidth + padH * 2;
           const bh = Math.max(16, 18 * cam.zoom);
 
-          ctx.fillStyle = isSelected ? 'rgba(30, 41, 59, 0.95)' : isHovered ? 'rgba(15, 23, 42, 0.92)' : 'rgba(8, 12, 28, 0.88)';
+          // BIỆN PHÁP 2: ĐẶT NHÃN HƯỚNG TÂM MỞ RA NGOÀI (RADIAL OUTWARD ANCHORING)
+          let bx = pos.x - bw / 2;
+          let by = pos.y + r + 5 * cam.zoom;
+
+          if (layoutMode === 'circular') {
+            const len = Math.hypot(n.x, n.y) || 1;
+            const ux = n.x / len;
+            const uy = n.y / len;
+
+            if (uy < -0.42) {
+              // Nửa trên vòng tròn: Nhãn hướng LÊN PHÍA TRÊN (thoát khỏi tâm đồ thị)
+              by = pos.y - r - bh - 5 * cam.zoom;
+              bx = pos.x - bw / 2 + ux * 10 * cam.zoom;
+            } else if (uy > 0.42) {
+              // Nửa dưới vòng tròn: Nhãn hướng XUỐNG PHÍA DƯỚI
+              by = pos.y + r + 5 * cam.zoom;
+              bx = pos.x - bw / 2 + ux * 10 * cam.zoom;
+            } else if (ux > 0) {
+              // Phía sườn bên phải: Nhãn nằm BÊN PHẢI nút
+              bx = pos.x + r + 7 * cam.zoom;
+              by = pos.y - bh / 2 + uy * 8 * cam.zoom;
+            } else {
+              // Phía sườn bên trái: Nhãn nằm BÊN TRÁI nút
+              bx = pos.x - r - bw - 7 * cam.zoom;
+              by = pos.y - bh / 2 + uy * 8 * cam.zoom;
+            }
+          } else {
+            // Layout đa tầng: So le nhãn trên/dưới
+            const isStaggerAbove = (n.device.id.charCodeAt(0) % 2 === 0);
+            if (isStaggerAbove) {
+              by = pos.y - r - bh - 5 * cam.zoom;
+            } else {
+              by = pos.y + r + 5 * cam.zoom;
+            }
+          }
+
+          ctx.fillStyle = isSelected ? 'rgba(30, 41, 59, 0.96)' : isHovered ? 'rgba(15, 23, 42, 0.94)' : 'rgba(8, 12, 28, 0.90)';
           ctx.strokeStyle = isSelected ? meta.color : isHovered ? '#ffffff' : (isInCurrentExperiment ? '#eab308' : 'rgba(99, 102, 241, 0.35)');
           ctx.lineWidth = isSelected || isHovered || isInCurrentExperiment ? 1.5 : 1;
           ctx.beginPath();
@@ -731,7 +797,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
           ctx.stroke();
 
           ctx.fillStyle = isSelected || isHovered ? '#ffffff' : isInCurrentExperiment ? '#fef08a' : '#cbd5e1';
-          ctx.fillText(label, pos.x, by + bh / 2);
+          ctx.fillText(label, bx + bw / 2, by + bh / 2);
         }
 
         ctx.restore();

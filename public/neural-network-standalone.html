@@ -364,46 +364,46 @@
     };
 
     const NODES = [
-      { id: 'vernier-caliper', assetId: 'OL3D-EQP-CAL-0001', nameVi: 'Thước cặp du xích 150 mm', nameStudent: 'Thước kẹp đo chính xác', category: 'G01_DIMENSION', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '📏', ports: ['CONN_VERNIER_CALIPER_JAWS'], studentPorts: ['Ngàm kẹp ngoài', 'Ngàm đo trong'], tip: 'Nhẹ nhàng trượt ngàm kẹp ôm vừa khít vật thể, không siết quá mạnh làm xước dụng cụ!', sgkFormula: 'Độ chính xác: 0.02 mm (1/50 mm)' },
-      { id: 'ruler-30', assetId: 'OL3D-EQP-RUL-0001', nameVi: 'Thước thẳng chia vạch 30 cm', nameStudent: 'Thước kẻ đo chiều dài', category: 'G01_DIMENSION', subject: 'general', grades: ['grade6', 'grade7', 'grade8', 'grade9'], glyph: '📐', ports: [], studentPorts: ['Thân chia vạch milimet'], tip: 'Đặt mắt nhìn vuông góc với vạch chia để tránh sai số đo nhé!', sgkFormula: 'ĐCNN = 1 mm' },
-      { id: 'electronic-balance', assetId: 'OL3D-EQP-BAL-0001', nameVi: 'Cân điện tử hiện số 500 g', nameStudent: 'Cân điện tử hiện số', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '⚖️', ports: ['CONN_BALANCE_PAN'], studentPorts: ['Đĩa cân inox', 'Nút trừ bì TARE'], tip: 'Nhớ bấm nút TARE để đưa màn hình về 0.00g khi đã đặt cốc lên đĩa cân trước khi rót nước!', sgkFormula: 'Khối lượng = Số chỉ trên màn hình (gam)' },
-      { id: 'calibration-weight', assetId: 'OL3D-EQP-WGT-0001', nameVi: 'Bộ quả cân chuẩn bằng đồng 50 g', nameStudent: 'Quả cân chuẩn 50g', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🥉', ports: [], studentPorts: ['Khuyên móc đỉnh', 'Đáy phẳng tiếp xúc'], tip: 'Cầm quả cân ở phần núm trên đỉnh, tránh chạm tay vào thân để không dính mồ hôi làm sai số!', sgkFormula: 'Khối lượng chuẩn: m = 50 gam' },
-      { id: 'solid-cylinder', assetId: 'OL3D-EQP-SLD-0001', nameVi: 'Khối trụ đặc hợp kim nhôm', nameStudent: 'Khối nhôm hình trụ', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🔩', ports: [], studentPorts: ['Thân trụ kim loại', 'Quai móc treo'], tip: 'Khối nhôm nhẹ hơn đồng thau, chìm trong nước nhưng chịu lực đẩy Ác-si-mét nâng lên.', sgkFormula: 'Khối lượng riêng: D = m / V' },
-      { id: 'solid-sphere', assetId: 'OL3D-EQP-SPH-0001', nameVi: 'Khối bi cầu thép không gỉ', nameStudent: 'Viên bi thép tròn', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '⚪', ports: [], studentPorts: ['Bề mặt cầu trơn'], tip: 'Thả nhẹ tay vào ống đong nghiêng để bi trượt xuống từ từ, không làm vỡ đáy thủy tinh!', sgkFormula: 'Thể tích: V = (4/3)·3.14·R³' },
-      { id: 'solid-block', assetId: 'OL3D-EQP-BLK-0001', nameVi: 'Khối hộp chữ nhật đồng thau', nameStudent: 'Khối đồng hình hộp', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '📦', ports: [], studentPorts: ['6 mặt phẳng đồng thau'], tip: 'Khối này to hơn miệng ống đong (chiều ngang 30mm > 28mm), các em phải dùng Bình tràn Eureka nhé!', sgkFormula: 'V = Dài × Rộng × Cao' },
-      { id: 'hollow-cylinder', assetId: 'OL3D-EQP-HLW-0001', nameVi: 'Ống trụ kim loại rỗng khoang kín', nameStudent: 'Ống kim loại rỗng ruột', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade8'], glyph: '🕳️', ports: [], studentPorts: ['Khoang rỗng bên trong'], tip: 'Mặc dù làm bằng kim loại nhưng có ruột rỗng chứa không khí nên vật có thể nổi trên mặt nước!', sgkFormula: 'Lực đẩy Ác-si-mét: F_A = d · V_chìm' },
-      { id: 'spring-dynamometer', assetId: 'OL3D-EQP-DYN-0001', nameVi: 'Lực kế lò xo ống trụ 5 N', nameStudent: 'Lực kế đo độ lớn lực', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🪝', ports: ['CONN_SPRING_DYNO_HOOK'], studentPorts: ['Móc treo dưới', 'Vòng cầm trên'], tip: 'Giữ lực kế thẳng đứng và chỉnh kim về đúng vạch 0 trước khi móc vật nặng.', sgkFormula: 'Trọng lượng: P = 10 · m (Newton)' },
-      { id: 'thermometer', assetId: 'OL3D-EQP-THM-0001', nameVi: 'Nhiệt kế rượu -10..110°C', nameStudent: 'Nhiệt kế đo nhiệt độ', category: 'G03_TIME_TEMP', subject: 'general', grades: ['grade6', 'grade7', 'grade8'], glyph: '🌡️', ports: [], studentPorts: ['Bầu cảm ứng nhiệt', 'Ống mao dẫn đỏ'], tip: 'Không để bầu nhiệt kế chạm đáy cốc đang đun để tránh đo sai nhiệt độ của ngọn lửa!', sgkFormula: 'Nhiệt độ đọc theo mực đỏ (°C)' },
-      { id: 'stopwatch', assetId: 'OL3D-EQP-STW-0001', nameVi: 'Đồng hồ bấm giây 0.01 s', nameStudent: 'Đồng hồ bấm giây', category: 'G03_TIME_TEMP', subject: 'general', grades: ['grade6', 'grade7'], glyph: '⏱️', ports: [], studentPorts: ['Nút Start/Stop', 'Nút Reset về 0'], tip: 'Bấm Start ngay khi bắt đầu hiện tượng và bấm Stop ngay khi kết thúc.', sgkFormula: 'Thời gian: giây (s)' },
-      { id: 'graduated-cylinder', assetId: 'OL3D-EQP-CYL-0001', nameVi: 'Ống đong thủy tinh 100 ml', nameStudent: 'Ống đong đo thể tích', category: 'G04_VOLUMETRIC', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🧪', ports: ['CONN_CYLINDER_APERTURE'], studentPorts: ['Miệng rót trên', 'Vạch chia mililit'], tip: 'Đọc thể tích tại đáy của mặt khum chất lỏng cong lõm nhé các em!', sgkFormula: 'Thể tích vật = Nước dâng lên (V2 - V1)' },
-      { id: 'beaker-250', assetId: 'OL3D-EQP-BKR-0001', nameVi: 'Cốc thủy tinh chịu nhiệt 250 ml', nameStudent: 'Cốc thủy tinh 250ml', category: 'G04_VOLUMETRIC', subject: 'general', grades: ['grade6', 'grade7', 'grade8', 'grade9'], glyph: '🥛', ports: ['CONN_BEAKER_RIM'], studentPorts: ['Miệng vòi rót', 'Đáy chịu nhiệt'], tip: 'Cốc thủy tinh khi đun phải đặt trên lưới tản nhiệt amiăng để không bị nứt vỡ.', sgkFormula: 'Dung tích chứa: 250 mL' },
-      { id: 'overflow-can', assetId: 'OL3D-EQP-OVF-0001', nameVi: 'Bình tràn Eureka 250 ml', nameStudent: 'Bình tràn Eureka có vòi', category: 'G04_VOLUMETRIC', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🫗', ports: ['CONN_OVERFLOW_CAN_APERTURE', 'CONN_OVERFLOW_CAN_SPOUT'], studentPorts: ['Miệng bình thả vật', 'Vòi xả tràn nghiêng'], tip: 'Chờ nước chảy hết qua vòi tràn trước khi thả vật vào, để chỉ hứng đúng lượng nước bị chiếm chỗ!', sgkFormula: 'Vật chìm đẩy nước tràn ra cốc hứng' },
-      { id: 'erlenmeyer-flask', assetId: 'OL3D-EQP-FLK-0001', nameVi: 'Bình tam giác Erlenmeyer 250 ml', nameStudent: 'Bình tam giác', category: 'G04_VOLUMETRIC', subject: 'chemistry', grades: ['grade8', 'grade9'], glyph: '⚗️', ports: [], studentPorts: ['Cổ bình thon', 'Đáy rộng'], tip: 'Cổ thon giúp các em lắc tròn dung dịch mà không bị bắn hóa chất ra ngoài.', sgkFormula: 'Bình pha chế & lắc dung dịch' },
-      { id: 'test-tube', assetId: 'OL3D-EQP-TUB-0001', nameVi: 'Ống nghiệm thủy tinh 150 mm', nameStudent: 'Ống nghiệm nhỏ', category: 'G05_CHEM_HEATING', subject: 'chemistry', grades: ['grade7', 'grade8', 'grade9'], glyph: '🧪', ports: [], studentPorts: ['Miệng ống', 'Đáy tròn chịu nhiệt'], tip: 'Khi đun ống nghiệm, luôn hướng miệng ống về nơi không có người!', sgkFormula: 'Dụng cụ phản ứng lượng nhỏ' },
-      { id: 'alcohol-lamp', assetId: 'OL3D-EQP-ALC-0001', nameVi: 'Đèn cồn thí nghiệm', nameStudent: 'Đèn cồn đốt nóng', category: 'G05_CHEM_HEATING', subject: 'chemistry', grades: ['grade6', 'grade8', 'grade9'], glyph: '🔥', ports: [], studentPorts: ['Tim bấc đèn', 'Nắp đậy dập lửa'], tip: 'Tuyệt đối không thổi bằng miệng! Hãy đậy nắp đèn cồn lại để dập tắt ngọn lửa an toàn.', sgkFormula: 'Nguồn nhiệt đun sôi dung dịch' },
-      { id: 'porcelain-dish', assetId: 'OL3D-EQP-DSH-0001', nameVi: 'Bát sứ chịu nhiệt cô cạn', nameStudent: 'Bát sứ cô cạn muối', category: 'G05_CHEM_HEATING', subject: 'chemistry', grades: ['grade8'], glyph: '🥣', ports: [], studentPorts: ['Lòng bát chịu lửa', 'Mỏ rót nhỏ'], tip: 'Dùng kẹp gắp bát sứ nóng, không dùng tay trần chạm vào bát sứ vừa đun!', sgkFormula: 'Đun cạn nước thu muối ăn kết tinh' },
-      { id: 'separatory-funnel', assetId: 'OL3D-EQP-SEP-0001', nameVi: 'Phễu chiết quả lê có khóa', nameStudent: 'Phễu chiết tách chất lỏng', category: 'G05_CHEM_HEATING', subject: 'chemistry', grades: ['grade8'], glyph: '⏳', ports: [], studentPorts: ['Khóa xả đáy', 'Miệng nạp có nút'], tip: 'Vặn khóa từ từ để chất lỏng nặng ở dưới chảy hết xuống cốc thì khóa ngay lại!', sgkFormula: 'Tách dầu ăn và nước' },
-      { id: 'distillation-flask', assetId: 'OL3D-EQP-DST-0001', nameVi: 'Bình cầu có nhánh chưng cất 250 ml', nameStudent: 'Bình cầu chưng cất', category: 'G05_CHEM_HEATING', subject: 'chemistry', grades: ['grade8', 'grade9'], glyph: '🍶', ports: [], studentPorts: ['Nhánh dẫn hơi', 'Miệng cắm nhiệt kế'], tip: 'Hơi rượu bay lên nhánh nghiêng gặp lạnh sẽ ngưng tụ thành giọt lỏng chảy ra.', sgkFormula: 'Tách rượu ra khỏi nước bằng nhiệt độ sôi' },
-      { id: 'optical-lamp', assetId: 'OL3D-EQP-OLP-0001', nameVi: 'Đèn chiếu sáng Halogen quang học', nameStudent: 'Đèn chiếu tia sáng', category: 'G06_OPTICS', subject: 'physics', grades: ['grade7', 'grade9'], glyph: '💡', ports: ['CONN_LAMP_DC_IN_POS', 'CONN_LAMP_DC_IN_NEG', 'CONN_OPTICAL_LAMP_CARRIAGE'], studentPorts: ['Cọc cắm dây điện đỏ (+)', 'Cọc cắm dây đen (-)', 'Chân gá ray trượt'], tip: 'Đèn này không có pin bên trong! Bắt buộc phải cắm 2 dây vào Hộp Nguồn và bật công tắc thì đèn mới sáng.', sgkFormula: 'Nguồn phát 1, 2, 3 tia sáng thẳng' },
-      { id: 'optical-power-supply', assetId: 'OL3D-EQP-PSU-0001', nameVi: 'Nguồn điện hạ áp thí nghiệm 3V–12V', nameStudent: 'Bộ nguồn điện thí nghiệm', category: 'G06_OPTICS', subject: 'physics', grades: ['grade8', 'grade9'], glyph: '🔋', ports: ['CONN_PSU_DC_OUT_POS', 'CONN_PSU_DC_OUT_NEG'], studentPorts: ['Cực dương đỏ (+)', 'Cực âm đen (-)'], tip: 'Vặn núm chọn điện áp về 6V hoặc 12V trước khi bật công tắc nguồn.', sgkFormula: 'Cung cấp dòng điện an toàn 3V - 12V' },
-      { id: 'optical-bench', assetId: 'OL3D-EQP-OBN-0001', nameVi: 'Giá quang học 90 cm chia vạch mm', nameStudent: 'Thanh ray quang học 90cm', category: 'G06_OPTICS', subject: 'physics', grades: ['grade7', 'grade9'], glyph: '🛤️', ports: ['CONN_OPTICAL_BENCH_RAIL'], studentPorts: ['Rãnh trượt dẫn hướng', 'Thước đo milimet hai bên'], tip: 'Các thiết bị gắn lên thanh ray này sẽ tự động thẳng hàng cùng độ cao với nhau.', sgkFormula: 'Thanh ray giữ dụng cụ thẳng hàng' },
-      { id: 'frosted-f-object', assetId: 'OL3D-EQP-FOB-0001', nameVi: 'Vật sáng kính mờ hình chữ F', nameStudent: 'Tấm kính chữ F phát sáng', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🅰️', ports: [], studentPorts: ['Mặt kính chữ F', 'Đế trượt gắn ray'], tip: 'Chữ F có nét trên nét dưới không đối xứng, giúp các em dễ dàng thấy ảnh bị lộn ngược!', sgkFormula: 'Vật sáng tạo ảnh (Cao 2 cm)' },
-      { id: 'optical-lens', assetId: 'OL3D-EQP-OPT-0001', nameVi: 'Thấu kính hội tụ/phân kỳ trên đế trượt', nameStudent: 'Thấu kính tạo ảnh', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🔍', ports: ['CONN_LENS_HOLDER_SOCKET'], studentPorts: ['Vành giữ kính tròn', 'Đế trượt khóa ốc'], tip: 'Thấu kính hội tụ có rìa mỏng, thấu kính phân kỳ có rìa dày hơn phần giữa.', sgkFormula: '1/f = 1/d + 1/d\' (Tiêu cự f = 10 cm)' },
-      { id: 'optical-lens-box', assetId: 'OL3D-EQP-LBX-0001', nameVi: 'Hộp bộ 6 thấu kính tiêu chuẩn', nameStudent: 'Hộp chứa các thấu kính', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🧰', ports: [], studentPorts: ['6 ngăn chứa lót nhung'], tip: 'Cầm mép vành nhựa thấu kính, không chạm tay vào mặt thủy tinh trong suốt.', sgkFormula: 'Gồm các thấu kính +5cm, +10cm, -10cm' },
-      { id: 'optical-screen', assetId: 'OL3D-EQP-SCR-0001', nameVi: 'Màn chắn hứng ảnh trắng mờ', nameStudent: 'Màn hứng ảnh trắng', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🖥️', ports: [], studentPorts: ['Mặt phẳng màu trắng mờ', 'Đế trượt trên ray'], tip: 'Dịch chuyển màn hứng chậm rãi trên ray cho đến khi thấy chữ F hiện lên nét nhất.', sgkFormula: 'Màn hứng ảnh thật ngược chiều' },
-      { id: 'laser-source', assetId: 'OL3D-EQP-LSR-0001', nameVi: 'Nguồn sáng Laser 3 tia song song', nameStudent: 'Hộp đèn Laser 3 tia', category: 'G06_OPTICS', subject: 'physics', grades: ['grade7', 'grade9'], glyph: '🔴', ports: [], studentPorts: ['3 khe phát tia laser đỏ', 'Công tắc gạt'], tip: 'Tuyệt đối không nhìn thẳng vào lỗ phát laser hoặc chiếu vào mắt bạn bè!', sgkFormula: 'Phát 3 tia sáng laser song song màu đỏ' },
-      { id: 'semicircular-slab', assetId: 'OL3D-EQP-SLB-0001', nameVi: 'Bản bán trụ thủy tinh & Đĩa chia độ 360°', nameStudent: 'Khối bán trụ thủy tinh', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🌓', ports: [], studentPorts: ['Mặt phẳng kính', 'Mặt cong bán nguyệt'], tip: 'Chiếu tia laser vào đúng tâm O của đĩa tròn để quan sát góc khúc xạ r bị gãy khúc!', sgkFormula: 'Tia sáng bị gãy khúc khi qua thủy tinh' },
-      { id: 'prism', assetId: 'OL3D-EQP-PRM-0001', nameVi: 'Lăng kính tam giác đều tán sắc', nameStudent: 'Lăng kính 7 sắc cầu vồng', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🌈', ports: [], studentPorts: ['3 mặt kính tam giác đều', 'Trục xoay giá đỡ'], tip: 'Ánh sáng trắng bị lăng kính tách thành dải màu Cầu Vồng: Đỏ, Cam, Vàng, Lục, Lam, Chàm, Tím.', sgkFormula: 'Tách ánh sáng trắng thành 7 màu cầu vồng' },
-      { id: 'magnifying-glass', assetId: 'OL3D-EQP-MAG-0001', nameVi: 'Kính lúp cầm tay độ bội giác 5x', nameStudent: 'Kính lúp cầm tay', category: 'G06_OPTICS', subject: 'general', grades: ['grade6', 'grade7'], glyph: '🔎', ports: [], studentPorts: ['Tròng kính lồi', 'Tay cầm nhựa'], tip: 'Đưa kính lúp gần sát mắt rồi dịch chuyển vật mẫu từ từ để nhìn thấy phóng to rõ nhất.', sgkFormula: 'Phóng đại hình ảnh gấp 5 lần' },
-      { id: 'galvanometer', assetId: 'OL3D-EQP-GLV-0001', nameVi: 'Điện kế nhạy vạch 0 ở giữa', nameStudent: 'Điện kế nhạy (Kim ở giữa)', category: 'G07_ELECTRICITY', subject: 'physics', grades: ['grade9'], glyph: '🧭', ports: [], studentPorts: ['Cọc nối dây bên trái', 'Cọc nối dây bên phải'], tip: 'Khi có dòng điện chạy qua, kim sẽ lệch sang trái hoặc sang phải báo hiệu chiều dòng điện.', sgkFormula: 'Phát hiện dòng điện cảm ứng siêu nhỏ' },
-      { id: 'digital-multimeter', assetId: 'OL3D-EQP-DMM-0001', nameVi: 'Đồng hồ vạn năng hiện số AC/DC', nameStudent: 'Đồng hồ đo điện hiện số', category: 'G07_ELECTRICITY', subject: 'physics', grades: ['grade8', 'grade9'], glyph: '📟', ports: [], studentPorts: ['Que đo đỏ (+)', 'Que đo đen (COM)'], tip: 'Chọn đúng nấc đo V (Vôn) khi đo nguồn điện, không để nhầm nấc đo điện trở Ω kẻo chập!', sgkFormula: 'Đo Vôn (V), Ampe (A), Ôm (Ω)' },
-      { id: 'induction-coil', assetId: 'OL3D-EQP-COIL-0001', nameVi: 'Cuộn dây dẫn kín kèm 2 LED & Nam châm', nameStudent: 'Cuộn dây cảm ứng & Nam châm', category: 'G07_ELECTRICITY', subject: 'physics', grades: ['grade9'], glyph: '🧲', ports: [], studentPorts: ['Lòng ống cuộn dây', '2 đèn LED đỏ & xanh'], tip: 'Đẩy nam châm vào thì đèn đỏ sáng, rút nam châm ra thì đèn xanh sáng! Nam châm đứng yên thì đèn tắt.', sgkFormula: 'Di chuyển nam châm sinh ra dòng điện' },
-      { id: 'lever-balance', assetId: 'OL3D-EQP-LEV-0001', nameVi: 'Bộ đòn bẩy thăng bằng chia vạch đối xứng', nameStudent: 'Thước đòn bẩy thăng bằng', category: 'G08_MECHANICS', subject: 'physics', grades: ['grade8'], glyph: '⚖️', ports: [], studentPorts: ['Trục quay ở giữa', 'Các lỗ treo quả nặng 2 bên'], tip: 'Treo quả nặng ở xa trục quay thì cần ít lực hơn để bập bênh thăng bằng!', sgkFormula: 'Quy tắc đòn bẩy: Lực × Khoảng cách = Nhau' },
-      { id: 'communicating-vessels', assetId: 'OL3D-EQP-HYD-0001', nameVi: 'Bình thông nhau 3 nhánh dị hình', nameStudent: 'Bình nước thông nhau 3 nhánh', category: 'G08_MECHANICS', subject: 'physics', grades: ['grade8'], glyph: '🧪', ports: [], studentPorts: ['Ống thẳng', 'Ống phình', 'Ống ngoằn ngoèo'], tip: 'Dù ống có hình dáng to, nhỏ hay cong queo thì khi đứng yên, mực nước ở 3 ống luôn cao bằng nhau!', sgkFormula: 'Mực nước ở các nhánh luôn cao bằng nhau' },
-      { id: 'microscope', assetId: 'OL3D-EQP-MIC-0001', nameVi: 'Kính hiển vi quang học 3 vật kính DIN', nameStudent: 'Kính hiển vi quang học', category: 'G09_BIOLOGY', subject: 'biology', grades: ['grade6', 'grade9'], glyph: '🔬', ports: [], studentPorts: ['Ống thị kính nhìn', 'Mâm 3 vật kính 10x, 40x', 'Ốc sơ cấp & vi cấp'], tip: 'Dùng ốc to (sơ cấp) để tìm thấy hình mẫu mờ mờ, sau đó vặn ốc nhỏ (vi cấp) thật khẽ để hình ảnh nét căng!', sgkFormula: 'Độ phóng đại = Thị kính × Vật kính (Ví dụ: 10 × 40 = 400 lần)' },
-      { id: 'dna-model', assetId: 'OL3D-EQP-DNA-0001', nameVi: 'Mô hình cấu trúc phân tử DNA xoắn kép', nameStudent: 'Mô hình xoắn kép DNA', category: 'G09_BIOLOGY', subject: 'biology', grades: ['grade9'], glyph: '🧬', ports: [], studentPorts: ['Trục xoắn 3D', 'Các cặp bazơ A-T, G-X'], tip: 'Ghi nhớ nguyên tắc bổ sung: Nu loại A luôn ghép đôi với T, Nu loại G luôn ghép đôi với X.', sgkFormula: 'Nguyên tắc bổ sung: A nối với T, G nối với X' },
-      { id: 'water-dispenser', assetId: 'OL3D-EQP-WDP-1000', nameVi: 'Bình chứa nước có van xả 1000 ml', nameStudent: 'Bình cấp nước sạch có van', category: 'G10_FLUID_SUPPLY', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🚰', ports: ['CONN_WATER_DISPENSER_SPOUT'], studentPorts: ['Vòi xả nước có van vặn'], tip: 'Mở van vừa phải để nước không bắn tung tóe ra ngoài mặt bàn thí nghiệm.', sgkFormula: 'Bình cung cấp nước làm thí nghiệm' },
-      { id: 'retort-stand', assetId: 'OL3D-EQP-STD-0001', nameVi: 'Giá đỡ thí nghiệm kèm khớp nối & kẹp', nameStudent: 'Giá sắt đỡ thí nghiệm', category: 'G08_MECHANICS', subject: 'general', grades: ['grade8', 'grade9'], glyph: '📐', ports: [], studentPorts: ['Chân đế gang nặng', 'Cột sắt', 'Tay kẹp có ốc siết'], tip: 'Siết chặt ốc giữ ngàm kẹp để dụng cụ thủy tinh không bị trượt rơi vỡ.', sgkFormula: 'Giữ cố định các dụng cụ trên cao' },
+      { id: 'vernier-caliper', assetId: 'OL3D-EQP-CAL-0001', nameVi: 'Thước cặp du xích 150 mm', nameStudent: 'Thước kẹp đo chính xác', shortKeyword: 'Thước kẹp', category: 'G01_DIMENSION', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '📏', ports: ['CONN_VERNIER_CALIPER_JAWS'], studentPorts: ['Ngàm kẹp ngoài', 'Ngàm đo trong'], tip: 'Nhẹ nhàng trượt ngàm kẹp ôm vừa khít vật thể, không siết quá mạnh làm xước dụng cụ!', sgkFormula: 'Độ chính xác: 0.02 mm (1/50 mm)' },
+      { id: 'ruler-30', assetId: 'OL3D-EQP-RUL-0001', nameVi: 'Thước thẳng chia vạch 30 cm', nameStudent: 'Thước kẻ đo chiều dài', shortKeyword: 'Thước kẻ', category: 'G01_DIMENSION', subject: 'general', grades: ['grade6', 'grade7', 'grade8', 'grade9'], glyph: '📐', ports: [], studentPorts: ['Thân chia vạch milimet'], tip: 'Đặt mắt nhìn vuông góc với vạch chia để tránh sai số đo nhé!', sgkFormula: 'ĐCNN = 1 mm' },
+      { id: 'electronic-balance', assetId: 'OL3D-EQP-BAL-0001', nameVi: 'Cân điện tử hiện số 500 g', nameStudent: 'Cân điện tử hiện số', shortKeyword: 'Cân điện tử', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '⚖️', ports: ['CONN_BALANCE_PAN'], studentPorts: ['Đĩa cân inox', 'Nút trừ bì TARE'], tip: 'Nhớ bấm nút TARE để đưa màn hình về 0.00g khi đã đặt cốc lên đĩa cân trước khi rót nước!', sgkFormula: 'Khối lượng = Số chỉ trên màn hình (gam)' },
+      { id: 'calibration-weight', assetId: 'OL3D-EQP-WGT-0001', nameVi: 'Bộ quả cân chuẩn bằng đồng 50 g', nameStudent: 'Quả cân chuẩn 50g', shortKeyword: 'Quả cân 50g', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🥉', ports: [], studentPorts: ['Khuyên móc đỉnh', 'Đáy phẳng tiếp xúc'], tip: 'Cầm quả cân ở phần núm trên đỉnh, tránh chạm tay vào thân để không dính mồ hôi làm sai số!', sgkFormula: 'Khối lượng chuẩn: m = 50 gam' },
+      { id: 'solid-cylinder', assetId: 'OL3D-EQP-SLD-0001', nameVi: 'Khối trụ đặc hợp kim nhôm', nameStudent: 'Khối nhôm hình trụ', shortKeyword: 'Khối nhôm', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🔩', ports: [], studentPorts: ['Thân trụ kim loại', 'Quai móc treo'], tip: 'Khối nhôm nhẹ hơn đồng thau, chìm trong nước nhưng chịu lực đẩy Ác-si-mét nâng lên.', sgkFormula: 'Khối lượng riêng: D = m / V' },
+      { id: 'solid-sphere', assetId: 'OL3D-EQP-SPH-0001', nameVi: 'Khối bi cầu thép không gỉ', nameStudent: 'Viên bi thép tròn', shortKeyword: 'Bi thép', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '⚪', ports: [], studentPorts: ['Bề mặt cầu trơn'], tip: 'Thả nhẹ tay vào ống đong nghiêng để bi trượt xuống từ từ, không làm vỡ đáy thủy tinh!', sgkFormula: 'Thể tích: V = (4/3)·3.14·R³' },
+      { id: 'solid-block', assetId: 'OL3D-EQP-BLK-0001', nameVi: 'Khối hộp chữ nhật đồng thau', nameStudent: 'Khối đồng hình hộp', shortKeyword: 'Khối đồng', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '📦', ports: [], studentPorts: ['6 mặt phẳng đồng thau'], tip: 'Khối này to hơn miệng ống đong (chiều ngang 30mm > 28mm), các em phải dùng Bình tràn Eureka nhé!', sgkFormula: 'V = Dài × Rộng × Cao' },
+      { id: 'hollow-cylinder', assetId: 'OL3D-EQP-HLW-0001', nameVi: 'Ống trụ kim loại rỗng khoang kín', nameStudent: 'Ống kim loại rỗng ruột', shortKeyword: 'Ống rỗng', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade8'], glyph: '🕳️', ports: [], studentPorts: ['Khoang rỗng bên trong'], tip: 'Mặc dù làm bằng kim loại nhưng có ruột rỗng chứa không khí nên vật có thể nổi trên mặt nước!', sgkFormula: 'Lực đẩy Ác-si-mét: F_A = d · V_chìm' },
+      { id: 'spring-dynamometer', assetId: 'OL3D-EQP-DYN-0001', nameVi: 'Lực kế lò xo ống trụ 5 N', nameStudent: 'Lực kế đo độ lớn lực', shortKeyword: 'Lực kế 5N', category: 'G02_MASS_FORCE', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🪝', ports: ['CONN_SPRING_DYNO_HOOK'], studentPorts: ['Móc treo dưới', 'Vòng cầm trên'], tip: 'Giữ lực kế thẳng đứng và chỉnh kim về đúng vạch 0 trước khi móc vật nặng.', sgkFormula: 'Trọng lượng: P = 10 · m (Newton)' },
+      { id: 'thermometer', assetId: 'OL3D-EQP-THM-0001', nameVi: 'Nhiệt kế rượu -10..110°C', nameStudent: 'Nhiệt kế đo nhiệt độ', shortKeyword: 'Nhiệt kế', category: 'G03_TIME_TEMP', subject: 'general', grades: ['grade6', 'grade7', 'grade8'], glyph: '🌡️', ports: [], studentPorts: ['Bầu cảm ứng nhiệt', 'Ống mao dẫn đỏ'], tip: 'Không để bầu nhiệt kế chạm đáy cốc đang đun để tránh đo sai nhiệt độ của ngọn lửa!', sgkFormula: 'Nhiệt độ đọc theo mực đỏ (°C)' },
+      { id: 'stopwatch', assetId: 'OL3D-EQP-STW-0001', nameVi: 'Đồng hồ bấm giây 0.01 s', nameStudent: 'Đồng hồ bấm giây', shortKeyword: 'Đồng hồ bấm giây', category: 'G03_TIME_TEMP', subject: 'general', grades: ['grade6', 'grade7'], glyph: '⏱️', ports: [], studentPorts: ['Nút Start/Stop', 'Nút Reset về 0'], tip: 'Bấm Start ngay khi bắt đầu hiện tượng và bấm Stop ngay khi kết thúc.', sgkFormula: 'Thời gian: giây (s)' },
+      { id: 'graduated-cylinder', assetId: 'OL3D-EQP-CYL-0001', nameVi: 'Ống đong thủy tinh 100 ml', nameStudent: 'Ống đong đo thể tích', shortKeyword: 'Ống đong', category: 'G04_VOLUMETRIC', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🧪', ports: ['CONN_CYLINDER_APERTURE'], studentPorts: ['Miệng rót trên', 'Vạch chia mililit'], tip: 'Đọc thể tích tại đáy của mặt khum chất lỏng cong lõm nhé các em!', sgkFormula: 'Thể tích vật = Nước dâng lên (V2 - V1)' },
+      { id: 'beaker-250', assetId: 'OL3D-EQP-BKR-0001', nameVi: 'Cốc thủy tinh chịu nhiệt 250 ml', nameStudent: 'Cốc thủy tinh 250ml', shortKeyword: 'Cốc 250ml', category: 'G04_VOLUMETRIC', subject: 'general', grades: ['grade6', 'grade7', 'grade8', 'grade9'], glyph: '🥛', ports: ['CONN_BEAKER_RIM'], studentPorts: ['Miệng vòi rót', 'Đáy chịu nhiệt'], tip: 'Cốc thủy tinh khi đun phải đặt trên lưới tản nhiệt amiăng để không bị nứt vỡ.', sgkFormula: 'Dung tích chứa: 250 mL' },
+      { id: 'overflow-can', assetId: 'OL3D-EQP-OVF-0001', nameVi: 'Bình tràn Eureka 250 ml', nameStudent: 'Bình tràn Eureka có vòi', shortKeyword: 'Bình tràn', category: 'G04_VOLUMETRIC', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🫗', ports: ['CONN_OVERFLOW_CAN_APERTURE', 'CONN_OVERFLOW_CAN_SPOUT'], studentPorts: ['Miệng bình thả vật', 'Vòi xả tràn nghiêng'], tip: 'Chờ nước chảy hết qua vòi tràn trước khi thả vật vào, để chỉ hứng đúng lượng nước bị chiếm chỗ!', sgkFormula: 'Vật chìm đẩy nước tràn ra cốc hứng' },
+      { id: 'erlenmeyer-flask', assetId: 'OL3D-EQP-FLK-0001', nameVi: 'Bình tam giác Erlenmeyer 250 ml', nameStudent: 'Bình tam giác', shortKeyword: 'Bình tam giác', category: 'G04_VOLUMETRIC', subject: 'chemistry', grades: ['grade8', 'grade9'], glyph: '⚗️', ports: [], studentPorts: ['Cổ bình thon', 'Đáy rộng'], tip: 'Cổ thon giúp các em lắc tròn dung dịch mà không bị bắn hóa chất ra ngoài.', sgkFormula: 'Bình pha chế & lắc dung dịch' },
+      { id: 'test-tube', assetId: 'OL3D-EQP-TUB-0001', nameVi: 'Ống nghiệm thủy tinh 150 mm', nameStudent: 'Ống nghiệm nhỏ', shortKeyword: 'Ống nghiệm', category: 'G05_CHEM_HEATING', subject: 'chemistry', grades: ['grade7', 'grade8', 'grade9'], glyph: '🧪', ports: [], studentPorts: ['Miệng ống', 'Đáy tròn chịu nhiệt'], tip: 'Khi đun ống nghiệm, luôn hướng miệng ống về nơi không có người!', sgkFormula: 'Dụng cụ phản ứng lượng nhỏ' },
+      { id: 'alcohol-lamp', assetId: 'OL3D-EQP-ALC-0001', nameVi: 'Đèn cồn thí nghiệm', nameStudent: 'Đèn cồn đốt nóng', shortKeyword: 'Đèn cồn', category: 'G05_CHEM_HEATING', subject: 'chemistry', grades: ['grade6', 'grade8', 'grade9'], glyph: '🔥', ports: [], studentPorts: ['Tim bấc đèn', 'Nắp đậy dập lửa'], tip: 'Tuyệt đối không thổi bằng miệng! Hãy đậy nắp đèn cồn lại để dập tắt ngọn lửa an toàn.', sgkFormula: 'Nguồn nhiệt đun sôi dung dịch' },
+      { id: 'porcelain-dish', assetId: 'OL3D-EQP-DSH-0001', nameVi: 'Bát sứ chịu nhiệt cô cạn', nameStudent: 'Bát sứ cô cạn muối', shortKeyword: 'Bát sứ', category: 'G05_CHEM_HEATING', subject: 'chemistry', grades: ['grade8'], glyph: '🥣', ports: [], studentPorts: ['Lòng bát chịu lửa', 'Mỏ rót nhỏ'], tip: 'Dùng kẹp gắp bát sứ nóng, không dùng tay trần chạm vào bát sứ vừa đun!', sgkFormula: 'Đun cạn nước thu muối ăn kết tinh' },
+      { id: 'separatory-funnel', assetId: 'OL3D-EQP-SEP-0001', nameVi: 'Phễu chiết quả lê có khóa', nameStudent: 'Phễu chiết tách chất lỏng', shortKeyword: 'Phễu chiết', category: 'G05_CHEM_HEATING', subject: 'chemistry', grades: ['grade8'], glyph: '⏳', ports: [], studentPorts: ['Khóa xả đáy', 'Miệng nạp có nút'], tip: 'Vặn khóa từ từ để chất lỏng nặng ở dưới chảy hết xuống cốc thì khóa ngay lại!', sgkFormula: 'Tách dầu ăn và nước' },
+      { id: 'distillation-flask', assetId: 'OL3D-EQP-DST-0001', nameVi: 'Bình cầu có nhánh chưng cất 250 ml', nameStudent: 'Bình cầu chưng cất', shortKeyword: 'Bình cầu', category: 'G05_CHEM_HEATING', subject: 'chemistry', grades: ['grade8', 'grade9'], glyph: '🍶', ports: [], studentPorts: ['Nhánh dẫn hơi', 'Miệng cắm nhiệt kế'], tip: 'Hơi rượu bay lên nhánh nghiêng gặp lạnh sẽ ngưng tụ thành giọt lỏng chảy ra.', sgkFormula: 'Tách rượu ra khỏi nước bằng nhiệt độ sôi' },
+      { id: 'optical-lamp', assetId: 'OL3D-EQP-OLP-0001', nameVi: 'Đèn chiếu sáng Halogen quang học', nameStudent: 'Đèn chiếu tia sáng', shortKeyword: 'Đèn chiếu', category: 'G06_OPTICS', subject: 'physics', grades: ['grade7', 'grade9'], glyph: '💡', ports: ['CONN_LAMP_DC_IN_POS', 'CONN_LAMP_DC_IN_NEG', 'CONN_OPTICAL_LAMP_CARRIAGE'], studentPorts: ['Cọc cắm dây điện đỏ (+)', 'Cọc cắm dây đen (-)', 'Chân gá ray trượt'], tip: 'Đèn này không có pin bên trong! Bắt buộc phải cắm 2 dây vào Hộp Nguồn và bật công tắc thì đèn mới sáng.', sgkFormula: 'Nguồn phát 1, 2, 3 tia sáng thẳng' },
+      { id: 'optical-power-supply', assetId: 'OL3D-EQP-PSU-0001', nameVi: 'Nguồn điện hạ áp thí nghiệm 3V–12V', nameStudent: 'Bộ nguồn điện thí nghiệm', shortKeyword: 'Nguồn điện DC', category: 'G06_OPTICS', subject: 'physics', grades: ['grade8', 'grade9'], glyph: '🔋', ports: ['CONN_PSU_DC_OUT_POS', 'CONN_PSU_DC_OUT_NEG'], studentPorts: ['Cực dương đỏ (+)', 'Cực âm đen (-)'], tip: 'Vặn núm chọn điện áp về 6V hoặc 12V trước khi bật công tắc nguồn.', sgkFormula: 'Cung cấp dòng điện an toàn 3V - 12V' },
+      { id: 'optical-bench', assetId: 'OL3D-EQP-OBN-0001', nameVi: 'Giá quang học 90 cm chia vạch mm', nameStudent: 'Thanh ray quang học 90cm', shortKeyword: 'Ray quang học', category: 'G06_OPTICS', subject: 'physics', grades: ['grade7', 'grade9'], glyph: '🛤️', ports: ['CONN_OPTICAL_BENCH_RAIL'], studentPorts: ['Rãnh trượt dẫn hướng', 'Thước đo milimet hai bên'], tip: 'Các thiết bị gắn lên thanh ray này sẽ tự động thẳng hàng cùng độ cao với nhau.', sgkFormula: 'Thanh ray giữ dụng cụ thẳng hàng' },
+      { id: 'frosted-f-object', assetId: 'OL3D-EQP-FOB-0001', nameVi: 'Vật sáng kính mờ hình chữ F', nameStudent: 'Tấm kính chữ F phát sáng', shortKeyword: 'Vật chữ F', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🅰️', ports: [], studentPorts: ['Mặt kính chữ F', 'Đế trượt gắn ray'], tip: 'Chữ F có nét trên nét dưới không đối xứng, giúp các em dễ dàng thấy ảnh bị lộn ngược!', sgkFormula: 'Vật sáng tạo ảnh (Cao 2 cm)' },
+      { id: 'optical-lens', assetId: 'OL3D-EQP-OPT-0001', nameVi: 'Thấu kính hội tụ/phân kỳ trên đế trượt', nameStudent: 'Thấu kính tạo ảnh', shortKeyword: 'Thấu kính', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🔍', ports: ['CONN_LENS_HOLDER_SOCKET'], studentPorts: ['Vành giữ kính tròn', 'Đế trượt khóa ốc'], tip: 'Thấu kính hội tụ có rìa mỏng, thấu kính phân kỳ có rìa dày hơn phần giữa.', sgkFormula: '1/f = 1/d + 1/d\' (Tiêu cự f = 10 cm)' },
+      { id: 'optical-lens-box', assetId: 'OL3D-EQP-LBX-0001', nameVi: 'Hộp bộ 6 thấu kính tiêu chuẩn', nameStudent: 'Hộp chứa các thấu kính', shortKeyword: 'Hộp thấu kính', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🧰', ports: [], studentPorts: ['6 ngăn chứa lót nhung'], tip: 'Cầm mép vành nhựa thấu kính, không chạm tay vào mặt thủy tinh trong suốt.', sgkFormula: 'Gồm các thấu kính +5cm, +10cm, -10cm' },
+      { id: 'optical-screen', assetId: 'OL3D-EQP-SCR-0001', nameVi: 'Màn chắn hứng ảnh trắng mờ', nameStudent: 'Màn hứng ảnh trắng', shortKeyword: 'Màn hứng ảnh', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🖥️', ports: [], studentPorts: ['Mặt phẳng màu trắng mờ', 'Đế trượt trên ray'], tip: 'Dịch chuyển màn hứng chậm rãi trên ray cho đến khi thấy chữ F hiện lên nét nhất.', sgkFormula: 'Màn hứng ảnh thật ngược chiều' },
+      { id: 'laser-source', assetId: 'OL3D-EQP-LSR-0001', nameVi: 'Nguồn sáng Laser 3 tia song song', nameStudent: 'Hộp đèn Laser 3 tia', shortKeyword: 'Đèn Laser 3 tia', category: 'G06_OPTICS', subject: 'physics', grades: ['grade7', 'grade9'], glyph: '🔴', ports: [], studentPorts: ['3 khe phát tia laser đỏ', 'Công tắc gạt'], tip: 'Tuyệt đối không nhìn thẳng vào lỗ phát laser hoặc chiếu vào mắt bạn bè!', sgkFormula: 'Phát 3 tia sáng laser song song màu đỏ' },
+      { id: 'semicircular-slab', assetId: 'OL3D-EQP-SLB-0001', nameVi: 'Bản bán trụ thủy tinh & Đĩa chia độ 360°', nameStudent: 'Khối bán trụ thủy tinh', shortKeyword: 'Bán trụ kính', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🌓', ports: [], studentPorts: ['Mặt phẳng kính', 'Mặt cong bán nguyệt'], tip: 'Chiếu tia laser vào đúng tâm O của đĩa tròn để quan sát góc khúc xạ r bị gãy khúc!', sgkFormula: 'Tia sáng bị gãy khúc khi qua thủy tinh' },
+      { id: 'prism', assetId: 'OL3D-EQP-PRM-0001', nameVi: 'Lăng kính tam giác đều tán sắc', nameStudent: 'Lăng kính 7 sắc cầu vồng', shortKeyword: 'Lăng kính', category: 'G06_OPTICS', subject: 'physics', grades: ['grade9'], glyph: '🌈', ports: [], studentPorts: ['3 mặt kính tam giác đều', 'Trục xoay giá đỡ'], tip: 'Ánh sáng trắng bị lăng kính tách thành dải màu Cầu Vồng: Đỏ, Cam, Vàng, Lục, Lam, Chàm, Tím.', sgkFormula: 'Tách ánh sáng trắng thành 7 màu cầu vồng' },
+      { id: 'magnifying-glass', assetId: 'OL3D-EQP-MAG-0001', nameVi: 'Kính lúp cầm tay độ bội giác 5x', nameStudent: 'Kính lúp cầm tay', shortKeyword: 'Kính lúp', category: 'G06_OPTICS', subject: 'general', grades: ['grade6', 'grade7'], glyph: '🔎', ports: [], studentPorts: ['Tròng kính lồi', 'Tay cầm nhựa'], tip: 'Đưa kính lúp gần sát mắt rồi dịch chuyển vật mẫu từ từ để nhìn thấy phóng to rõ nhất.', sgkFormula: 'Phóng đại hình ảnh gấp 5 lần' },
+      { id: 'galvanometer', assetId: 'OL3D-EQP-GLV-0001', nameVi: 'Điện kế nhạy vạch 0 ở giữa', nameStudent: 'Điện kế nhạy (Kim ở giữa)', shortKeyword: 'Điện kế nhạy', category: 'G07_ELECTRICITY', subject: 'physics', grades: ['grade9'], glyph: '🧭', ports: [], studentPorts: ['Cọc nối dây bên trái', 'Cọc nối dây bên phải'], tip: 'Khi có dòng điện chạy qua, kim sẽ lệch sang trái hoặc sang phải báo hiệu chiều dòng điện.', sgkFormula: 'Phát hiện dòng điện cảm ứng siêu nhỏ' },
+      { id: 'digital-multimeter', assetId: 'OL3D-EQP-DMM-0001', nameVi: 'Đồng hồ vạn năng hiện số AC/DC', nameStudent: 'Đồng hồ đo điện hiện số', shortKeyword: 'Đồng hồ DMM', category: 'G07_ELECTRICITY', subject: 'physics', grades: ['grade8', 'grade9'], glyph: '📟', ports: [], studentPorts: ['Que đo đỏ (+)', 'Que đo đen (COM)'], tip: 'Chọn đúng nấc đo V (Vôn) khi đo nguồn điện, không để nhầm nấc đo điện trở Ω kẻo chập!', sgkFormula: 'Đo Vôn (V), Ampe (A), Ôm (Ω)' },
+      { id: 'induction-coil', assetId: 'OL3D-EQP-COIL-0001', nameVi: 'Cuộn dây dẫn kín kèm 2 LED & Nam châm', nameStudent: 'Cuộn dây cảm ứng & Nam châm', shortKeyword: 'Cuộn dây & Nam châm', category: 'G07_ELECTRICITY', subject: 'physics', grades: ['grade9'], glyph: '🧲', ports: [], studentPorts: ['Lòng ống cuộn dây', '2 đèn LED đỏ & xanh'], tip: 'Đẩy nam châm vào thì đèn đỏ sáng, rút nam châm ra thì đèn xanh sáng! Nam châm đứng yên thì đèn tắt.', sgkFormula: 'Di chuyển nam châm sinh ra dòng điện' },
+      { id: 'lever-balance', assetId: 'OL3D-EQP-LEV-0001', nameVi: 'Bộ đòn bẩy thăng bằng chia vạch đối xứng', nameStudent: 'Thước đòn bẩy thăng bằng', shortKeyword: 'Đòn bẩy', category: 'G08_MECHANICS', subject: 'physics', grades: ['grade8'], glyph: '⚖️', ports: [], studentPorts: ['Trục quay ở giữa', 'Các lỗ treo quả nặng 2 bên'], tip: 'Treo quả nặng ở xa trục quay thì cần ít lực hơn để bập bênh thăng bằng!', sgkFormula: 'Quy tắc đòn bẩy: Lực × Khoảng cách = Nhau' },
+      { id: 'communicating-vessels', assetId: 'OL3D-EQP-HYD-0001', nameVi: 'Bình thông nhau 3 nhánh dị hình', nameStudent: 'Bình nước thông nhau 3 nhánh', shortKeyword: 'Bình thông nhau', category: 'G08_MECHANICS', subject: 'physics', grades: ['grade8'], glyph: '🧪', ports: [], studentPorts: ['Ống thẳng', 'Ống phình', 'Ống ngoằn ngoèo'], tip: 'Dù ống có hình dáng to, nhỏ hay cong queo thì khi đứng yên, mực nước ở 3 ống luôn cao bằng nhau!', sgkFormula: 'Mực nước ở các nhánh luôn cao bằng nhau' },
+      { id: 'microscope', assetId: 'OL3D-EQP-MIC-0001', nameVi: 'Kính hiển vi quang học 3 vật kính DIN', nameStudent: 'Kính hiển vi quang học', shortKeyword: 'Kính hiển vi', category: 'G09_BIOLOGY', subject: 'biology', grades: ['grade6', 'grade9'], glyph: '🔬', ports: [], studentPorts: ['Ống thị kính nhìn', 'Mâm 3 vật kính 10x, 40x', 'Ốc sơ cấp & vi cấp'], tip: 'Dùng ốc to (sơ cấp) để tìm thấy hình mẫu mờ mờ, sau đó vặn ốc nhỏ (vi cấp) thật khẽ để hình ảnh nét căng!', sgkFormula: 'Độ phóng đại = Thị kính × Vật kính (Ví dụ: 10 × 40 = 400 lần)' },
+      { id: 'dna-model', assetId: 'OL3D-EQP-DNA-0001', nameVi: 'Mô hình cấu trúc phân tử DNA xoắn kép', nameStudent: 'Mô hình xoắn kép DNA', shortKeyword: 'Mô hình DNA', category: 'G09_BIOLOGY', subject: 'biology', grades: ['grade9'], glyph: '🧬', ports: [], studentPorts: ['Trục xoắn 3D', 'Các cặp bazơ A-T, G-X'], tip: 'Ghi nhớ nguyên tắc bổ sung: Nu loại A luôn ghép đôi với T, Nu loại G luôn ghép đôi với X.', sgkFormula: 'Nguyên tắc bổ sung: A nối với T, G nối với X' },
+      { id: 'water-dispenser', assetId: 'OL3D-EQP-WDP-1000', nameVi: 'Bình chứa nước có van xả 1000 ml', nameStudent: 'Bình cấp nước sạch có van', shortKeyword: 'Bình cấp nước', category: 'G10_FLUID_SUPPLY', subject: 'physics', grades: ['grade6', 'grade8'], glyph: '🚰', ports: ['CONN_WATER_DISPENSER_SPOUT'], studentPorts: ['Vòi xả nước có van vặn'], tip: 'Mở van vừa phải để nước không bắn tung tóe ra ngoài mặt bàn thí nghiệm.', sgkFormula: 'Bình cung cấp nước làm thí nghiệm' },
+      { id: 'retort-stand', assetId: 'OL3D-EQP-STD-0001', nameVi: 'Giá đỡ thí nghiệm kèm khớp nối & kẹp', nameStudent: 'Giá sắt đỡ thí nghiệm', shortKeyword: 'Giá thí nghiệm', category: 'G08_MECHANICS', subject: 'general', grades: ['grade8', 'grade9'], glyph: '📐', ports: [], studentPorts: ['Chân đế gang nặng', 'Cột sắt', 'Tay kẹp có ốc siết'], tip: 'Siết chặt ốc giữ ngàm kẹp để dụng cụ thủy tinh không bị trượt rơi vỡ.', sgkFormula: 'Giữ cố định các dụng cụ trên cao' },
     ];
 
     const EDGES = [
@@ -555,30 +555,49 @@
     // BỐ CỤC CHUẨN XÁC: GỐC (0, 0) LÀ TÂM VỚI KHỬ VA CHẠM (COLLISION RELAXATION)
     function applyLayout() {
       // Giới hạn bán kính quỹ đạo để toàn bộ nơ-ron không bao giờ chạm mép trên/dưới
-      const R_orbit = Math.min((W - 350) * 0.46, (H - 180) * 0.42);
+      const maxR = Math.min((W - 350) * 0.44, (H - 180) * 0.44);
+      const R_orbit = Math.max(260, Math.min(380, maxR));
 
       if (layoutMode === 'circular') {
         const catKeys = Object.keys(CATEGORIES);
         catKeys.forEach((cat, idx) => {
-          // Xoay góc sao cho các cụm dày không rơi trúng vị trí thanh công cụ đáy
           const angle = (idx / catKeys.length) * Math.PI * 2 - Math.PI / 2;
-          const gx = R_orbit * Math.cos(angle);
-          const gy = R_orbit * Math.sin(angle) * 0.88; // Nén trục Y nhẹ để tăng khoảng cách với thanh đáy
           const inCat = nodeSims.filter(n => n.d.category === cat);
           
           if (inCat.length === 1) {
-            inCat[0].tx = gx;
-            inCat[0].ty = gy;
+            inCat[0].tx = R_orbit * Math.cos(angle);
+            inCat[0].ty = R_orbit * Math.sin(angle) * 0.90;
+          } else if (inCat.length === 2) {
+            const halfSpan = 0.16;
+            inCat[0].tx = (R_orbit * 0.92) * Math.cos(angle - halfSpan);
+            inCat[0].ty = (R_orbit * 0.92) * Math.sin(angle - halfSpan) * 0.90;
+            inCat[1].tx = (R_orbit * 1.16) * Math.cos(angle + halfSpan);
+            inCat[1].ty = (R_orbit * 1.16) * Math.sin(angle + halfSpan) * 0.90;
           } else {
-            // Phân bổ hình cánh quạt/vòng cung hướng ra ngoài tâm
-            const fanSpan = Math.PI * 0.36;
-            const startAngle = angle - fanSpan / 2;
-            inCat.forEach((n, i) => {
-              const a = startAngle + (i / Math.max(1, inCat.length - 1)) * fanSpan;
-              // Xếp so le 2 bán kính trong và ngoài để nhãn không đè nhau
-              const rOffset = (i % 2 === 0 ? 0.85 : 1.12);
-              n.tx = gx + (R_orbit * 0.26 * rOffset) * Math.cos(a);
-              n.ty = gy + (R_orbit * 0.24 * rOffset) * Math.sin(a);
+            // BIỆN PHÁP 3: TÁCH TẦNG ĐA BÁN KÍNH (CONCENTRIC TIERING)
+            const sorted = [...inCat].sort((a, b) => (b.connections || 0) - (a.connections || 0));
+            const coreCount = sorted.length >= 6 ? 2 : 1;
+            const coreNodes = sorted.slice(0, coreCount);
+            const satNodes = sorted.slice(coreCount);
+
+            if (coreNodes.length === 1) {
+              coreNodes[0].tx = (R_orbit * 0.78) * Math.cos(angle);
+              coreNodes[0].ty = (R_orbit * 0.78) * Math.sin(angle) * 0.90;
+            } else {
+              const coreSpan = 0.32;
+              coreNodes.forEach((cn, cIdx) => {
+                const ca = angle - coreSpan / 2 + (cIdx / (coreNodes.length - 1)) * coreSpan;
+                cn.tx = (R_orbit * 0.78) * Math.cos(ca);
+                cn.ty = (R_orbit * 0.78) * Math.sin(ca) * 0.90;
+              });
+            }
+
+            const satSpan = Math.PI * 0.44;
+            satNodes.forEach((sn, sIdx) => {
+              const sa = angle - satSpan / 2 + (sIdx / Math.max(1, satNodes.length - 1)) * satSpan;
+              const satRadius = R_orbit * (1.20 + (sIdx % 2 === 0 ? 0.14 : -0.04));
+              sn.tx = satRadius * Math.cos(sa);
+              sn.ty = satRadius * Math.sin(sa) * 0.90;
             });
           }
         });
@@ -592,8 +611,8 @@
               const dx = b.tx - a.tx;
               const dy = b.ty - a.ty;
               // Hình elip bao quanh nơ-ron và nhãn chữ (ngang 115px, dọc 42px)
-              const rx = 112;
-              const ry = 42;
+              const rx = 105;
+              const ry = 46;
               const nx = dx / rx;
               const ny = dy / ry;
               const d2 = nx * nx + ny * ny;
@@ -918,33 +937,71 @@
         }
 
         // Nhãn tên dạng thẻ bo góc cao cấp
-        if (cam.zoom > 0.35) {
-          ctx.font = `600 ${Math.max(10, 11 * cam.zoom)}px system-ui, -apple-system, sans-serif`;
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          const label = userMode === 'student' ? n.d.nameStudent : n.d.nameVi;
-          const lw = ctx.measureText(label).width;
-          const padH = 7 * cam.zoom;
-          const padV = 3.5 * cam.zoom;
-          const bx = pos.x - lw / 2 - padH;
-          const by = pos.y + r + 5 * cam.zoom;
-          const bw = lw + padH * 2;
-          const bh = Math.max(16, 18 * cam.zoom);
+          if (cam.zoom > 0.35) {
+            ctx.font = `600 ${Math.max(10, 11 * cam.zoom)}px system-ui, -apple-system, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
 
-          ctx.fillStyle = isSel ? 'rgba(30, 41, 59, 0.95)' : isHov ? 'rgba(15, 23, 42, 0.92)' : 'rgba(8, 12, 28, 0.88)';
-          ctx.strokeStyle = isSel ? meta.color : isHov ? '#ffffff' : (isExpStep ? '#eab308' : 'rgba(99, 102, 241, 0.35)');
-          ctx.lineWidth = isSel || isHov || isExpStep ? 1.5 : 1;
-          ctx.beginPath();
-          if (ctx.roundRect) {
-            ctx.roundRect(bx, by, bw, bh, 5);
-          } else {
-            ctx.rect(bx, by, bw, bh);
-          }
-          ctx.fill();
-          ctx.stroke();
+            // BIỆN PHÁP 1: RÚT GỌN TỪ KHÓA NHÃN (PILL-TAGS THÔNG MINH)
+            const isExpanded = isSel || isHov || isExpStep;
+            const label = isExpanded
+              ? (userMode === 'student' ? n.d.nameStudent : n.d.nameVi)
+              : (n.d.shortKeyword || (userMode === 'student' ? n.d.nameStudent : n.d.nameVi));
 
-          ctx.fillStyle = isSel || isHov ? '#ffffff' : isExpStep ? '#fef08a' : '#cbd5e1';
-          ctx.fillText(label, pos.x, by + bh / 2);
+            const lw = ctx.measureText(label).width;
+            const padH = 6 * cam.zoom;
+            const bw = lw + padH * 2;
+            const bh = Math.max(16, 18 * cam.zoom);
+
+            // BIỆN PHÁP 2: ĐẶT NHÃN HƯỚNG TÂM MỞ RA NGOÀI (RADIAL OUTWARD ANCHORING)
+            let bx = pos.x - bw / 2;
+            let by = pos.y + r + 5 * cam.zoom;
+
+            if (layoutMode === 'circular') {
+              const len = Math.hypot(n.x, n.y) || 1;
+              const ux = n.x / len;
+              const uy = n.y / len;
+
+              if (uy < -0.42) {
+                // Nửa trên vòng tròn: Nhãn hướng LÊN PHÍA TRÊN
+                by = pos.y - r - bh - 5 * cam.zoom;
+                bx = pos.x - bw / 2 + ux * 10 * cam.zoom;
+              } else if (uy > 0.42) {
+                // Nửa dưới vòng tròn: Nhãn hướng XUỐNG PHÍA DƯỚI
+                by = pos.y + r + 5 * cam.zoom;
+                bx = pos.x - bw / 2 + ux * 10 * cam.zoom;
+              } else if (ux > 0) {
+                // Phía sườn bên phải: Nhãn nằm BÊN PHẢI nút
+                bx = pos.x + r + 7 * cam.zoom;
+                by = pos.y - bh / 2 + uy * 8 * cam.zoom;
+              } else {
+                // Phía sườn bên trái: Nhãn nằm BÊN TRÁI nút
+                bx = pos.x - r - bw - 7 * cam.zoom;
+                by = pos.y - bh / 2 + uy * 8 * cam.zoom;
+              }
+            } else {
+              const isStaggerAbove = (n.d.id.charCodeAt(0) % 2 === 0);
+              if (isStaggerAbove) {
+                by = pos.y - r - bh - 5 * cam.zoom;
+              } else {
+                by = pos.y + r + 5 * cam.zoom;
+              }
+            }
+
+            ctx.fillStyle = isSel ? 'rgba(30, 41, 59, 0.96)' : isHov ? 'rgba(15, 23, 42, 0.94)' : 'rgba(8, 12, 28, 0.90)';
+            ctx.strokeStyle = isSel ? meta.color : isHov ? '#ffffff' : (isExpStep ? '#eab308' : 'rgba(99, 102, 241, 0.35)');
+            ctx.lineWidth = isSel || isHov || isExpStep ? 1.5 : 1;
+            ctx.beginPath();
+            if (ctx.roundRect) {
+              ctx.roundRect(bx, by, bw, bh, 5);
+            } else {
+              ctx.rect(bx, by, bw, bh);
+            }
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = isSel || isHov ? '#ffffff' : isExpStep ? '#fef08a' : '#cbd5e1';
+            ctx.fillText(label, bx + bw / 2, by + bh / 2);
         }
 
         ctx.restore();

@@ -365,6 +365,7 @@ export class NeuralConnectionEngine {
           assetId: instance.assetId,
           nameVi: assetsMap.get(instance.assetId)?.name.vi || 'Thiết bị thí nghiệm',
           nameStudent: assetsMap.get(instance.assetId)?.name.vi || 'Thiết bị',
+          shortKeyword: assetsMap.get(instance.assetId)?.name.vi?.split(' ')[0] || 'Thiết bị',
           nameEn: 'Apparatus',
           category: 'G01_DIMENSION',
           subject: 'physics',
