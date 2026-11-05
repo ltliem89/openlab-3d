@@ -198,6 +198,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   const [challengeScore, setChallengeScore] = useState<number>(0);
   const [challengeFeedback, setChallengeFeedback] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [mapTheme, setMapTheme] = useState<'dark' | 'light' | 'transparent'>('dark');
 
   // Camera
   const cameraRef = useRef<{ x: number; y: number; zoom: number }>({ x: 0, y: 0, zoom: 1 });
@@ -517,14 +518,22 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         if (p.progress >= 1) particlesRef.current.splice(i, 1);
       }
 
-      // ĐẢM BẢO NỀN TRONG SUỐT HOÀN TOÀN (TRANSPARENT BACKGROUND)
+      // ĐẢM BẢO NỀN PHÙ HỢP VỚI CHẾ ĐỘ NỀN TỐI / SÁNG / TRONG SUỐT
       ctx.clearRect(0, 0, w, h);
+
+      if (mapTheme === 'dark') {
+        ctx.fillStyle = '#050813';
+        ctx.fillRect(0, 0, w, h);
+      } else if (mapTheme === 'light') {
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+      }
 
       ctx.save();
       const gridSize = 45 * cam.zoom;
       const offX = (-cam.x * cam.zoom + w / 2) % gridSize;
       const offY = (-cam.y * cam.zoom + h / 2) % gridSize;
-      ctx.strokeStyle = 'rgba(0, 243, 255, 0.04)';
+      ctx.strokeStyle = mapTheme === 'light' ? 'rgba(99, 102, 241, 0.12)' : 'rgba(0, 243, 255, 0.04)';
       ctx.lineWidth = 1;
       for (let x = offX; x < w; x += gridSize) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
@@ -784,9 +793,15 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
             }
           }
 
-          ctx.fillStyle = isSelected ? 'rgba(30, 41, 59, 0.96)' : isHovered ? 'rgba(15, 23, 42, 0.94)' : 'rgba(8, 12, 28, 0.90)';
-          ctx.strokeStyle = isSelected ? meta.color : isHovered ? '#ffffff' : (isInCurrentExperiment ? '#eab308' : 'rgba(99, 102, 241, 0.35)');
-          ctx.lineWidth = isSelected || isHovered || isInCurrentExperiment ? 1.5 : 1;
+          if (mapTheme === 'light') {
+            ctx.fillStyle = isSelected ? 'rgba(255, 255, 255, 0.98)' : isHovered ? 'rgba(241, 245, 249, 0.98)' : 'rgba(255, 255, 255, 0.92)';
+            ctx.strokeStyle = isSelected ? meta.color : isHovered ? '#1e293b' : (isInCurrentExperiment ? '#d97706' : 'rgba(148, 163, 184, 0.7)');
+            ctx.lineWidth = isSelected || isHovered || isInCurrentExperiment ? 1.8 : 1.2;
+          } else {
+            ctx.fillStyle = isSelected ? 'rgba(30, 41, 59, 0.96)' : isHovered ? 'rgba(15, 23, 42, 0.94)' : 'rgba(8, 12, 28, 0.90)';
+            ctx.strokeStyle = isSelected ? meta.color : isHovered ? '#ffffff' : (isInCurrentExperiment ? '#eab308' : 'rgba(99, 102, 241, 0.35)');
+            ctx.lineWidth = isSelected || isHovered || isInCurrentExperiment ? 1.5 : 1;
+          }
           ctx.beginPath();
           if (ctx.roundRect) {
             ctx.roundRect(bx, by, bw, bh, 5);
@@ -796,7 +811,11 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
           ctx.fill();
           ctx.stroke();
 
-          ctx.fillStyle = isSelected || isHovered ? '#ffffff' : isInCurrentExperiment ? '#fef08a' : '#cbd5e1';
+          if (mapTheme === 'light') {
+            ctx.fillStyle = isSelected ? meta.color : isHovered ? '#0f172a' : isInCurrentExperiment ? '#b45309' : '#1e293b';
+          } else {
+            ctx.fillStyle = isSelected || isHovered ? '#ffffff' : isInCurrentExperiment ? '#fef08a' : '#cbd5e1';
+          }
           ctx.fillText(label, bx + bw / 2, by + bh / 2);
         }
 
@@ -811,7 +830,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
     return () => {
       if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
     };
-  }, [isOpen, filteredEdges, filteredNodeIds, selectedNode, hoveredNode, selectedExperiment, activeSceneDeviceIds, isFiringSignal, userMode]);
+  }, [isOpen, filteredEdges, filteredNodeIds, selectedNode, hoveredNode, selectedExperiment, activeSceneDeviceIds, isFiringSignal, userMode, mapTheme]);
 
   // Căn giữa camera mượt mà
   const handleResetCamera = () => {
@@ -1167,38 +1186,65 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               </div>
             )}
 
-            {/* THANH ĐIỀU KHIỂN DƯỚI ĐÁY */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-950/45 border border-white/15 backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] text-xs">
+            {/* THANH ĐIỀU KHIỂN DƯỚI ĐÁY: CHỈ ĐỂ BIỂU TƯỢNG SÁT ĐÁY GỌN GÀNG, KHÔNG CHE BẢN ĐỒ */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 p-1 rounded-2xl bg-slate-950/85 border border-white/10 backdrop-blur-xl shadow-2xl text-xs pointer-events-auto">
               <button
                 onClick={handleResetCamera}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-1.5"
-                title="Đưa góc nhìn về vị trí chuẩn (hoặc nhấp đúp chuột lên màn hình)"
+                className="w-8 h-8 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-700/60 flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95"
+                title="Căn giữa sơ đồ (Nhấp đúp chuột lên màn hình)"
               >
-                🎯 Căn giữa
+                🎯
               </button>
               <button
                 onClick={() => setIsFiringSignal(prev => !prev)}
-                className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 ${
-                  isFiringSignal ? 'bg-indigo-600/30 border border-indigo-500 text-indigo-300' : 'bg-slate-900 text-slate-400'
+                className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95 ${
+                  isFiringSignal
+                    ? 'bg-amber-500/25 border border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.3)]'
+                    : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 border border-slate-700/60 opacity-60'
                 }`}
+                title={isFiringSignal ? 'Xung tín hiệu: ĐANG BẬT (Bấm để tạm dừng)' : 'Xung tín hiệu: ĐÃ DỪNG (Bấm để bật)'}
               >
-                {isFiringSignal ? '⚡ Xung: BẬT' : '⏸ Xung: TẮT'}
+                ⚡
               </button>
               <button
                 onClick={handleToggleSound}
-                className={`px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5 ${
-                  !isSoundMuted ? 'bg-indigo-600/30 border border-indigo-500 text-indigo-300' : 'bg-slate-900 text-slate-400'
+                className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95 ${
+                  !isSoundMuted
+                    ? 'bg-indigo-600/35 border border-indigo-400 text-indigo-200'
+                    : 'bg-slate-900/80 hover:bg-slate-800 text-slate-400 border border-slate-700/60'
                 }`}
-                title="Bật/Tắt âm thanh tương tác"
+                title={!isSoundMuted ? 'Âm thanh tương tác: ĐANG BẬT (Bấm để tắt tiếng)' : 'Âm thanh: ĐÃ TẮT (Bấm để bật)'}
               >
-                {!isSoundMuted ? '🔊 Âm thanh' : '🔇 Tắt tiếng'}
+                {!isSoundMuted ? '🔊' : '🔇'}
               </button>
               <button
                 onClick={handleExportDiagramPng}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors flex items-center gap-1.5"
-                title="Lưu ảnh sơ đồ nơ-ron PNG"
+                className="w-8 h-8 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-700/60 flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95"
+                title="Lưu ảnh chụp sơ đồ nơ-ron PNG"
               >
-                📸 Xuất ảnh PNG
+                📸
+              </button>
+              <button
+                onClick={() => {
+                  setMapTheme(prev => prev === 'dark' ? 'light' : prev === 'light' ? 'transparent' : 'dark');
+                  audioFX.playNodeClick();
+                }}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95 ${
+                  mapTheme === 'light'
+                    ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-400/60 shadow-[0_0_10px_rgba(251,191,36,0.3)]'
+                    : mapTheme === 'transparent'
+                    ? 'bg-cyan-600/30 hover:bg-cyan-600/40 text-cyan-300 border border-cyan-400/60'
+                    : 'bg-slate-900/80 hover:bg-slate-800 text-indigo-300 border border-slate-700/60'
+                }`}
+                title={
+                  mapTheme === 'dark'
+                    ? 'Nền bản đồ: TỐI (Nhấp để đổi sang NỀN SÁNG)'
+                    : mapTheme === 'light'
+                    ? 'Nền bản đồ: SÁNG (Nhấp để đổi sang NỀN TRONG SUỐT)'
+                    : 'Nền bản đồ: TRONG SUỐT (Nhấp để đổi sang NỀN TỐI)'
+                }
+              >
+                {mapTheme === 'dark' ? '🌙' : mapTheme === 'light' ? '☀️' : '🪟'}
               </button>
               <button
                 onClick={() => {
@@ -1206,14 +1252,18 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                   setLayoutMode(nextMode);
                   if (canvasRef.current) computeTargetPositions(canvasRef.current.width, canvasRef.current.height, nextMode);
                 }}
-                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 transition-colors"
+                className="w-8 h-8 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-700/60 flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95"
+                title={`Bố cục: ${layoutMode === 'circular' ? 'Vòng tròn' : 'Đa tầng'} (Nhấp để đổi)`}
               >
-                🔄 Bố cục: {layoutMode === 'circular' ? 'Vòng tròn' : 'Đa tầng'}
+                🔄
               </button>
-              <div className="h-4 w-px bg-slate-800" />
-              <span className="text-[11px] text-slate-400">
-                {filteredNodes.length} thiết bị · {filteredEdges.length} khớp nối
-              </span>
+              <div className="h-4 w-px bg-slate-800/80 mx-0.5" />
+              <button
+                className="w-8 h-8 rounded-xl bg-slate-900/50 hover:bg-slate-800 text-slate-400 border border-slate-800/80 flex items-center justify-center text-xs transition-all cursor-help"
+                title={`Hướng dẫn: Cuộn chuột để Thu/Phóng · Giữ chuột trái để Kéo di chuyển · Nhấp đúp để Căn giữa (${filteredNodes.length} thiết bị, ${filteredEdges.length} khớp nối)`}
+              >
+                ℹ️
+              </button>
             </div>
           </div>
 
