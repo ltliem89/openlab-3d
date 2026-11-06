@@ -10,12 +10,14 @@ import {
   ExperimentMacroCluster,
   ThcsGrade
 } from '../../domain/neuralNetworkTopology';
+import { EquipmentThumbnailSvg } from '../common/EquipmentThumbnailSvg';
+import { ProceduralArchetype } from '../../domain/types';
 
 export interface NeuralDeviceNetworkModalProps {
   isOpen: boolean;
   initialDeviceId?: string | null;
   onClose: () => void;
-  onSelectDevice?: (deviceId: string) => void;
+  onSelectDevice?: (deviceId: string, positionM?: [number, number, number]) => void;
   onTriggerMacroCluster?: (cluster: ExperimentMacroCluster) => void;
   activeSceneDeviceIds?: string[];
 }
@@ -207,6 +209,14 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   const [challengeFeedback, setChallengeFeedback] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [mapTheme, setMapTheme] = useState<'dark' | 'light' | 'transparent'>('dark');
+
+  // Kéo thả nơ-ron biến hình thành thiết bị thật vào bàn 3D
+  const [isDraggingToScene, setIsDraggingToScene] = useState<boolean>(false);
+  const [draggedNode, setDraggedNode] = useState<NeuralDeviceNode | null>(null);
+  const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [dragCurrentPos, setDragCurrentPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const dragCandidateRef = useRef<{ node: NeuralDeviceNode; startX: number; startY: number } | null>(null);
+  const isNodeDragActiveRef = useRef<boolean>(false);
 
   // Camera
   const cameraRef = useRef<{ x: number; y: number; zoom: number }>({ x: 0, y: 0, zoom: 1 });
@@ -875,27 +885,19 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       if (!filteredNodeIds.has(n.device.id)) return false;
       const dx = n.x - wx;
       const dy = n.y - wy;
-      return dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6);
+      return dx * dx + dy * dy <= (n.radius + 8) * (n.radius + 8);
     });
 
     if (clicked) {
-      audioFX.playNodeClick();
-      if (challengeMode && selectedNode && selectedNode.id !== clicked.device.id) {
-        const isConnected = NEURAL_SYNAPSE_EDGES.some(
-          edge => (edge.source === selectedNode.id && edge.target === clicked.device.id) ||
-                  (edge.target === selectedNode.id && edge.source === clicked.device.id)
-        );
-        if (isConnected) {
-          setChallengeScore(s => s + 10);
-          setChallengeFeedback(`🎉 CHÍNH XÁC! ${selectedNode.nameStudent} kết nối chuẩn với ${clicked.device.nameStudent}! (+10 điểm)`);
-          audioFX.playSuccessChime();
-        } else {
-          setChallengeFeedback(`❌ Chưa đúng rồi! ${selectedNode.nameStudent} và ${clicked.device.nameStudent} không trực tiếp ghép nối.`);
-          audioFX.playErrorBuzz();
-        }
-      }
-      setSelectedNode(prev => (prev?.id === clicked.device.id ? null : clicked.device));
+      dragCandidateRef.current = {
+        node: clicked.device,
+        startX: e.clientX,
+        startY: e.clientY,
+      };
+      isNodeDragActiveRef.current = false;
     } else {
+      dragCandidateRef.current = null;
+      isNodeDragActiveRef.current = false;
       isDraggingRef.current = true;
       dragStartRef.current = { x: e.clientX, y: e.clientY };
       cameraStartRef.current = { x: cam.x, y: cam.y };
@@ -905,9 +907,6 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mx = e.clientX - rect.left;
-    const my = e.clientY - rect.top;
 
     if (isDraggingRef.current) {
       const dx = e.clientX - dragStartRef.current.x;
@@ -917,6 +916,12 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       return;
     }
 
+    if (isDraggingToScene) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
     const cam = cameraRef.current;
     const wx = (mx - canvas.width / 2) / cam.zoom + cam.x;
     const wy = (my - canvas.height / 2) / cam.zoom + cam.y;
@@ -925,14 +930,158 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       if (!filteredNodeIds.has(n.device.id)) return false;
       const dx = n.x - wx;
       const dy = n.y - wy;
-      return dx * dx + dy * dy <= (n.radius + 6) * (n.radius + 6);
+      return dx * dx + dy * dy <= (n.radius + 8) * (n.radius + 8);
     });
 
     setHoveredNode(hov ? hov.device : null);
     canvas.style.cursor = hov ? 'pointer' : isDraggingRef.current ? 'grabbing' : 'grab';
   };
 
-  const handlePointerUp = () => { isDraggingRef.current = false; };
+  const handlePointerUp = () => {
+    isDraggingRef.current = false;
+  };
+
+  // Lắng nghe sự kiện kéo thả toàn cục để biến hình nơ-ron thành thiết bị 3D
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleWindowPointerMove = (e: PointerEvent) => {
+      if (!dragCandidateRef.current) return;
+
+      const dist = Math.hypot(
+        e.clientX - dragCandidateRef.current.startX,
+        e.clientY - dragCandidateRef.current.startY,
+      );
+
+      if (!isNodeDragActiveRef.current && dist > 8) {
+        isNodeDragActiveRef.current = true;
+        setIsDraggingToScene(true);
+        setDraggedNode(dragCandidateRef.current.node);
+        setDragStartPos({ x: dragCandidateRef.current.startX, y: dragCandidateRef.current.startY });
+        setDragCurrentPos({ x: e.clientX, y: e.clientY });
+        audioFX.playNodeClick();
+        window.dispatchEvent(
+          new CustomEvent('openlab:neural-drag-preview', {
+            detail: {
+              assetId: dragCandidateRef.current.node.assetId,
+              nodeId: dragCandidateRef.current.node.id,
+              clientX: e.clientX,
+              clientY: e.clientY,
+              isDragging: true,
+            },
+          }),
+        );
+      } else if (isNodeDragActiveRef.current) {
+        setDragCurrentPos({ x: e.clientX, y: e.clientY });
+        window.dispatchEvent(
+          new CustomEvent('openlab:neural-drag-preview', {
+            detail: {
+              assetId: dragCandidateRef.current.node.assetId,
+              nodeId: dragCandidateRef.current.node.id,
+              clientX: e.clientX,
+              clientY: e.clientY,
+              isDragging: true,
+            },
+          }),
+        );
+      }
+    };
+
+    const handleWindowPointerUp = (e: PointerEvent) => {
+      if (isNodeDragActiveRef.current && dragCandidateRef.current) {
+        const candidate = dragCandidateRef.current.node;
+        // Bắn sự kiện thả thiết bị vào không gian 3D
+        window.dispatchEvent(
+          new CustomEvent('openlab:neural-drag-drop', {
+            detail: {
+              assetId: candidate.assetId,
+              nodeId: candidate.id,
+              clientX: e.clientX,
+              clientY: e.clientY,
+            },
+          }),
+        );
+        window.dispatchEvent(
+          new CustomEvent('openlab:neural-drag-preview', {
+            detail: {
+              assetId: candidate.assetId,
+              nodeId: candidate.id,
+              clientX: e.clientX,
+              clientY: e.clientY,
+              isDragging: false,
+            },
+          }),
+        );
+        audioFX.playSuccessChime();
+        setIsDraggingToScene(false);
+        setDraggedNode(null);
+        isNodeDragActiveRef.current = false;
+        dragCandidateRef.current = null;
+        onClose();
+        return;
+      }
+
+      if (dragCandidateRef.current && !isNodeDragActiveRef.current) {
+        // Chỉ là click chọn nút đơn thuần
+        const candidate = dragCandidateRef.current.node;
+        dragCandidateRef.current = null;
+        isNodeDragActiveRef.current = false;
+        audioFX.playNodeClick();
+        if (challengeMode && selectedNode && selectedNode.id !== candidate.id) {
+          const isConnected = NEURAL_SYNAPSE_EDGES.some(
+            (edge) =>
+              (edge.source === selectedNode.id && edge.target === candidate.id) ||
+              (edge.target === selectedNode.id && edge.source === candidate.id),
+          );
+          if (isConnected) {
+            setChallengeScore((s) => s + 10);
+            setChallengeFeedback(
+              `🎉 CHÍNH XÁC! ${selectedNode.nameStudent} kết nối chuẩn với ${candidate.nameStudent}! (+10 điểm)`,
+            );
+            audioFX.playSuccessChime();
+          } else {
+            setChallengeFeedback(
+              `❌ Chưa đúng rồi! ${selectedNode.nameStudent} và ${candidate.nameStudent} không trực tiếp ghép nối.`,
+            );
+            audioFX.playErrorBuzz();
+          }
+        }
+        setSelectedNode((prev) => (prev?.id === candidate.id ? null : candidate));
+      }
+
+      isDraggingRef.current = false;
+    };
+
+    window.addEventListener('pointermove', handleWindowPointerMove);
+    window.addEventListener('pointerup', handleWindowPointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handleWindowPointerMove);
+      window.removeEventListener('pointerup', handleWindowPointerUp);
+    };
+  }, [isOpen, challengeMode, selectedNode, onClose]);
+
+  // Nhấn phím Escape để hủy kéo thả hoặc thoát modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isDraggingToScene) {
+          window.dispatchEvent(
+            new CustomEvent('openlab:neural-drag-preview', {
+              detail: { isDragging: false },
+            }),
+          );
+          setIsDraggingToScene(false);
+          setDraggedNode(null);
+          isNodeDragActiveRef.current = false;
+          dragCandidateRef.current = null;
+        } else if (isOpen) {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isDraggingToScene, isOpen, onClose]);
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
@@ -954,8 +1103,20 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-2 md:p-4 animate-in fade-in duration-200">
-      <div className="relative w-full h-[96vh] max-w-7xl flex flex-col bg-slate-950/20 backdrop-blur-2xl border border-cyan-500/35 rounded-2xl shadow-[0_0_60px_rgba(0,243,255,0.15)] overflow-hidden text-slate-200">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${
+        isDraggingToScene
+          ? 'bg-transparent backdrop-blur-none pointer-events-none'
+          : 'bg-black/30 backdrop-blur-sm p-2 md:p-4'
+      } animate-in fade-in duration-200`}
+    >
+      <div
+        className={`relative w-full h-[96vh] max-w-7xl flex flex-col rounded-2xl shadow-[0_0_60px_rgba(0,243,255,0.15)] overflow-hidden text-slate-200 transition-all duration-300 ${
+          isDraggingToScene
+            ? 'opacity-15 scale-[0.98] border-cyan-500/15 bg-slate-950/15 pointer-events-none'
+            : 'bg-slate-950/20 backdrop-blur-2xl border border-cyan-500/35'
+        }`}
+      >
         
         {/* HEADER BAR */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-white/10 bg-slate-950/40 backdrop-blur-xl">
@@ -1519,6 +1680,124 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
 
         </div>
       </div>
+
+      {/* 🔮 HOLOGRAPHIC MORPHING AVATAR TRONG SUỐT QUÁ TRÌNH KÉO THIẾT BỊ VÀO BÀN THÍ NGHIỆM 3D */}
+      {isDraggingToScene && draggedNode && (
+        <div
+          className="fixed z-[9999] pointer-events-none -translate-x-1/2 -translate-y-1/2 select-none"
+          style={{ left: dragCurrentPos.x, top: dragCurrentPos.y }}
+        >
+          {(() => {
+            const dragDist = Math.hypot(dragCurrentPos.x - dragStartPos.x, dragCurrentPos.y - dragStartPos.y);
+            const morphProgress = Math.min(1, Math.max(0, (dragDist - 12) / 85));
+            const meta = CATEGORY_META[draggedNode.category];
+
+            return (
+              <div className="flex flex-col items-center">
+                <div
+                  className="relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-100 overflow-hidden"
+                  style={{
+                    width: `${Math.round(68 + morphProgress * 115)}px`,
+                    minHeight: `${Math.round(68 + morphProgress * 135)}px`,
+                    background:
+                      morphProgress < 0.35
+                        ? `radial-gradient(circle at 35% 35%, ${meta.color}, #0f172a)`
+                        : 'rgba(6, 17, 34, 0.94)',
+                    borderColor: morphProgress > 0.5 ? '#00f3ff' : meta.color,
+                    boxShadow: `0 0 ${Math.round(20 + morphProgress * 25)}px ${
+                      morphProgress > 0.5 ? 'rgba(0, 243, 255, 0.65)' : meta.color + 'aa'
+                    }, inset 0 0 15px rgba(0, 243, 255, 0.25)`,
+                    backdropFilter: 'blur(20px)',
+                  }}
+                >
+                  {/* Laser scanline sweep */}
+                  <div
+                    className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-cyan-400/35 to-transparent animate-pulse"
+                    style={{
+                      opacity: 0.4 + morphProgress * 0.6,
+                    }}
+                  />
+
+                  {/* 2D Neural Glyph Icon (Fades out when dragging progresses) */}
+                  {morphProgress < 0.75 && (
+                    <div
+                      className="text-2xl transition-opacity flex items-center justify-center"
+                      style={{
+                        opacity: Math.max(0, 1 - morphProgress * 1.4),
+                        transform: `scale(${1 - morphProgress * 0.3})`,
+                      }}
+                    >
+                      {draggedNode.glyphIcon}
+                    </div>
+                  )}
+
+                  {/* Real Equipment Thumbnail/Photo (Fades in & scales as morph progresses) */}
+                  <div
+                    className="relative flex items-center justify-center transition-all duration-150"
+                    style={{
+                      opacity: Math.max(0, morphProgress),
+                      transform: `scale(${0.65 + morphProgress * 0.35})`,
+                      height: morphProgress > 0.15 ? '92px' : '0px',
+                      width: morphProgress > 0.15 ? '92px' : '0px',
+                      overflow: 'hidden',
+                    }}
+                  >
+                    <EquipmentThumbnailSvg
+                      archetype={draggedNode.id as ProceduralArchetype}
+                      assetId={draggedNode.assetId}
+                      preferRealPhoto={true}
+                      className="w-24 h-24 object-contain filter drop-shadow-[0_6px_14px_rgba(0,243,255,0.45)]"
+                    />
+                  </div>
+
+                  {/* Equipment Name & Quantum Materialization Badge */}
+                  {morphProgress > 0.35 && (
+                    <div
+                      className="flex flex-col items-center text-center mt-1 z-10 transition-opacity duration-150 max-w-[170px]"
+                      style={{ opacity: Math.min(1, (morphProgress - 0.35) / 0.45) }}
+                    >
+                      <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
+                        {morphProgress < 0.8 ? '⚡ Đang lượng tử hóa' : '✨ Thiết bị thực KHTN'}
+                      </span>
+                      <span className="text-[11.5px] font-extrabold text-white leading-tight mt-1 line-clamp-1 drop-shadow">
+                        {userMode === 'student' ? draggedNode.nameStudent : draggedNode.nameVi}
+                      </span>
+                      <span className="text-[9px] text-cyan-200 font-mono opacity-80">
+                        {draggedNode.assetId}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Ground Laser Guide Beam pointing down towards 3D Workbench */}
+                <div className="flex flex-col items-center mt-1.5 animate-bounce">
+                  <div className="w-0.5 h-6 bg-gradient-to-b from-cyan-400 to-transparent" />
+                  <div className="px-2.5 py-0.5 rounded-full bg-slate-950/95 border border-cyan-400/80 shadow-[0_0_15px_rgba(0,243,255,0.5)] text-[10px] font-bold text-cyan-200 tracking-wide flex items-center gap-1">
+                    <span>🎯</span>
+                    <span>Thả chuột để đặt lên bàn 3D</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Floating Status Banner at top during Drag */}
+      {isDraggingToScene && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[110] px-5 py-2.5 rounded-2xl bg-slate-950/90 border border-cyan-400/80 shadow-[0_0_30px_rgba(0,243,255,0.35)] backdrop-blur-xl flex items-center gap-3 text-xs text-white animate-in fade-in slide-in-from-top-4 pointer-events-none">
+          <span className="w-3 h-3 rounded-full bg-cyan-400 animate-ping" />
+          <span className="font-extrabold text-cyan-200 tracking-wide uppercase text-[12px]">
+            Kéo thiết bị vào bàn thí nghiệm 3D
+          </span>
+          <span className="text-slate-300 text-[11.5px]">
+            Di chuyển chuột đến vị trí mong muốn trên bàn rồi thả chuột để đặt thiết bị.
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
+            Esc để hủy
+          </span>
+        </div>
+      )}
     </div>
   );
 };

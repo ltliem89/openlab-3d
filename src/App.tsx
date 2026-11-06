@@ -5147,10 +5147,10 @@ export default function App() {
           setShowNeuralNetworkModal(false);
           setNeuralModalTargetDeviceId(null);
         }}
-        onSelectDevice={(deviceId) => {
+        onSelectDevice={(deviceId, targetPos) => {
           const node = neuralConnectionEngine.getNode(deviceId);
           const targetAssetId = node?.assetId || deviceId;
-          handleAddAssetToScene(targetAssetId);
+          handleAddAssetToScene(targetAssetId, targetPos);
           setShowNeuralNetworkModal(false);
           notify(`Đã nạp "${node?.nameVi || targetAssetId}" vào bàn thí nghiệm 3D`, 'success');
         }}

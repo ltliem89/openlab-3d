@@ -1504,6 +1504,98 @@ function createTransporterPortalGroup(): THREE.Group {
 }
 
 /**
+ * Vùng đón đặt thiết bị Holographic khi người dùng kéo nơ-ron từ sơ đồ mạng xuống mặt bàn thực hành 3D
+ */
+function createNeuralPlacementTargetGroup(): THREE.Group {
+  const targetGroup = new THREE.Group();
+  targetGroup.name = 'neural_placement_target_group';
+  targetGroup.visible = false;
+
+  const radius = 0.085;
+
+  // 1. Đĩa phát quang holographic phẳng trên mặt bàn
+  const discGeo = new THREE.CircleGeometry(radius, 48);
+  discGeo.rotateX(-Math.PI / 2);
+  const discMat = new THREE.MeshBasicMaterial({
+    map: getFuturisticNeonZoneTexture(),
+    color: 0x00f3ff,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+    polygonOffsetUnits: -4,
+  });
+  const discMesh = new THREE.Mesh(discGeo, discMat);
+  discMesh.name = 'neural_target_disc';
+  targetGroup.add(discMesh);
+
+  // 2. Vòng phát sáng Cyan ngoài cùng
+  const outerRingGeo = new THREE.RingGeometry(radius * 0.95, radius * 1.08, 48);
+  outerRingGeo.rotateX(-Math.PI / 2);
+  const outerRingMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.9,
+    depthWrite: false,
+  });
+  const outerRingMesh = new THREE.Mesh(outerRingGeo, outerRingMat);
+  outerRingMesh.name = 'neural_target_outer_ring';
+  outerRingMesh.position.y = 0.0006;
+  targetGroup.add(outerRingMesh);
+
+  // 3. Vòng phụ tâm (Reticle Ring)
+  const innerRingGeo = new THREE.RingGeometry(radius * 0.28, radius * 0.35, 32);
+  innerRingGeo.rotateX(-Math.PI / 2);
+  const innerRingMat = new THREE.MeshBasicMaterial({
+    color: 0x67e8f9,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.8,
+    depthWrite: false,
+  });
+  const innerRingMesh = new THREE.Mesh(innerRingGeo, innerRingMat);
+  innerRingMesh.name = 'neural_target_inner_ring';
+  innerRingMesh.position.y = 0.0008;
+  targetGroup.add(innerRingMesh);
+
+  // 4. Trụ quét holographic thẳng đứng (Holographic Laser Beacon)
+  const beaconHeight = 0.26;
+  const beaconGeo = new THREE.CylinderGeometry(radius * 0.95, radius * 0.95, beaconHeight, 32, 1, true);
+  beaconGeo.translate(0, beaconHeight / 2, 0);
+  const beaconMat = new THREE.MeshBasicMaterial({
+    color: 0x00f3ff,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.28,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const beaconMesh = new THREE.Mesh(beaconGeo, beaconMat);
+  beaconMesh.name = 'neural_target_beacon';
+  targetGroup.add(beaconMesh);
+
+  // 5. Vòng tròn quét trên đỉnh trụ
+  const topRingGeo = new THREE.RingGeometry(radius * 0.9, radius * 0.98, 32);
+  topRingGeo.rotateX(-Math.PI / 2);
+  topRingGeo.translate(0, beaconHeight, 0);
+  const topRingMat = new THREE.MeshBasicMaterial({
+    color: 0x38bdf8,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.75,
+    depthWrite: false,
+  });
+  const topRingMesh = new THREE.Mesh(topRingGeo, topRingMat);
+  topRingMesh.name = 'neural_target_top_ring';
+  targetGroup.add(topRingMesh);
+
+  return targetGroup;
+}
+
+/**
  * Xây dựng bối cảnh phòng thí nghiệm Khoa học tự nhiên chuẩn OL3D-LAB-ENVIRONMENT-SPEC v2.0:
  * - Phòng 12.0 × 8.0 × 3.6 m, mặt sàn tại y = 0.000 m, gốc O (0, 0, 0) tại tâm sàn
  * - Bàn thực hành 2.40 × 0.75 m, mặt trên ở đúng y = BENCH_SURFACE_Y = 0.82 m, dày 0.04 m (mặt dưới y = 0.78 m)
@@ -1635,6 +1727,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
   const opticalAssemblyGroupRef = useRef<THREE.Group | null>(null);
   const neuralSynapseBeamGroupRef = useRef<THREE.Group | null>(null);
   const transporterPortalRef = useRef<THREE.Group | null>(null);
+  const neuralPlacementTargetRef = useRef<THREE.Group | null>(null);
   const dynamicWireDragGroupRef = useRef<THREE.Group | null>(null);
   const wireDragRef = useRef<{
     isDragging: boolean;
@@ -3140,6 +3233,11 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     const transporterPortalGroup = createTransporterPortalGroup();
     scene.add(transporterPortalGroup);
     transporterPortalRef.current = transporterPortalGroup;
+
+    // 🧠 VÙNG ĐÓN ĐẶT THIẾT BỊ HOLOGRAPHIC TỪ MẠNG NƠ-RON
+    const neuralPlacementGroup = createNeuralPlacementTargetGroup();
+    scene.add(neuralPlacementGroup);
+    neuralPlacementTargetRef.current = neuralPlacementGroup;
 
     // 3D High-Graphics Flowing Liquid Stream Group (strictly hidden unless actively pouring!)
     const pouringStreamGroup = new THREE.Group();
@@ -4913,6 +5011,22 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           if (!isSoftwareGl) {
             needsMoreFrames = true;
           }
+        }
+
+        // 🧠 HOLOGRAPHIC NEURAL PLACEMENT TARGET ANIMATION LOOP
+        const neuralTarget = neuralPlacementTargetRef.current;
+        if (neuralTarget && neuralTarget.visible) {
+          const outer = neuralTarget.getObjectByName('neural_target_outer_ring');
+          if (outer) outer.rotation.y += 0.024;
+
+          const inner = neuralTarget.getObjectByName('neural_target_inner_ring');
+          if (inner) inner.rotation.y -= 0.032;
+
+          const beacon = neuralTarget.getObjectByName('neural_target_beacon') as THREE.Mesh | undefined;
+          if (beacon && beacon.material instanceof THREE.MeshBasicMaterial) {
+            beacon.material.opacity = 0.22 + 0.14 * Math.sin(now * 0.007);
+          }
+          needsMoreFrames = true;
         }
 
         orbit.update();
@@ -7836,6 +7950,92 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     window.addEventListener('transitionrun', handleTransitionRun);
     window.addEventListener('transitionend', handleTransitionEnd);
 
+    // Xử lý kéo thả thiết bị trực quan từ Mạng Nơ-ron xuống Bàn Thí Nghiệm 3D
+    const handleNeuralDragPreview = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        assetId: string;
+        clientX: number;
+        clientY: number;
+        isDragging: boolean;
+      }>;
+      const detail = customEvent.detail;
+      if (!detail || !detail.isDragging) {
+        if (neuralPlacementTargetRef.current && neuralPlacementTargetRef.current.visible) {
+          neuralPlacementTargetRef.current.visible = false;
+          requestRender();
+        }
+        return;
+      }
+
+      const camera = cameraRef.current;
+      const renderer = rendererRef.current;
+      if (!camera || !renderer) return;
+
+      const rect = renderer.domElement.getBoundingClientRect();
+      const ndc = new THREE.Vector2(
+        ((detail.clientX - rect.left) / rect.width) * 2 - 1,
+        -((detail.clientY - rect.top) / rect.height) * 2 + 1,
+      );
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(ndc, camera);
+      const hit = raycaster.ray.intersectPlane(_rayPlane, _dropPoint);
+      if (hit && neuralPlacementTargetRef.current) {
+        const clampedX = Number(
+          THREE.MathUtils.clamp(_dropPoint.x, -BENCH_LIMIT_X, BENCH_LIMIT_X).toFixed(3),
+        );
+        const clampedZ = Number(
+          THREE.MathUtils.clamp(_dropPoint.z, -BENCH_LIMIT_Z, BENCH_LIMIT_Z).toFixed(3),
+        );
+        neuralPlacementTargetRef.current.position.set(clampedX, BENCH_SURFACE_Y + 0.003, clampedZ);
+        neuralPlacementTargetRef.current.visible = true;
+        requestRender();
+      }
+    };
+
+    const handleNeuralDragDrop = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        assetId: string;
+        clientX: number;
+        clientY: number;
+      }>;
+      const detail = customEvent.detail;
+      if (!detail) return;
+      if (neuralPlacementTargetRef.current) {
+        neuralPlacementTargetRef.current.visible = false;
+      }
+
+      const camera = cameraRef.current;
+      const renderer = rendererRef.current;
+      let finalX = 0;
+      let finalZ = 0.08;
+
+      if (camera && renderer) {
+        const rect = renderer.domElement.getBoundingClientRect();
+        const ndc = new THREE.Vector2(
+          ((detail.clientX - rect.left) / rect.width) * 2 - 1,
+          -((detail.clientY - rect.top) / rect.height) * 2 + 1,
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(ndc, camera);
+        const hit = raycaster.ray.intersectPlane(_rayPlane, _dropPoint);
+        if (hit) {
+          finalX = Number(
+            THREE.MathUtils.clamp(_dropPoint.x, -BENCH_LIMIT_X, BENCH_LIMIT_X).toFixed(3),
+          );
+          finalZ = Number(
+            THREE.MathUtils.clamp(_dropPoint.z, -BENCH_LIMIT_Z, BENCH_LIMIT_Z).toFixed(3),
+          );
+        }
+      }
+
+      onDropAssetIntoScene(detail.assetId, [finalX, 0, finalZ]);
+      labSoundEngine.play('dock-hover-snap', 1.0);
+      requestRender();
+    };
+
+    window.addEventListener('openlab:neural-drag-preview', handleNeuralDragPreview);
+    window.addEventListener('openlab:neural-drag-drop', handleNeuralDragDrop);
+
     requestRender();
 
     return () => {
@@ -7843,6 +8043,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       window.removeEventListener('resize', handleWindowResize);
       window.removeEventListener('transitionrun', handleTransitionRun);
       window.removeEventListener('transitionend', handleTransitionEnd);
+      window.removeEventListener('openlab:neural-drag-preview', handleNeuralDragPreview);
+      window.removeEventListener('openlab:neural-drag-drop', handleNeuralDragDrop);
       resizeObserver.disconnect();
       renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
       renderer.domElement.removeEventListener('contextmenu', handleContextMenu);
