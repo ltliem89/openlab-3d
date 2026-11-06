@@ -1113,7 +1113,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       <div
         className={`relative w-full h-[96vh] max-w-7xl flex flex-col rounded-2xl shadow-[0_0_60px_rgba(0,243,255,0.15)] overflow-hidden text-slate-200 transition-all duration-300 ${
           isDraggingToScene
-            ? 'opacity-15 scale-[0.98] border-cyan-500/15 bg-slate-950/15 pointer-events-none'
+            ? 'opacity-0 scale-[0.98] pointer-events-none'
             : 'bg-slate-950/20 backdrop-blur-2xl border border-cyan-500/35'
         }`}
       >
@@ -1681,121 +1681,23 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         </div>
       </div>
 
-      {/* 🔮 HOLOGRAPHIC MORPHING AVATAR TRONG SUỐT QUÁ TRÌNH KÉO THIẾT BỊ VÀO BÀN THÍ NGHIỆM 3D */}
+      {/* 🏷️ NHÃN TÊN THIẾT BỊ NỔI TRÊN ĐẦU MÔ HÌNH 3D (KHÔNG CHE MÔ HÌNH 3D PHÍA SAU) */}
       {isDraggingToScene && draggedNode && (
         <div
-          className="fixed z-[9999] pointer-events-none -translate-x-1/2 -translate-y-1/2 select-none"
-          style={{ left: dragCurrentPos.x, top: dragCurrentPos.y }}
+          className="fixed z-[9999] pointer-events-none -translate-x-1/2 -translate-y-full select-none"
+          style={{ left: dragCurrentPos.x, top: dragCurrentPos.y - 32 }}
         >
-          {(() => {
-            const dragDist = Math.hypot(dragCurrentPos.x - dragStartPos.x, dragCurrentPos.y - dragStartPos.y);
-            const morphProgress = Math.min(1, Math.max(0, (dragDist - 12) / 85));
-            const meta = CATEGORY_META[draggedNode.category];
-
-            return (
-              <div className="flex flex-col items-center">
-                <div
-                  className="relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-100 overflow-hidden"
-                  style={{
-                    width: `${Math.round(68 + morphProgress * 115)}px`,
-                    minHeight: `${Math.round(68 + morphProgress * 135)}px`,
-                    background:
-                      morphProgress < 0.35
-                        ? `radial-gradient(circle at 35% 35%, ${meta.color}, #0f172a)`
-                        : 'rgba(6, 17, 34, 0.94)',
-                    borderColor: morphProgress > 0.5 ? '#00f3ff' : meta.color,
-                    boxShadow: `0 0 ${Math.round(20 + morphProgress * 25)}px ${
-                      morphProgress > 0.5 ? 'rgba(0, 243, 255, 0.65)' : meta.color + 'aa'
-                    }, inset 0 0 15px rgba(0, 243, 255, 0.25)`,
-                    backdropFilter: 'blur(20px)',
-                  }}
-                >
-                  {/* Laser scanline sweep */}
-                  <div
-                    className="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-cyan-400/35 to-transparent animate-pulse"
-                    style={{
-                      opacity: 0.4 + morphProgress * 0.6,
-                    }}
-                  />
-
-                  {/* 2D Neural Glyph Icon (Fades out when dragging progresses) */}
-                  {morphProgress < 0.75 && (
-                    <div
-                      className="text-2xl transition-opacity flex items-center justify-center"
-                      style={{
-                        opacity: Math.max(0, 1 - morphProgress * 1.4),
-                        transform: `scale(${1 - morphProgress * 0.3})`,
-                      }}
-                    >
-                      {draggedNode.glyphIcon}
-                    </div>
-                  )}
-
-                  {/* Real Equipment Thumbnail/Photo (Fades in & scales as morph progresses) */}
-                  <div
-                    className="relative flex items-center justify-center transition-all duration-150"
-                    style={{
-                      opacity: Math.max(0, morphProgress),
-                      transform: `scale(${0.65 + morphProgress * 0.35})`,
-                      height: morphProgress > 0.15 ? '92px' : '0px',
-                      width: morphProgress > 0.15 ? '92px' : '0px',
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <EquipmentThumbnailSvg
-                      archetype={draggedNode.id as ProceduralArchetype}
-                      assetId={draggedNode.assetId}
-                      preferRealPhoto={true}
-                      className="w-24 h-24 object-contain filter drop-shadow-[0_6px_14px_rgba(0,243,255,0.45)]"
-                    />
-                  </div>
-
-                  {/* Equipment Name & Quantum Materialization Badge */}
-                  {morphProgress > 0.35 && (
-                    <div
-                      className="flex flex-col items-center text-center mt-1 z-10 transition-opacity duration-150 max-w-[170px]"
-                      style={{ opacity: Math.min(1, (morphProgress - 0.35) / 0.45) }}
-                    >
-                      <span className="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">
-                        {morphProgress < 0.8 ? '⚡ Đang lượng tử hóa' : '✨ Thiết bị thực KHTN'}
-                      </span>
-                      <span className="text-[11.5px] font-extrabold text-white leading-tight mt-1 line-clamp-1 drop-shadow">
-                        {userMode === 'student' ? draggedNode.nameStudent : draggedNode.nameVi}
-                      </span>
-                      <span className="text-[9px] text-cyan-200 font-mono opacity-80">
-                        {draggedNode.assetId}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Ground Laser Guide Beam pointing down towards 3D Workbench */}
-                <div className="flex flex-col items-center mt-1.5 animate-bounce">
-                  <div className="w-0.5 h-6 bg-gradient-to-b from-cyan-400 to-transparent" />
-                  <div className="px-2.5 py-0.5 rounded-full bg-slate-950/95 border border-cyan-400/80 shadow-[0_0_15px_rgba(0,243,255,0.5)] text-[10px] font-bold text-cyan-200 tracking-wide flex items-center gap-1">
-                    <span>🎯</span>
-                    <span>Thả chuột để đặt lên bàn 3D</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
-      {/* Floating Status Banner at top during Drag */}
-      {isDraggingToScene && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[110] px-5 py-2.5 rounded-2xl bg-slate-950/90 border border-cyan-400/80 shadow-[0_0_30px_rgba(0,243,255,0.35)] backdrop-blur-xl flex items-center gap-3 text-xs text-white animate-in fade-in slide-in-from-top-4 pointer-events-none">
-          <span className="w-3 h-3 rounded-full bg-cyan-400 animate-ping" />
-          <span className="font-extrabold text-cyan-200 tracking-wide uppercase text-[12px]">
-            Kéo thiết bị vào bàn thí nghiệm 3D
-          </span>
-          <span className="text-slate-300 text-[11.5px]">
-            Di chuyển chuột đến vị trí mong muốn trên bàn rồi thả chuột để đặt thiết bị.
-          </span>
-          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-cyan-500/20 text-cyan-300 border border-cyan-500/40">
-            Esc để hủy
-          </span>
+          <div className="flex flex-col items-center">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/85 border border-cyan-400/80 shadow-[0_0_20px_rgba(0,243,255,0.45)] backdrop-blur-md text-white">
+              <span className="text-base">{draggedNode.glyphIcon}</span>
+              <span className="text-xs font-bold tracking-wide">
+                {userMode === 'student' ? draggedNode.nameStudent : draggedNode.nameVi}
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
+            </div>
+            {/* Tia định hướng laser chỉ xuống mô hình 3D thực tế dưới bàn */}
+            <div className="w-0.5 h-3 bg-gradient-to-b from-cyan-400 to-transparent" />
+          </div>
         </div>
       )}
     </div>

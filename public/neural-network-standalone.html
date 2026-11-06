@@ -251,7 +251,7 @@
   </footer>
 
   <!-- HOLOGRAPHIC DRAG AVATAR & BANNER -->
-  <div id="dragAvatar" class="fixed z-[100] pointer-events-none -translate-x-1/2 -translate-y-1/2 hidden select-none"></div>
+  <div id="dragAvatar" class="fixed z-[100] pointer-events-none -translate-x-1/2 -translate-y-full hidden select-none"></div>
   <div id="dragBanner" class="fixed top-4 left-1/2 -translate-x-1/2 z-[110] px-4 py-2 rounded-2xl bg-slate-950/90 border border-cyan-400/80 shadow-[0_0_25px_rgba(0,243,255,0.4)] backdrop-blur-xl hidden items-center gap-2.5 text-xs text-white pointer-events-none">
     <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
     <span class="font-bold text-cyan-200 uppercase tracking-wide">Kéo thiết bị vào bàn thí nghiệm 3D</span>
@@ -1142,26 +1142,16 @@
           if (avatar) {
             avatar.classList.remove('hidden');
             avatar.style.left = `${e.clientX}px`;
-            avatar.style.top = `${e.clientY}px`;
-            const morph = Math.min(1, Math.max(0, (dist - 12) / 85));
+            avatar.style.top = `${e.clientY - 32}px`;
             const dev = nodeCandidate.node;
             avatar.innerHTML = `
               <div class="flex flex-col items-center">
-                <div class="relative flex flex-col items-center justify-center p-3 rounded-2xl border-2 transition-all duration-100 overflow-hidden"
-                  style="width: ${Math.round(68 + morph * 115)}px; min-height: ${Math.round(68 + morph * 130)}px; background: ${morph < 0.35 ? 'rgba(15,23,42,0.95)' : 'rgba(6,17,34,0.96)'}; border-color: ${morph > 0.5 ? '#00f3ff' : '#6366f1'}; box-shadow: 0 0 ${Math.round(20 + morph * 25)}px rgba(0,243,255,0.65); backdrop-filter: blur(20px);">
-                  <div class="text-2xl">${dev.glyphIcon}</div>
-                  ${morph > 0.35 ? `
-                    <div class="flex flex-col items-center text-center mt-1 z-10">
-                      <span class="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase bg-cyan-500/20 text-cyan-300 border border-cyan-400/40">${morph < 0.8 ? '⚡ Đang lượng tử hóa' : '✨ Thiết bị thực'}</span>
-                      <div class="text-xs font-bold text-white mt-1 leading-tight">${userMode === 'student' ? dev.nameStudent : dev.nameVi}</div>
-                      <div class="text-[9px] text-cyan-200 font-mono opacity-80">${dev.assetId}</div>
-                    </div>
-                  ` : ''}
+                <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-950/85 border border-cyan-400/80 shadow-[0_0_20px_rgba(0,243,255,0.45)] backdrop-blur-md text-white">
+                  <span class="text-base">${dev.glyphIcon}</span>
+                  <span class="text-xs font-bold tracking-wide">${userMode === 'student' ? dev.nameStudent : dev.nameVi}</span>
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span>
                 </div>
-                <div class="flex flex-col items-center mt-1.5 animate-bounce">
-                  <div class="w-0.5 h-5 bg-gradient-to-b from-cyan-400 to-transparent"></div>
-                  <div class="px-2.5 py-0.5 rounded-full bg-slate-950/95 border border-cyan-400/80 shadow-[0_0_12px_rgba(0,243,255,0.4)] text-[10px] font-bold text-cyan-200">🎯 Thả chuột để đặt lên bàn 3D</div>
-                </div>
+                <div class="w-0.5 h-3 bg-gradient-to-b from-cyan-400 to-transparent"></div>
               </div>
             `;
           }

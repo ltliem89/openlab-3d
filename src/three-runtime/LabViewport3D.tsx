@@ -1728,6 +1728,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
   const neuralSynapseBeamGroupRef = useRef<THREE.Group | null>(null);
   const transporterPortalRef = useRef<THREE.Group | null>(null);
   const neuralPlacementTargetRef = useRef<THREE.Group | null>(null);
+  const neuralDragPreviewGroupRef = useRef<{ assetId: string; root: THREE.Group } | null>(null);
   const dynamicWireDragGroupRef = useRef<THREE.Group | null>(null);
   const wireDragRef = useRef<{
     isDragging: boolean;
@@ -7962,8 +7963,13 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       if (!detail || !detail.isDragging) {
         if (neuralPlacementTargetRef.current && neuralPlacementTargetRef.current.visible) {
           neuralPlacementTargetRef.current.visible = false;
-          requestRender();
         }
+        if (neuralDragPreviewGroupRef.current) {
+          scene.remove(neuralDragPreviewGroupRef.current.root);
+          OpenLabAssetLoader.disposeObject3D(neuralDragPreviewGroupRef.current.root);
+          neuralDragPreviewGroupRef.current = null;
+        }
+        requestRender();
         return;
       }
 
@@ -7979,15 +7985,51 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       const raycaster = new THREE.Raycaster();
       raycaster.setFromCamera(ndc, camera);
       const hit = raycaster.ray.intersectPlane(_rayPlane, _dropPoint);
-      if (hit && neuralPlacementTargetRef.current) {
+      if (hit) {
         const clampedX = Number(
           THREE.MathUtils.clamp(_dropPoint.x, -BENCH_LIMIT_X, BENCH_LIMIT_X).toFixed(3),
         );
         const clampedZ = Number(
           THREE.MathUtils.clamp(_dropPoint.z, -BENCH_LIMIT_Z, BENCH_LIMIT_Z).toFixed(3),
         );
-        neuralPlacementTargetRef.current.position.set(clampedX, BENCH_SURFACE_Y + 0.003, clampedZ);
-        neuralPlacementTargetRef.current.visible = true;
+
+        if (neuralPlacementTargetRef.current) {
+          neuralPlacementTargetRef.current.position.set(clampedX, BENCH_SURFACE_Y + 0.003, clampedZ);
+          neuralPlacementTargetRef.current.visible = true;
+        }
+
+        // Tải và hiển thị trực tiếp mô hình 3D thực tế của thiết bị lướt trên mặt bàn
+        if (
+          !neuralDragPreviewGroupRef.current ||
+          neuralDragPreviewGroupRef.current.assetId !== detail.assetId
+        ) {
+          if (neuralDragPreviewGroupRef.current) {
+            scene.remove(neuralDragPreviewGroupRef.current.root);
+            OpenLabAssetLoader.disposeObject3D(neuralDragPreviewGroupRef.current.root);
+            neuralDragPreviewGroupRef.current = null;
+          }
+
+          const targetAsset =
+            assetsMap.get(detail.assetId) ??
+            htmlEquipmentModuleRegistry.getModule(detail.assetId)?.asset;
+
+          if (targetAsset) {
+            openLabAssetLoader.loadInstanceMesh(targetAsset).then((loaded) => {
+              const previewRoot = loaded.root;
+              previewRoot.position.set(clampedX, BENCH_SURFACE_Y, clampedZ);
+              scene.add(previewRoot);
+              neuralDragPreviewGroupRef.current = {
+                assetId: detail.assetId,
+                root: previewRoot,
+              };
+              requestRender();
+            });
+          }
+        } else {
+          neuralDragPreviewGroupRef.current.root.position.set(clampedX, BENCH_SURFACE_Y, clampedZ);
+          neuralDragPreviewGroupRef.current.root.visible = true;
+        }
+
         requestRender();
       }
     };
@@ -8000,6 +8042,13 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       }>;
       const detail = customEvent.detail;
       if (!detail) return;
+
+      if (neuralDragPreviewGroupRef.current) {
+        scene.remove(neuralDragPreviewGroupRef.current.root);
+        OpenLabAssetLoader.disposeObject3D(neuralDragPreviewGroupRef.current.root);
+        neuralDragPreviewGroupRef.current = null;
+      }
+
       if (neuralPlacementTargetRef.current) {
         neuralPlacementTargetRef.current.visible = false;
       }
@@ -8045,6 +8094,11 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       window.removeEventListener('transitionend', handleTransitionEnd);
       window.removeEventListener('openlab:neural-drag-preview', handleNeuralDragPreview);
       window.removeEventListener('openlab:neural-drag-drop', handleNeuralDragDrop);
+      if (neuralDragPreviewGroupRef.current) {
+        scene.remove(neuralDragPreviewGroupRef.current.root);
+        OpenLabAssetLoader.disposeObject3D(neuralDragPreviewGroupRef.current.root);
+        neuralDragPreviewGroupRef.current = null;
+      }
       resizeObserver.disconnect();
       renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
       renderer.domElement.removeEventListener('contextmenu', handleContextMenu);
