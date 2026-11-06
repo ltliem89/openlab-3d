@@ -112,7 +112,7 @@ export const DEFAULT_LAB_ROOM_CONFIG: LabRoomConfig = {
     enabled: true,
     count: 1,
     widthM: 2.4,
-    depthM: 0.75,
+    depthM: 0.975, // Tăng thêm 30% độ rộng mặt bàn (từ 0.75m lên 0.975m theo yêu cầu)
     topY: BENCH_SURFACE_Y,
     topThicknessM: 0.04,
   },
@@ -1289,35 +1289,35 @@ function createCompactCoordSprite(
   scaleH = 0.052,
 ): THREE.Sprite {
   const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 84;
+  canvas.width = 384;
+  canvas.height = 128;
   const ctx = canvas.getContext('2d');
   if (ctx) {
-    ctx.clearRect(0, 0, 256, 84);
+    ctx.clearRect(0, 0, 384, 128);
 
     // Nền kính trong suốt mờ nhẹ đồng bộ với chuẩn "Kho chứa"
-    ctx.fillStyle = bgColor.includes('rgba') ? bgColor : 'rgba(11, 27, 54, 0.38)';
+    ctx.fillStyle = bgColor.includes('rgba') ? bgColor : 'rgba(11, 27, 54, 0.42)';
     ctx.beginPath();
-    ctx.roundRect(6, 6, 244, 72, 14);
+    ctx.roundRect(8, 8, 368, 112, 18);
     ctx.fill();
 
     // Viền phát quang mảnh tinh tế với hiệu ứng hào quang neon
     ctx.save();
-    ctx.lineWidth = 2.4;
+    ctx.lineWidth = 3.6;
     ctx.strokeStyle = borderColor;
     ctx.shadowColor = borderColor;
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = 10;
     ctx.stroke();
     ctx.restore();
 
     ctx.save();
     ctx.fillStyle = textColor;
     ctx.shadowColor = borderColor;
-    ctx.shadowBlur = 4;
-    ctx.font = 'bold 28px ui-monospace, SFMono-Regular, Menlo, monospace';
+    ctx.shadowBlur = 6;
+    ctx.font = '900 48px ui-monospace, SFMono-Regular, Menlo, monospace, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(text, 128, 43);
+    ctx.fillText(text, 192, 64);
     ctx.restore();
   }
   const tex = new THREE.CanvasTexture(canvas);
@@ -1350,11 +1350,11 @@ export function buildWorldCoordinatesAndGridHelper(
   root.name = 'worldAxesHelper';
 
   const benchW = roomConfig.bench.widthM; // 2.40 m (cạnh dài X)
-  const benchD = roomConfig.bench.depthM; // 0.75 m (cạnh rộng Y)
+  const benchD = roomConfig.bench.depthM; // 0.975 m (cạnh rộng Y, tăng thêm 30%)
   const benchY = roomConfig.bench.topY; // 0.82 m (mặt bàn Z = 0)
   const axisLenX = Number((benchW - 0.10).toFixed(2)); // 2.30 m (giảm 0.1m để nằm gọn trên mặt bàn)
-  const axisLenY = Number((benchD - 0.10).toFixed(2)); // 0.65 m (giảm 0.1m để nằm gọn trên mặt bàn)
-  const zHeightM = 0.60; // 0.60 m (giảm 0.1m từ 0.70m để nằm gọn hoàn toàn trong màn hình mô phỏng)
+  const axisLenY = Number((benchD - 0.10).toFixed(2)); // 0.875 m (cạnh rộng tăng 30% nằm gọn trên mặt bàn)
+  const zHeightM = 0.36; // 0.36 m (giảm độ cao còn 60% hiện tại theo yêu cầu người dùng)
 
   // Tọa độ gốc cố định O(0,0,0) tại góc sau-trái của mặt bàn
   const ox = -benchW / 2; // -1.20 m
@@ -1556,46 +1556,46 @@ export function buildWorldCoordinatesAndGridHelper(
 
   const lblO = createCompactCoordSprite(
     'O(0,0,0)',
-    'rgba(11, 27, 54, 0.38)',
+    'rgba(11, 27, 54, 0.48)',
     '#FACC15',
     '#FACC15',
-    0.11,
-    0.042,
+    0.20,
+    0.072,
   );
-  lblO.position.set(ox - 0.02, oy + 0.04, oz - 0.02);
+  lblO.position.set(ox - 0.035, oy + 0.045, oz - 0.035);
   labelsGroup.add(lblO);
 
   const lblX = createCompactCoordSprite(
     'X',
-    'rgba(11, 27, 54, 0.38)',
+    'rgba(11, 27, 54, 0.48)',
     '#EF4444',
     '#FCA5A5',
+    0.13,
     0.072,
-    0.042,
   );
-  lblX.position.set(ox + axisLenX + 0.038, oy + 0.035, oz);
+  lblX.position.set(ox + axisLenX + 0.052, oy + 0.038, oz);
   labelsGroup.add(lblX);
 
   const lblY = createCompactCoordSprite(
     'Y',
-    'rgba(11, 27, 54, 0.38)',
+    'rgba(11, 27, 54, 0.48)',
     '#22C55E',
     '#86EFAC',
+    0.13,
     0.072,
-    0.042,
   );
-  lblY.position.set(ox, oy + 0.035, oz + axisLenY + 0.038);
+  lblY.position.set(ox, oy + 0.038, oz + axisLenY + 0.052);
   labelsGroup.add(lblY);
 
   const lblZ = createCompactCoordSprite(
     'Z',
-    'rgba(11, 27, 54, 0.38)',
+    'rgba(11, 27, 54, 0.48)',
     '#3B82F6',
     '#93C5FD',
+    0.13,
     0.072,
-    0.042,
   );
-  lblZ.position.set(ox, oy + zHeightM + 0.038, oz);
+  lblZ.position.set(ox, oy + zHeightM + 0.045, oz);
   labelsGroup.add(lblZ);
 
   root.add(labelsGroup);
@@ -1611,19 +1611,19 @@ export function buildWorldCoordinatesAndGridHelper(
   // Vạch chia mỗi 10 cm dọc cạnh dài X (0 .. axisLenX m)
   for (let dx = 0.1; dx <= axisLenX + 0.001; dx += 0.1) {
     const wx = ox + dx;
-    const tickLen = Math.abs((dx * 10) % 2) < 0.01 ? 0.018 : 0.01;
+    const tickLen = Math.abs((dx * 10) % 2) < 0.01 ? 0.022 : 0.012;
     tickPts.push(wx, oy + 0.002, oz, wx, oy + 0.002, oz + tickLen);
   }
   // Vạch chia mỗi 10 cm dọc cạnh rộng Y (0 .. axisLenY m)
   for (let dy = 0.1; dy <= axisLenY + 0.001; dy += 0.1) {
     const wz = oz + dy;
-    const tickLen = Math.abs((dy * 10) % 2) < 0.01 ? 0.018 : 0.01;
+    const tickLen = Math.abs((dy * 10) % 2) < 0.01 ? 0.022 : 0.012;
     tickPts.push(ox, oy + 0.002, wz, ox + tickLen, oy + 0.002, wz);
   }
   // Vạch chia mỗi 10 cm dọc trục đứng Z (0 .. zHeightM m)
   for (let dz = 0.1; dz <= zHeightM + 0.001; dz += 0.1) {
     const wy = oy + dz;
-    const tickLen = Math.abs((dz * 10) % 2) < 0.01 ? 0.018 : 0.01;
+    const tickLen = Math.abs((dz * 10) % 2) < 0.01 ? 0.022 : 0.012;
     tickPts.push(ox, wy, oz, ox + tickLen, wy, oz);
   }
 
@@ -1640,45 +1640,47 @@ export function buildWorldCoordinatesAndGridHelper(
     ),
   );
 
-  // Nhãn số nhỏ dọc cạnh dài X (0.4m, 0.8m, 1.2m, 1.6m, 2.0m)
+  // Nhãn số nhỏ dọc cạnh dài X (0.4m, 0.8m, 1.2m, 1.6m, 2.0m) - tăng cỡ chữ rõ nét
   for (const dx of [0.4, 0.8, 1.2, 1.6, 2.0]) {
     const sp = createCompactCoordSprite(
       `${dx.toFixed(1)}m`,
-      'rgba(11, 27, 54, 0.32)',
+      'rgba(11, 27, 54, 0.42)',
       '#EF4444',
       '#FCA5A5',
-      0.085,
-      0.028,
+      0.135,
+      0.046,
     );
-    sp.position.set(ox + dx, oy + 0.02, oz - 0.015);
+    sp.position.set(ox + dx, oy + 0.024, oz - 0.025);
     ticksGroup.add(sp);
   }
 
-  // Nhãn số nhỏ dọc cạnh rộng Y (0.2m, 0.4m, 0.6m)
-  for (const dy of [0.2, 0.4, 0.6]) {
+  // Nhãn số nhỏ dọc cạnh rộng Y (0.2m, 0.4m, 0.6m, 0.8m) - tương thích độ rộng bàn tăng 30%
+  for (const dy of [0.2, 0.4, 0.6, 0.8]) {
+    if (dy > axisLenY) continue;
     const sp = createCompactCoordSprite(
       `${dy.toFixed(2).replace(/0$/, '')}m`,
-      'rgba(11, 27, 54, 0.32)',
+      'rgba(11, 27, 54, 0.42)',
       '#22C55E',
       '#86EFAC',
-      0.085,
-      0.028,
+      0.135,
+      0.046,
     );
-    sp.position.set(ox - 0.02, oy + 0.02, oz + dy);
+    sp.position.set(ox - 0.035, oy + 0.024, oz + dy);
     ticksGroup.add(sp);
   }
 
-  // Nhãn số nhỏ dọc trục đứng Z (0.2m, 0.4m)
-  for (const dz of [0.2, 0.4]) {
+  // Nhãn số nhỏ dọc trục đứng Z (0.1m, 0.2m, 0.3m) - tương thích trục Z giảm còn 60%
+  for (const dz of [0.1, 0.2, 0.3]) {
+    if (dz > zHeightM) continue;
     const sp = createCompactCoordSprite(
       `${dz.toFixed(1)}m`,
-      'rgba(11, 27, 54, 0.32)',
+      'rgba(11, 27, 54, 0.42)',
       '#3B82F6',
       '#93C5FD',
-      0.085,
-      0.028,
+      0.135,
+      0.046,
     );
-    sp.position.set(ox - 0.025, oy + dz, oz - 0.015);
+    sp.position.set(ox - 0.038, oy + dz, oz - 0.022);
     ticksGroup.add(sp);
   }
 
@@ -1859,7 +1861,7 @@ export function buildStandardLabRoomV2(
 
     // =========================================================================
     // 5. KHU TRƯNG BÀY 1 TẦNG NÂNG CAO GỌN GÀNG (Kệ kính mờ mỏng 7.6cm sát mép sau bàn, không chiếm diện tích mặt bàn)
-    // - Rộng 1.38 m (từ X = -0.69 m đến +0.69 m), mỏng 0.076 m (7.6 cm, sát mép sau Z = -0.375 m, tâm Z = -0.337 m)
+    // - Rộng 1.38 m (từ X = -0.69 m đến +0.69 m), mỏng 0.076 m (7.6 cm, sát mép sau Z = -0.488 m, tâm Z = -0.450 m)
     // - Đã bỏ tầng 2 và nâng cao mặt đợt Tầng 1 lên y_local = 0.135 m (đặt vật tại 0.138 m), tổng chiều cao vách lưng 0.32 m
     //   giúp cả phần gầm dưới kệ và khoảng không phía trên mặt kệ đều thoáng rộng để chứa các dụng cụ cao.
     // =========================================================================
@@ -1869,8 +1871,8 @@ export function buildStandardLabRoomV2(
     const shelfW = 1.38; // Rộng 138 cm gọn gàng ở giữa mép sau bàn
     const shelfH = 0.32; // Cao 32 cm thoáng rộng cho các dụng cụ cao
     const shelfD = 0.076; // Siêu mỏng 7.6 cm sát mép sau, giải phóng tối đa diện tích bàn
-    const shelfBackZ = -benchD / 2; // Sát mép sau bàn (-0.375 m)
-    const shelfCenterZ = shelfBackZ + shelfD / 2; // -0.337 m
+    const shelfBackZ = -benchD / 2; // Sát mép sau bàn (-0.4875 m)
+    const shelfCenterZ = shelfBackZ + shelfD / 2; // -0.450 m
     const tierDeckLocalYs = [0.135]; // Duy nhất 1 tầng nâng cao (13.5 cm trên mặt bàn)
 
     // 1. Tấm kính sau lưng kệ: Kính mờ chân thật (Frosted Glass), đã tăng độ trong suốt lên 50%

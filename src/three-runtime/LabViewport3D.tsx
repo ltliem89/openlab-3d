@@ -93,10 +93,10 @@ import {
   EyeOff,
 } from 'lucide-react';
 
-// Bàn thí nghiệm rộng 2.40 m (X ∈ [-1.20, 1.20]) × sâu 0.75 m (Z ∈ [-0.375, 0.375]).
-// Cách mép bàn đúng 1 ô lưới (0.05 m = 5 cm) -> Giới hạn di chuyển: X ∈ [-1.15, 1.15], Z ∈ [-0.325, 0.325]
+// Bàn thí nghiệm rộng 2.40 m (X ∈ [-1.20, 1.20]) × sâu 0.975 m (Z ∈ [-0.4875, 0.4875] tăng 30%).
+// Cách mép bàn đúng 1 ô lưới (0.05 m = 5 cm) -> Giới hạn di chuyển: X ∈ [-1.15, 1.15], Z ∈ [-0.435, 0.435]
 const BENCH_LIMIT_X = 1.15;
-const BENCH_LIMIT_Z = 0.325;
+const BENCH_LIMIT_Z = 0.435;
 
 export type TransformToolMode = 'select' | 'translate' | 'rotate';
 export type ViewportDisplayMode = 'lab-scene' | 'single-asset';
@@ -3114,15 +3114,15 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     pmremGenerator.dispose();
 
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.02, 35);
-    // Khởi tạo ngay lập tức góc nhìn Mặc định (Toàn bàn) trọn vẹn 2.40m x 0.75m theo đúng khung hình tiêu chuẩn
+    // Khởi tạo ngay lập tức góc nhìn Mặc định (Toàn bàn) với góc nghiêng chuẩn theo ảnh và mặt bàn rộng 0.975m
     const initialAspect = width / height;
     const tanHalfVFov = Math.tan(THREE.MathUtils.degToRad(21)); // fov = 42 deg
     const tanHalfHFov = tanHalfVFov * Math.max(0.65, initialAspect);
-    const initDist = THREE.MathUtils.clamp(1.26 / tanHalfHFov + 0.34, 1.85, 3.35);
+    const initDist = THREE.MathUtils.clamp(1.32 / tanHalfHFov + 0.38, 2.05, 3.55);
     camera.position.set(
       0.0,
-      BENCH_SURFACE_Y + 0.08 + initDist * 0.4,
-      -0.02 + initDist * 0.915,
+      BENCH_SURFACE_Y + 0.08 + initDist * 0.5,
+      initDist * 0.866,
     );
     cameraRef.current = camera;
 
@@ -3565,7 +3565,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     orbit.minDistance = 0.22;
     orbit.maxDistance = 12.5;
     orbit.maxPolarAngle = Math.PI / 2 - 0.02;
-    orbit.target.set(0, BENCH_SURFACE_Y + 0.08, -0.02);
+    orbit.target.set(0, BENCH_SURFACE_Y + 0.05, -0.01);
     orbit.update();
     orbitRef.current = orbit;
 
@@ -3577,7 +3577,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         scene,
         renderer,
         benchSurfaceY: BENCH_SURFACE_Y,
-        setCameraView: (camX: number, camY: number, camZ: number, tgtX = 0, tgtY = BENCH_SURFACE_Y + 0.08, tgtZ = -0.02) => {
+        setCameraView: (camX: number, camY: number, camZ: number, tgtX = 0, tgtY = BENCH_SURFACE_Y + 0.05, tgtZ = -0.01) => {
           camera.position.set(camX, camY, camZ);
           orbit.target.set(tgtX, tgtY, tgtZ);
           orbit.update();
@@ -5661,7 +5661,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       let rayLocalYAtShelf = preservedLocalY;
       let rayXAtShelf = worldX;
       if (Math.abs(raycaster.ray.direction.z) > 1e-4) {
-        const tShelf = (-0.337 - raycaster.ray.origin.z) / raycaster.ray.direction.z;
+        const tShelf = (-0.45 - raycaster.ray.origin.z) / raycaster.ray.direction.z;
         if (tShelf > 0) {
           rayLocalYAtShelf =
             raycaster.ray.origin.y +
@@ -5672,11 +5672,11 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         }
       }
       const isAimingAtShelf =
-        (worldZ <= -0.25 && Math.abs(worldX) <= 0.69) ||
+        (worldZ <= -0.36 && Math.abs(worldX) <= 0.69) ||
         (rayLocalYAtShelf >= 0.05 &&
           rayLocalYAtShelf <= 0.35 &&
           Math.abs(rayXAtShelf) <= 0.68 &&
-          worldZ <= -0.14);
+          worldZ <= -0.22);
 
       if (isAimingAtShelf) {
         const candidateX = Math.abs(rayXAtShelf) <= 0.66 ? rayXAtShelf : worldX;
@@ -5699,11 +5699,11 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           }
         }
         return {
-          pos: [Number(shelfX.toFixed(3)), targetTierY, -0.337],
+          pos: [Number(shelfX.toFixed(3)), targetTierY, -0.45],
           targetInstanceId: null,
           slot: 'shelf',
           hint: `✨ Thả vào Khu trưng bày (Cất "${draggedInst.customLabel || draggedAsset.name.vi}" lên kệ gọn)`,
-          snapRingPos: [Number(shelfX.toFixed(3)), targetTierY + 0.002, -0.337],
+          snapRingPos: [Number(shelfX.toFixed(3)), targetTierY + 0.002, -0.45],
         };
       }
 
@@ -7789,7 +7789,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         const finalPos: [number, number, number] = [
           Number(settleX.toFixed(3)),
           Number(finalY.toFixed(3)),
-          Number((dock.slot === 'shelf' ? -0.337 : settleZ).toFixed(3)),
+          Number((dock.slot === 'shelf' ? -0.45 : settleZ).toFixed(3)),
         ];
 
         // Đặt trên mặt bàn theo đúng chuẩn anchor 'base-center' tại worldY = BENCH_SURFACE_Y (0.82 m) + finalY
@@ -9365,15 +9365,15 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     const aspect = cam && cam.aspect > 0.1 ? cam.aspect : 1.55;
     const tanHalfVFov = Math.tan(THREE.MathUtils.degToRad(21)); // fov = 42 deg
     const tanHalfHFov = tanHalfVFov * Math.max(0.65, aspect);
-    // Đảm bảo toàn bộ chiều dài bàn 2.40m (từ -1.20m đến +1.20m) và chiều sâu 0.75m nằm trọn trong khung mô phỏng
-    const dist = THREE.MathUtils.clamp(1.26 / tanHalfHFov + 0.34, 1.85, 3.35);
+    // Đảm bảo toàn bộ chiều dài bàn 2.40m và chiều sâu 0.975m (tăng 30%) nằm trọn với góc nghiêng chuẩn
+    const dist = THREE.MathUtils.clamp(1.32 / tanHalfHFov + 0.38, 2.05, 3.55);
     return {
       pos: new THREE.Vector3(
         0.0,
-        BENCH_SURFACE_Y + 0.08 + dist * 0.4,
-        -0.02 + dist * 0.915,
+        BENCH_SURFACE_Y + 0.08 + dist * 0.5,
+        dist * 0.866,
       ),
-      target: new THREE.Vector3(0.0, BENCH_SURFACE_Y + 0.08, -0.02),
+      target: new THREE.Vector3(0.0, BENCH_SURFACE_Y + 0.05, -0.01),
     };
   }, []);
 
@@ -9419,7 +9419,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         onSelectInstanceRef.current(null);
         setViewportContextMenu(null);
         onNotify(
-          'Đã đưa góc nhìn về Mặc định chính giữa — hiển thị trọn vẹn toàn bộ bàn thí nghiệm (2.40 × 0.75 m) trong khung mô phỏng.',
+          'Đã đưa góc nhìn về Mặc định chính giữa — hiển thị trọn vẹn toàn bộ bàn thí nghiệm (2.40 × 0.98 m) trong khung mô phỏng.',
           'info',
         );
       }

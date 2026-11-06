@@ -3529,7 +3529,7 @@ export const INITIAL_DEMO_SCENE: LabScene = {
       customLabel: 'Cân điện tử',
       parentZone: 'bench-scale',
       transform: {
-        positionM: [-0.35, 0.138, -0.337],
+        positionM: [-0.35, 0.138, -0.45],
         rotationRad: [0, 0, 0],
         displayScale: [0.42, 0.42, 0.42],
       },
@@ -3549,7 +3549,7 @@ export const INITIAL_DEMO_SCENE: LabScene = {
       customLabel: 'Vật rắn kim loại',
       parentZone: 'bench-main',
       transform: {
-        positionM: [-0.21, 0.138, -0.337],
+        positionM: [-0.21, 0.138, -0.45],
         rotationRad: [0, 0, 0],
         displayScale: [0.42, 0.42, 0.42],
       },
@@ -3567,7 +3567,7 @@ export const INITIAL_DEMO_SCENE: LabScene = {
       customLabel: 'Ống đong 100 ml',
       parentZone: 'bench-glassware',
       transform: {
-        positionM: [-0.07, 0.138, -0.337],
+        positionM: [-0.07, 0.138, -0.45],
         rotationRad: [0, 0, 0],
         displayScale: [0.42, 0.42, 0.42],
       },
@@ -3587,7 +3587,7 @@ export const INITIAL_DEMO_SCENE: LabScene = {
       customLabel: 'Bình tràn',
       parentZone: 'bench-glassware',
       transform: {
-        positionM: [0.07, 0.138, -0.337],
+        positionM: [0.07, 0.138, -0.45],
         rotationRad: [0, 0, 0],
         displayScale: [0.42, 0.42, 0.42],
       },
@@ -3607,7 +3607,7 @@ export const INITIAL_DEMO_SCENE: LabScene = {
       customLabel: 'Cốc thủy tinh',
       parentZone: 'bench-glassware',
       transform: {
-        positionM: [0.21, 0.138, -0.337],
+        positionM: [0.21, 0.138, -0.45],
         rotationRad: [0, 0, 0],
         displayScale: [0.42, 0.42, 0.42],
       },
@@ -3627,7 +3627,7 @@ export const INITIAL_DEMO_SCENE: LabScene = {
       customLabel: 'Bình cấp nước (Van ml)',
       parentZone: 'bench-glassware',
       transform: {
-        positionM: [0.35, 0.138, -0.337],
+        positionM: [0.35, 0.138, -0.45],
         rotationRad: [0, 0, 0],
         displayScale: [0.42, 0.42, 0.42],
       },

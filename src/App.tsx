@@ -611,7 +611,7 @@ export default function App() {
           ? customPosM[2]
           : Number((Math.sin(angle) * radius * 0.65).toFixed(3));
         const posX = Math.max(-1.15, Math.min(1.15, rawPosX));
-        const posZ = Math.max(-0.325, Math.min(0.325, rawPosZ));
+        const posZ = Math.max(-0.435, Math.min(0.435, rawPosZ));
 
         // Nếu thiết bị này đang nằm trên Khu trưng bày ('shelf'), lấy trực tiếp từ Khu trưng bày xuống mặt bàn!
         const storedOnShelf = prev.instances.find(
@@ -2537,7 +2537,7 @@ export default function App() {
                 Math.min(1.15, balance.transform.positionM[0] + 0.16 + (idx % 3) * 0.06).toFixed(3),
               );
               const benchZ = Number(
-                Math.min(0.325, balance.transform.positionM[2] + 0.04 + (clearedCount - 1) * 0.06).toFixed(3),
+                Math.min(0.435, balance.transform.positionM[2] + 0.04 + (clearedCount - 1) * 0.06).toFixed(3),
               );
               return {
                 ...item,
@@ -2686,7 +2686,7 @@ export default function App() {
                 Math.min(1.15, targetVessel.transform.positionM[0] + 0.12 + (retrievedCount - 1) * 0.06).toFixed(3),
               );
               const benchZ = Number(
-                Math.min(0.325, targetVessel.transform.positionM[2] + 0.04).toFixed(3),
+                Math.min(0.435, targetVessel.transform.positionM[2] + 0.04).toFixed(3),
               );
               return {
                 ...item,
@@ -2742,7 +2742,7 @@ export default function App() {
         const settlePos: [number, number, number] = [
           Number(Math.max(-1.15, cylinder.transform.positionM[0] - 0.105).toFixed(3)),
           0,
-          Number(Math.min(0.325, cylinder.transform.positionM[2] + 0.025).toFixed(3)),
+          Number(Math.min(0.435, cylinder.transform.positionM[2] + 0.025).toFixed(3)),
         ];
         handlePhysicalDockInteraction(
           inst.instanceId,
@@ -2757,7 +2757,7 @@ export default function App() {
         const settlePos: [number, number, number] = [
           Number(Math.max(-1.15, beaker.transform.positionM[0] - 0.105).toFixed(3)),
           0,
-          Number(Math.min(0.325, beaker.transform.positionM[2] + 0.025).toFixed(3)),
+          Number(Math.min(0.435, beaker.transform.positionM[2] + 0.025).toFixed(3)),
         ];
         handlePhysicalDockInteraction(
           inst.instanceId,
@@ -2772,7 +2772,7 @@ export default function App() {
         const settlePos: [number, number, number] = [
           Number(Math.max(-1.15, overflowCan.transform.positionM[0] - 0.115).toFixed(3)),
           0,
-          Number(Math.min(0.325, overflowCan.transform.positionM[2] + 0.025).toFixed(3)),
+          Number(Math.min(0.435, overflowCan.transform.positionM[2] + 0.025).toFixed(3)),
         ];
         handlePhysicalDockInteraction(
           inst.instanceId,
@@ -3833,9 +3833,9 @@ export default function App() {
                     0,
                     Number(
                       Math.min(
-                        0.325,
+                        0.435,
                         Math.max(
-                          -0.325,
+                          -0.435,
                           dispenserInst.transform.positionM[2] -
                             Math.sin(dispRotY) * 0.095,
                         ),
@@ -4084,7 +4084,7 @@ export default function App() {
       handleAddAssetToScene(source.assetId, [
         Number(Math.min(1.15, source.transform.positionM[0] + 0.09).toFixed(3)),
         0,
-        Number(Math.min(0.325, source.transform.positionM[2] + 0.06).toFixed(3)),
+        Number(Math.min(0.435, source.transform.positionM[2] + 0.06).toFixed(3)),
       ]);
     },
     [scene.instances, handleAddAssetToScene],
