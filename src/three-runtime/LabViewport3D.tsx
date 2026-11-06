@@ -7725,6 +7725,55 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
 
     const handleDblClick = (e: MouseEvent) => {
       e.preventDefault();
+
+      // Kiểm tra nhấp đúp (double-click) chuột trái vào thiết bị trên bàn hoặc Khu trưng bày
+      const rect = renderer.domElement.getBoundingClientRect();
+      const mouseNdcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const mouseNdcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+      const dblRaycaster = new THREE.Raycaster();
+      dblRaycaster.setFromCamera(new THREE.Vector2(mouseNdcX, mouseNdcY), camera);
+
+      const pickables: THREE.Object3D[] = [];
+      instanceObjectsRef.current.forEach((group, instId) => {
+        const inst = instancesRef.current.find((i) => i.instanceId === instId);
+        if (inst && inst.visible) {
+          pickables.push(group);
+        }
+      });
+
+      const hits = dblRaycaster.intersectObjects(pickables, true);
+      const validHits = hits.filter((h) => isRealEquipmentMesh(h.object));
+
+      if (validHits.length > 0) {
+        let curr: THREE.Object3D | null = validHits[0].object;
+        while (curr && !curr.userData?.instanceId) {
+          curr = curr.parent;
+        }
+        const hitInstId = curr?.userData?.instanceId as string | undefined;
+        if (hitInstId) {
+          const hitInst = instancesRef.current.find((i) => i.instanceId === hitInstId);
+          if (hitInst) {
+            const hitAsset = assetsMapRef.current.get(hitInst.assetId);
+            const targetId = hitInst.assetId || hitAsset?.geometry.proceduralArchetype || hitInstId;
+
+            // Chọn thiết bị trong 3D Viewport
+            selectedInstanceIdRef.current = hitInstId;
+            onSelectInstanceRef.current(hitInstId);
+            labSoundEngine.play('ui-toggle', 1.0);
+
+            // Mở sơ đồ Mạng nơ-ron liên kết cho thiết bị này trên bàn / khu trưng bày
+            window.dispatchEvent(
+              new CustomEvent('openlab:open-neural-modal', {
+                detail: { deviceId: targetId },
+              }),
+            );
+            return;
+          }
+        }
+      }
+
+      // Nhấp đúp vào khoảng trống -> Trả góc nhìn camera về mặc định
       resetSimulationToDefaultView();
     };
 

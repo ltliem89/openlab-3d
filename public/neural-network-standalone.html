@@ -44,7 +44,7 @@
     <button
       id="btnOpenPanel"
       onclick="toggleSidebar(true)"
-      class="hidden px-3 py-2 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 border border-indigo-400/50 text-white text-xs font-semibold shadow-2xl backdrop-blur-md items-center gap-1.5 transition-all"
+      class="flex px-3 py-2 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 border border-indigo-400/50 text-white text-xs font-semibold shadow-2xl backdrop-blur-md items-center gap-1.5 transition-all"
     >
       <span>📂</span>
       <span>Chọn bài thực hành</span>
@@ -81,11 +81,11 @@
     </button>
   </div>
 
-  <!-- PANEL ĐIỀU HƯỚNG TRÁI: CỐ ĐỊNH KÍCH THƯỚC 310PX & CÓ THỂ THU GỌN -->
+  <!-- PANEL ĐIỀU HƯỚNG TRÁI: CỐ ĐỊNH KÍCH THƯỚC 310PX & MẶC ĐỊNH THU GỌN ĐỂ KHÔNG CHE BẢN ĐỒ -->
   <aside
     id="leftSidebar"
     class="panel-transition absolute top-18 left-3 bottom-16 z-20 rounded-2xl bg-slate-950/92 border border-indigo-500/30 backdrop-blur-2xl shadow-2xl flex flex-col p-3.5 gap-2.5 overflow-hidden pointer-events-auto"
-    style="width: 310px; max-width: calc(100vw - 24px);"
+    style="width: 310px; max-width: calc(100vw - 24px); transform: translateX(-340px); opacity: 0; pointer-events: none;"
   >
     <!-- Thanh tiêu đề panel & nút thu gọn -->
     <div class="flex items-center justify-between pb-1.5 border-b border-slate-800">
@@ -194,10 +194,40 @@
     </div>
   </aside>
 
+  <!-- HUY HIỆU NỔI THIẾT BỊ ĐANG CHỌN (GỌN GÀNG, KHI BẤM 'CHI TIẾT' MỚI MỞ BẢNG ĐẦY ĐỦ) -->
+  <div
+    id="selectedNodeFloatingPill"
+    class="hidden absolute top-18 right-3 z-20 flex items-center gap-2.5 p-1.5 pl-3 rounded-2xl bg-slate-950/85 border border-indigo-500/50 backdrop-blur-xl shadow-2xl pointer-events-auto"
+  >
+    <span id="floatingGlyph" class="text-base p-1 rounded-xl bg-slate-900 border border-slate-800 shadow-inner"></span>
+    <div class="flex flex-col">
+      <span id="floatingTitle" class="text-xs font-bold text-white leading-tight"></span>
+      <span id="floatingSubtitle" class="text-[10px] text-indigo-300"></span>
+    </div>
+    <button
+      onclick="openDetailDrawerFromFloating()"
+      class="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md ml-1 cursor-pointer"
+      title="Xem thông tin chi tiết đầy đủ của thiết bị này"
+    >
+      <span>📋</span>
+      <span>Chi tiết</span>
+    </button>
+    <button
+      onclick="closeSelectedNodeFloating()"
+      class="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+      title="Bỏ chọn thiết bị"
+    >
+      ✕
+    </button>
+  </div>
+
   <!-- THANH CÔNG CỤ DƯỚI ĐÁY: CHỈ ĐỂ BIỂU TƯỢNG SÁT ĐÁY GỌN GÀNG, KHÔNG CHE BẢN ĐỒ -->
   <footer class="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 p-1 rounded-2xl bg-slate-950/85 border border-white/10 backdrop-blur-xl shadow-2xl pointer-events-auto">
     <button onclick="resetCamera()" class="w-8 h-8 rounded-xl bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-700/60 flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95" title="Căn giữa sơ đồ (hoặc nhấp đúp lên nền)">
       🎯
+    </button>
+    <button onclick="toggleDetailDrawer()" id="btn-toggle-detail" class="w-8 h-8 rounded-xl bg-slate-900/40 text-slate-600 border border-slate-800/60 flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95 cursor-not-allowed opacity-40" title="Chọn một thiết bị trên sơ đồ để xem chi tiết" disabled>
+      📋
     </button>
     <button onclick="toggleFiring()" id="btn-toggle-fire" class="w-8 h-8 rounded-xl bg-amber-500/25 border border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.3)] flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95" title="Xung tín hiệu: ĐANG BẬT (Bấm để tạm dừng)">
       ⚡
@@ -311,8 +341,8 @@
       playSuccessSound();
     }
 
-    // THU GỌN / MỞ RỘNG BẢNG ĐIỀU HƯỚNG BÊN TRÁI
-    let isSidebarOpen = true;
+    // THU GỌN / MỞ RỘNG BẢNG ĐIỀU HƯỚNG BÊN TRÁI (MẶC ĐỊNH THU GỌN ĐỂ KHÔNG CHE BẢN ĐỒ)
+    let isSidebarOpen = false;
     function toggleSidebar(open) {
       isSidebarOpen = open;
       const sidebar = document.getElementById('leftSidebar');
@@ -1088,7 +1118,7 @@
           }
         }
         selectedNode = selectedNode?.id === clicked.d.id ? null : clicked.d;
-        renderDetailDrawer(selectedNode);
+        updateSelectedNodeFloating(selectedNode);
       } else {
         isDragging = true;
         dragStart = { x: e.clientX, y: e.clientY };
@@ -1220,9 +1250,90 @@
       playClickSound();
     }
 
-    function closeDetailDrawer() {
-      document.getElementById('detailDrawer').classList.add('hidden');
+    let isDetailDrawerOpen = false;
+
+    function updateSelectedNodeFloating(node) {
+      const pill = document.getElementById('selectedNodeFloatingPill');
+      const drawer = document.getElementById('detailDrawer');
+
+      if (!node) {
+        if (pill) pill.classList.add('hidden');
+        if (drawer) drawer.classList.add('hidden');
+        isDetailDrawerOpen = false;
+        updateDetailBtnState();
+        return;
+      }
+
+      const outs = EDGES.filter(e => e.source === node.id).length;
+      const ins = EDGES.filter(e => e.target === node.id).length;
+
+      document.getElementById('floatingGlyph').textContent = node.glyph;
+      document.getElementById('floatingTitle').textContent = userMode === 'student' ? node.nameStudent : node.nameVi;
+      document.getElementById('floatingSubtitle').textContent = `${outs} tác động ra · ${ins} nhận vào`;
+
+      updateDetailBtnState();
+
+      if (isDetailDrawerOpen) {
+        if (pill) pill.classList.add('hidden');
+        renderDetailDrawer(node);
+      } else {
+        if (pill) pill.classList.remove('hidden');
+        if (drawer) drawer.classList.add('hidden');
+      }
+    }
+
+    function openDetailDrawerFromFloating() {
+      if (!selectedNode) return;
+      isDetailDrawerOpen = true;
+      const pill = document.getElementById('selectedNodeFloatingPill');
+      if (pill) pill.classList.add('hidden');
+      renderDetailDrawer(selectedNode);
+      updateDetailBtnState();
+      playClickSound();
+    }
+
+    function closeSelectedNodeFloating() {
       selectedNode = null;
+      isDetailDrawerOpen = false;
+      const pill = document.getElementById('selectedNodeFloatingPill');
+      const drawer = document.getElementById('detailDrawer');
+      if (pill) pill.classList.add('hidden');
+      if (drawer) drawer.classList.add('hidden');
+      updateDetailBtnState();
+      playClickSound();
+    }
+
+    function toggleDetailDrawer() {
+      if (!selectedNode) return;
+      isDetailDrawerOpen = !isDetailDrawerOpen;
+      updateSelectedNodeFloating(selectedNode);
+      playClickSound();
+    }
+
+    function updateDetailBtnState() {
+      const btnDetail = document.getElementById('btn-toggle-detail');
+      if (!btnDetail) return;
+      if (!selectedNode) {
+        btnDetail.disabled = true;
+        btnDetail.className = 'w-8 h-8 rounded-xl bg-slate-900/40 text-slate-600 border border-slate-800/60 flex items-center justify-center text-sm transition-all cursor-not-allowed opacity-40';
+        btnDetail.title = 'Chọn một thiết bị trên sơ đồ để xem chi tiết';
+      } else {
+        btnDetail.disabled = false;
+        btnDetail.className = isDetailDrawerOpen
+          ? 'w-8 h-8 rounded-xl bg-indigo-600/40 border border-indigo-400 text-indigo-200 shadow-[0_0_10px_rgba(99,102,241,0.4)] flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95 cursor-pointer'
+          : 'w-8 h-8 rounded-xl bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-300 animate-pulse flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95 cursor-pointer';
+        btnDetail.title = isDetailDrawerOpen ? 'Đóng bảng chi tiết thiết bị' : `Xem chi tiết thiết bị: ${userMode === 'student' ? selectedNode.nameStudent : selectedNode.nameVi}`;
+      }
+    }
+
+    function closeDetailDrawer() {
+      isDetailDrawerOpen = false;
+      document.getElementById('detailDrawer').classList.add('hidden');
+      if (selectedNode) {
+        const pill = document.getElementById('selectedNodeFloatingPill');
+        if (pill) pill.classList.remove('hidden');
+      }
+      updateDetailBtnState();
       playClickSound();
     }
 

@@ -176,6 +176,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   const [userMode, setUserMode] = useState<'student' | 'expert'>('student');
   const [selectedGrade, setSelectedGrade] = useState<'ALL' | ThcsGrade>('ALL');
   const [selectedNode, setSelectedNode] = useState<NeuralDeviceNode | null>(null);
+  const [showDetailDrawer, setShowDetailDrawer] = useState<boolean>(false);
 
   useEffect(() => {
     if (isOpen && initialDeviceId) {
@@ -184,7 +185,14 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       );
       if (match) {
         setSelectedNode(match);
+        setShowDetailDrawer(false); // Chưa mở bảng chi tiết, ưu tiên hiển thị mạng liên kết rộng rãi
+        const targetSim = nodesRef.current.find(n => n.device.id === match.id);
+        if (targetSim) {
+          cameraRef.current = { x: targetSim.tx * 0.45, y: targetSim.ty * 0.45, zoom: 1.15 };
+        }
       }
+    } else if (isOpen) {
+      setShowDetailDrawer(false);
     }
   }, [isOpen, initialDeviceId]);
 
@@ -197,7 +205,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   const [challengeMode, setChallengeMode] = useState<boolean>(false);
   const [challengeScore, setChallengeScore] = useState<number>(0);
   const [challengeFeedback, setChallengeFeedback] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [mapTheme, setMapTheme] = useState<'dark' | 'light' | 'transparent'>('dark');
 
   // Camera
@@ -1186,6 +1194,44 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               </div>
             )}
 
+            {/* HUY HIỆU NỔI THIẾT BỊ ĐANG CHỌN (GỌN GÀNG, KHI BẤM 'XEM CHI TIẾT' MỚI MỞ BẢNG ĐẦY ĐỦ) */}
+            {selectedNode && selectedNodeDetails && !showDetailDrawer && (
+              <div className="absolute top-4 right-4 z-20 flex items-center gap-2.5 p-1.5 pl-3 rounded-2xl bg-slate-950/85 border border-indigo-500/50 backdrop-blur-xl shadow-2xl animate-in fade-in slide-in-from-top-2 pointer-events-auto">
+                <span className="text-base p-1 rounded-xl bg-slate-900 border border-slate-800 shadow-inner">
+                  {selectedNode.glyphIcon}
+                </span>
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-white leading-tight">
+                    {userMode === 'student' ? selectedNode.nameStudent : selectedNode.nameVi}
+                  </span>
+                  <span className="text-[10px] text-indigo-300">
+                    {selectedNodeDetails.outgoing.length} tác động ra · {selectedNodeDetails.incoming.length} nhận vào
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowDetailDrawer(true);
+                    audioFX.playNodeClick();
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md ml-1 cursor-pointer"
+                  title="Xem thông tin chi tiết đầy đủ của thiết bị này"
+                >
+                  <span>📋</span>
+                  <span>Chi tiết</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedNode(null);
+                    audioFX.playNodeClick();
+                  }}
+                  className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                  title="Bỏ chọn thiết bị"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* THANH ĐIỀU KHIỂN DƯỚI ĐÁY: CHỈ ĐỂ BIỂU TƯỢNG SÁT ĐÁY GỌN GÀNG, KHÔNG CHE BẢN ĐỒ */}
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 p-1 rounded-2xl bg-slate-950/85 border border-white/10 backdrop-blur-xl shadow-2xl text-xs pointer-events-auto">
               <button
@@ -1194,6 +1240,31 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                 title="Căn giữa sơ đồ (Nhấp đúp chuột lên màn hình)"
               >
                 🎯
+              </button>
+              <button
+                onClick={() => {
+                  if (selectedNode) {
+                    setShowDetailDrawer(prev => !prev);
+                    audioFX.playNodeClick();
+                  }
+                }}
+                disabled={!selectedNode}
+                className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm transition-all hover:scale-105 active:scale-95 ${
+                  selectedNode
+                    ? showDetailDrawer
+                      ? 'bg-indigo-600/40 border border-indigo-400 text-indigo-200 shadow-[0_0_10px_rgba(99,102,241,0.4)]'
+                      : 'bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/60 text-indigo-300 animate-pulse'
+                    : 'bg-slate-900/40 text-slate-600 border border-slate-800/60 cursor-not-allowed opacity-40'
+                }`}
+                title={
+                  selectedNode
+                    ? showDetailDrawer
+                      ? 'Đóng bảng chi tiết thiết bị'
+                      : `Xem chi tiết thiết bị: ${userMode === 'student' ? selectedNode.nameStudent : selectedNode.nameVi}`
+                    : 'Chọn một thiết bị trên sơ đồ để xem chi tiết'
+                }
+              >
+                📋
               </button>
               <button
                 onClick={() => setIsFiringSignal(prev => !prev)}
@@ -1267,9 +1338,9 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
             </div>
           </div>
 
-          {/* SIDEBAR PHẢI: CHI TIẾT THIẾT BỊ NƠ-RON (CHẮT LỌC TỪ NGỮ GỌN ĐỦ NGHĨA, TRÁNH RỐI MẮT) */}
-          {selectedNode && selectedNodeDetails && (
-            <div className="w-[310px] flex-shrink-0 border-l border-white/10 bg-slate-950/40 backdrop-blur-2xl flex flex-col p-4 overflow-y-auto">
+          {/* SIDEBAR PHẢI: CHI TIẾT THIẾT BỊ NƠ-RON (CHỈ HIỂN THỊ KHI BẤM BIỂU TƯỢNG CHI TIẾT) */}
+          {selectedNode && selectedNodeDetails && showDetailDrawer && (
+            <div className="w-[310px] flex-shrink-0 border-l border-white/10 bg-slate-950/90 backdrop-blur-2xl flex flex-col p-4 overflow-y-auto animate-in slide-in-from-right duration-200">
               {/* Header thiết bị */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
@@ -1286,8 +1357,12 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                   </div>
                 </div>
                 <button
-                  onClick={() => setSelectedNode(null)}
-                  className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors text-xs"
+                  onClick={() => {
+                    setShowDetailDrawer(false);
+                    audioFX.playNodeClick();
+                  }}
+                  className="w-7 h-7 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-colors text-xs cursor-pointer"
+                  title="Thu gọn bảng chi tiết"
                 >
                   ✕
                 </button>
