@@ -16,14 +16,16 @@ export const BENCH_SURFACE_Y = 0.82;
 export const BENCH_CORNER_ORIGIN_WORLD: [number, number, number] = [
   -1.2,
   BENCH_SURFACE_Y,
-  -0.375,
+  -0.4875,
 ];
+export const DEFAULT_SHELF_CENTER_Z = -0.45;
+export const DEFAULT_SHELF_TIER_Y = 0.138;
 
 /**
  * Chuyển đổi từ tọa độ Three.js nội bộ sang Hệ trục Góc Bàn cố định O(0,0,0):
- * - Gốc O(0,0,0) đặt cố định tại góc sau-trái của mặt bàn thực hành (-1.20m, 0.82m, -0.375m)
+ * - Gốc O(0,0,0) đặt cố định tại góc sau-trái của mặt bàn thực hành (-1.20m, 0.82m, -0.488m)
  * - Trục X: thuộc cạnh dài của bàn (từ trái sang phải: 0 -> 2.40 m)
- * - Trục Y: thuộc cạnh rộng của bàn (từ sau ra trước: 0 -> 0.75 m)
+ * - Trục Y: thuộc cạnh rộng của bàn (từ sau ra trước: 0 -> 0.98 m)
  * - Trục Z: trục đứng vuông góc mặt bàn hướng lên trên (Z = 0 tại mặt bàn -> +Z hướng lên)
  */
 export function worldToBenchCornerCoords(
@@ -77,7 +79,7 @@ export interface LabRoomConfig {
     enabled: boolean;
     count: number;
     widthM: number; // Mặc định 2.40 m (-1.20 .. +1.20)
-    depthM: number; // Mặc định 0.75 m (-0.375 .. +0.375)
+    depthM: number; // Mặc định 0.975 m (-0.4875 .. +0.4875)
     topY: number; // Mặc định 0.82 m (BENCH_SURFACE_Y)
     topThicknessM: number; // Mặc định 0.04 m (mặt dưới ở y = 0.78 m)
   };
@@ -1335,10 +1337,10 @@ function createCompactCoordSprite(
 /**
  * Xây dựng DUY NHẤT 1 Hệ Trục Tọa Độ tại Góc Bàn Cố Định O(0, 0, 0):
  * - Gốc O(0, 0, 0) đặt cố định tại góc sau-trái của mặt bàn thực hành:
- *   worldOrigin = (-benchW/2, BENCH_SURFACE_Y, -benchD/2) = (-1.20 m, 0.82 m, -0.375 m)
+ *   worldOrigin = (-benchW/2, BENCH_SURFACE_Y, -benchD/2) = (-1.20 m, 0.82 m, -0.488 m)
  * - Trục +X (Đỏ): thuộc cạnh dài của mặt bàn (chạy từ trái sang phải: 0 -> 2.40 m)
- * - Trục +Y (Xanh lá): thuộc cạnh rộng của mặt bàn (chạy từ sau ra trước: 0 -> 0.75 m)
- * - Trục +Z (Xanh dương): dựng thẳng đứng vuông góc mặt bàn tại góc gốc O (0 -> 0.85 m)
+ * - Trục +Y (Xanh lá): thuộc cạnh rộng của mặt bàn (chạy từ sau ra trước: 0 -> 0.98 m)
+ * - Trục +Z (Xanh dương): dựng thẳng đứng vuông góc mặt bàn tại góc gốc O (0 -> 0.36 m)
  * - Lưới trên mặt bàn (`coord_floor_grid`, mặt phẳng XY trên bàn) và Lưới không gian 3D (`coord_space_grid`,
  *   các mặt phẳng đứng XZ & YZ dựng từ 2 cạnh bàn) có thể bật/tắt tùy ý khi cần.
  */
@@ -1359,7 +1361,7 @@ export function buildWorldCoordinatesAndGridHelper(
   // Tọa độ gốc cố định O(0,0,0) tại góc sau-trái của mặt bàn
   const ox = -benchW / 2; // -1.20 m
   const oy = benchY + 0.0015; // 0.8215 m (nằm sát mặt bàn)
-  const oz = -benchD / 2; // -0.375 m
+  const oz = -benchD / 2; // -0.4875 m
 
   // ===========================================================================
   // 1. LƯỚI TRÊN MẶT BÀN (Mặt phẳng XY thuộc bàn: X = 0..2.40m, Y = 0..0.75m, Z = 0)
@@ -1915,7 +1917,7 @@ export function buildStandardLabRoomV2(
       metalness: 0.78,
     });
 
-    // Tấm kính sau lưng sát trục X (Z = -0.375 m, rộng 1.38 m, cao 0.32 m)
+    // Tấm kính sau lưng sát trục X (Z = -0.488 m, rộng 1.38 m, cao 0.32 m)
     // renderOrder = 0 và depthWrite = true để tấm kính sau luôn làm nền phía sau cho các thiết bị
     const backGlassMesh = new THREE.Mesh(
       new THREE.BoxGeometry(shelfW, shelfH, 0.004),

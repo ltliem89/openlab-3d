@@ -807,7 +807,7 @@ export default function App() {
               customLabel: asset.name.vi,
               parentZone: 'bench-main',
               transform: {
-                positionM: [slotX, slotY, -0.337],
+                positionM: [slotX, slotY, -0.45],
                 rotationRad: [0, 0, 0],
                 displayScale: [symbolicScale, symbolicScale, symbolicScale],
               },
@@ -1097,7 +1097,7 @@ export default function App() {
         const instAsset = assetsMap.get(inst.assetId);
         const arch = instAsset?.geometry.proceduralArchetype;
 
-        // 0. Nếu thiết bị đang nằm trong Khu trưng bày 1 tầng nâng cao ('shelf'), tự động xếp gọn trên tầng 1 (Y = 0.138m) sát mép sau bàn (Z = -0.337m)
+        // 0. Nếu thiết bị đang nằm trong Khu trưng bày 1 tầng nâng cao ('shelf'), tự động xếp gọn trên tầng 1 (Y = 0.138m) sát mép sau bàn (Z = -0.450m)
         if (inst.instanceState.attachmentSlot === 'shelf') {
           const inShelfIdx = Math.max(
             0,
@@ -1117,7 +1117,7 @@ export default function App() {
             ...inst,
             transform: {
               ...inst.transform,
-              positionM: [slotX, slotY, -0.337],
+              positionM: [slotX, slotY, -0.45],
               rotationRad: [0, inst.transform.rotationRad[1] ?? 0, 0],
               displayScale: [symbolicScale, symbolicScale, symbolicScale],
             },
@@ -3652,7 +3652,7 @@ export default function App() {
                     ...item,
                     transform: {
                       ...item.transform,
-                      positionM: [0, autoTierY, -0.337] as [number, number, number],
+                      positionM: [0, autoTierY, -0.45] as [number, number, number],
                     },
                     instanceState: {
                       ...item.instanceState,
