@@ -65,7 +65,7 @@ export const GovernanceOverviewModal: React.FC<GovernanceOverviewModalProps> = (
           <div>
             <h2 className="text-base font-extrabold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.85)]">
               {mode === 'overview'
-                ? 'Tổng quan Kiến trúc Nền tảng OpenLab 3D (v2.3)'
+                ? 'Tổng quan Kiến trúc Nền tảng OpenLab 3D (v2.4)'
                 : 'Quản trị, Phân nhóm G01–G10 & Kiểm định Đo lường Thống kê (t-test)'}
             </h2>
             <p className="text-xs font-bold text-[#7DD3FC] mt-0.5">
