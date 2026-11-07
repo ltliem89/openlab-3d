@@ -22,7 +22,6 @@ import {
   Wrench,
   PanelLeftClose,
   PanelLeftOpen,
-  Box,
   Eye,
   Clock,
   X,
@@ -165,7 +164,6 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
     y: number;
   } | null>(null);
 
-  // Thẻ nổi hướng dẫn & chi tiết Glassmorphism khi rê chuột (Hover Information Card)
   const [hoverTarget, setHoverTarget] = useState<HoverTargetInfo | null>(null);
   const hoverTimeoutRef = React.useRef<number | null>(null);
 
@@ -187,7 +185,6 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
     }, 110);
   };
 
-  // Trạng thái hộp "Thư viện" (libraries3DLab) cùng hàng với Nạp .HTML
   const [libraryDiskStatus, setLibraryDiskStatus] = useState(() =>
     localDiskLibraryEngine.getStatus(),
   );
@@ -358,8 +355,6 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
 
   const effectiveSelectedId =
     selectedAssetId || filtered[0]?.assetId || 'OL3D-EQP-BAL-0001';
-  const effectiveSelectedAsset =
-    assets.find((a) => a.assetId === effectiveSelectedId) || filtered[0] || assets[0];
 
   const handlePlaceAssetOnTable = (assetId: string) => {
     onAddAssetToTable(assetId);
@@ -373,7 +368,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
       <aside
         className={`hidden md:flex w-10 border rounded-[10px] py-2 flex-col items-center justify-between h-full shrink-0 select-none transition-colors z-20 ${
           isDarkMode
-            ? 'bg-[#131E30] border-[#263854] text-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.3)]'
+            ? 'bg-[#071326] border-[#41D9F5]/25 text-[#E8F2FF] shadow-[0_6px_20px_rgba(3,8,20,0.45)]'
             : 'bg-[#F2F6FB] border-[#C4D5E8] text-[#123059] shadow-[0_2px_10px_rgba(18,52,107,0.06)]'
         }`}
       >
@@ -385,7 +380,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
             title={`Mở thanh công cụ danh mục thiết bị (${assets.length})`}
             aria-label="Mở danh mục thiết bị"
           >
-            <PanelLeftOpen className="w-3.5 h-3.5 text-white" />
+            <PanelLeftOpen className="w-3.5 h-3.5" />
             <span className="text-[9px] font-extrabold leading-none mt-0.5">
               {assets.length}
             </span>
@@ -398,7 +393,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               href="/libraries3DLab/index.html"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-8 h-8 rounded-[7px] bg-[#1E6BFF] hover:bg-[#1557DB] text-white flex items-center justify-center transition-colors cursor-pointer shadow-xs"
+              className="w-8 h-8 rounded-[7px] bg-[#4D8DFF] hover:bg-[#1E6BFF] text-white flex items-center justify-center transition-colors cursor-pointer shadow-xs"
               title={`Thư viện (${libraryDiskStatus.configuredBasePath}) — Bấm để mở thư mục ra Tab mới`}
               aria-label="Mở thư mục Thư viện"
             >
@@ -411,7 +406,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                 onToggleCollapse();
                 setShowLibraryPathBox(true);
               }}
-              className="w-8 h-8 rounded-[7px] bg-[#1E6BFF] hover:bg-[#1557DB] text-white flex items-center justify-center transition-colors cursor-pointer shadow-xs"
+              className="w-8 h-8 rounded-[7px] bg-[#4D8DFF] hover:bg-[#1E6BFF] text-white flex items-center justify-center transition-colors cursor-pointer shadow-xs"
               title="Chưa chỉ định đường dẫn Thư viện libraries3D — Bấm để chỉ định & áp dụng"
               aria-label="Chỉ định Thư viện"
             >
@@ -423,7 +418,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
             <button
               type="button"
               onClick={onOpenHtmlModuleImporter}
-              className="w-8 h-8 rounded-[7px] bg-[#0B3A7D] hover:bg-[#1E6BFF] text-[#00BCEB] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              className="w-8 h-8 rounded-[7px] bg-[#0B1930] hover:bg-[#1E6BFF] border border-[#41D9F5]/40 text-[#41D9F5] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
               title="Nạp Module .HTML"
               aria-label="Nạp Module .HTML"
             >
@@ -440,7 +435,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
       aria-label="Danh mục thiết bị thí nghiệm"
       className={`fixed inset-0 z-40 w-full md:static md:z-20 md:w-[274px] lg:w-[292px] md:border md:rounded-[12px] p-3.5 safe-bottom flex flex-col h-full shrink-0 select-none transition-colors ${
         isDarkMode
-          ? 'bg-[#131E30] md:border-[#263854] text-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.3)]'
+          ? 'bg-[#071326] md:border-[#41D9F5]/25 text-[#E8F2FF] shadow-[0_8px_28px_rgba(3,8,20,0.5)]'
           : 'bg-[#F2F6FB] md:border-[#C4D5E8] text-[#123059] shadow-[0_2px_10px_rgba(18,52,107,0.06)]'
       }`}
     >
@@ -458,7 +453,6 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
         </button>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Hộp "Thư viện": Nếu đã chỉ định -> mở luôn thư mục ra tab mới; Nếu chưa có -> bật hộp chỉ định áp dụng */}
           {libraryDiskStatus.hasConfiguredLibraryPath ? (
             <a
               href="/libraries3DLab/index.html"
@@ -468,7 +462,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                 e.preventDefault();
                 setShowLibraryPathBox((v) => !v);
               }}
-              className="h-7 px-2.5 rounded-[6px] bg-[#1E6BFF] hover:bg-[#1557DB] border border-[#60A5FA] text-white text-[12px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-xs whitespace-nowrap no-underline"
+              className="h-7 px-2.5 rounded-[6px] bg-[#1E6BFF] hover:bg-[#1557DB] border border-[#41D9F5]/75 text-white text-[12px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-xs whitespace-nowrap no-underline"
               title={`Đường dẫn libraries3D: ${libraryDiskStatus.configuredBasePath}\n• Bấm chuột trái: Mở luôn thư mục ra Tab mới\n• Nhấp chuột phải: Chỉ định lại đường dẫn`}
             >
               <FolderOpen className="w-3.5 h-3.5 shrink-0" />
@@ -479,7 +473,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
             <button
               type="button"
               onClick={() => setShowLibraryPathBox((v) => !v)}
-              className="h-7 px-2.5 rounded-[6px] bg-[#1E6BFF] hover:bg-[#1557DB] border border-[#60A5FA] text-white text-[12px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+              className="h-7 px-2.5 rounded-[6px] bg-[#1E6BFF] hover:bg-[#1557DB] border border-[#41D9F5]/75 text-white text-[12px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
               title="Chưa chỉ định đường dẫn thư mục libraries3D — Bấm để chỉ định & áp dụng"
             >
               <FolderOpen className="w-3.5 h-3.5 shrink-0" />
@@ -491,7 +485,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
             <button
               type="button"
               onClick={onOpenHtmlModuleImporter}
-              className="h-7 px-2.5 rounded-[6px] bg-[#047857] hover:bg-[#065F46] border border-[#34D399]/60 text-white text-[12px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
+              className="h-7 px-2.5 rounded-[6px] bg-[#047857] hover:bg-[#065F46] border border-[#48D6A0]/65 text-white text-[12px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
               title="Nạp thiết bị mới (.HTML)"
             >
               <FileCode className="w-3.5 h-3.5" />
@@ -501,12 +495,12 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
         </div>
       </div>
 
-      {/* Hộp Chỉ định & Áp dụng đường dẫn đến thư mục libraries3D (Hiện khi chưa có hoặc khi cần đổi đường dẫn) */}
+      {/* Hộp Chỉ định & Áp dụng đường dẫn đến thư mục libraries3D */}
       {showLibraryPathBox && (
         <div
           className={`mb-2.5 p-2.5 rounded-[10px] border-[1.5px] space-y-2 shrink-0 ${
             isDarkMode
-              ? 'bg-[#0D1829] border-[#38BDF8] text-white'
+              ? 'bg-[#050B18] border-[#41D9F5]/65 text-[#E8F2FF]'
               : 'bg-white border-[#1D63E8] text-[#051630] shadow-sm'
           }`}
         >
@@ -532,7 +526,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
             placeholder="C:\Users\ltlie\Documents\libraries3DLab"
             className={`w-full px-2.5 py-1.5 rounded-[7px] border font-mono text-[11.5px] font-bold focus:outline-none ${
               isDarkMode
-                ? 'bg-[#07101E] border-[#2E476B] text-sky-200 focus:border-[#00BCEB]'
+                ? 'bg-[#0B1930] border-[#41D9F5]/40 text-[#E8F2FF] focus:border-[#41D9F5]'
                 : 'bg-slate-50 border-[#88ADD8] text-[#051630] focus:border-[#1D63E8]'
             }`}
           />
@@ -555,7 +549,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               onClick={() => libraryFolderInputRef.current?.click()}
               className={`px-2.5 py-1.5 rounded-[7px] border text-[11.5px] font-extrabold flex items-center gap-1 cursor-pointer transition-colors ${
                 isDarkMode
-                  ? 'bg-[#162338] hover:bg-[#1E2E48] border-[#3B5984] text-sky-200'
+                  ? 'bg-[#10223D] hover:bg-[#19335A] border-[#41D9F5]/40 text-[#E8F2FF]'
                   : 'bg-[#E6EEF8] hover:bg-[#D5E3F5] border-[#88ADD8] text-[#051630]'
               }`}
               title="Duyệt chọn thư mục libraries3DLab trên máy tính"
@@ -575,7 +569,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
           </div>
 
           {libraryDiskStatus.hasConfiguredLibraryPath && (
-            <div className="pt-1 border-t border-current/10 flex items-center justify-between text-[11px]">
+            <div className="pt-1 border-t border-slate-400/25 flex items-center justify-between text-[11px]">
               <a
                 href="/libraries3DLab/index.html"
                 target="_blank"
@@ -610,7 +604,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
       <div className="relative mb-2 shrink-0">
         <Search
           className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${
-            isDarkMode ? 'text-[#38BDF8]' : 'text-[#1D63E8]'
+            isDarkMode ? 'text-[#41D9F5]' : 'text-[#1E3A5F]'
           }`}
         />
         <input
@@ -628,10 +622,10 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
             }
           }}
           placeholder="Tìm dụng cụ, bài học..."
-          className={`w-full border-[1.5px] rounded-[9px] pl-9 pr-8 py-2 md:py-1.5 text-[15px] md:text-[14.5px] font-extrabold focus:outline-none transition-colors ${
+          className={`w-full border-[1.5px] rounded-[9px] pl-9 pr-8 py-2 md:py-1.5 text-[15px] md:text-[14.5px] font-extrabold focus:outline-none focus:border-[#1D63E8] transition-colors ${
             isDarkMode
-              ? 'bg-[#162338] border-[#3B5984] focus:border-[#00BCEB] text-white placeholder:text-slate-300'
-              : 'bg-white border-[#88ADD8] focus:border-[#1D63E8] text-[#051630] placeholder:text-[#2B476B]'
+              ? 'bg-[#050B18] border-[#41D9F5]/35 focus:border-[#41D9F5] text-[#E8F2FF] placeholder:text-[#A8BCD5]/75'
+              : 'bg-[#E2ECF8] border-[#7FA3CE] text-[#051630] placeholder:text-[#2B4C73]'
           }`}
         />
         {search && (
@@ -640,8 +634,8 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
             onClick={() => setSearch('')}
             className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer ${
               isDarkMode
-                ? 'bg-slate-700 text-white hover:bg-slate-600'
-                : 'bg-slate-200 text-[#051630] hover:bg-slate-300'
+                ? 'bg-[#10223D] text-[#E8F2FF] hover:bg-[#4D8DFF]'
+                : 'bg-[#C4D7EE] text-[#051630] hover:bg-[#A6C2E5]'
             }`}
             title="Xóa tìm kiếm"
           >
@@ -652,15 +646,15 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
         {/* Popover Glassmorphism: 5 Tìm kiếm gần đây khi focus ô tìm kiếm sidebar */}
         {isSearchFocused && recentSearches.length > 0 && (
           <div
-            className={`absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-[11px] border-[1.5px] p-2 shadow-[0_14px_34px_rgba(0,0,0,0.45)] backdrop-blur-2xl ${
+            className={`absolute left-0 right-0 top-[calc(100%+6px)] z-50 rounded-[11px] border-[1.5px] p-2 shadow-xl backdrop-blur-2xl ${
               isDarkMode
-                ? 'bg-[#081528]/78 border-[#38BDF8]/80 text-white'
-                : 'bg-white/82 border-[#1D63E8]/80 text-[#051630]'
+                ? 'bg-[#0B1930]/95 border-[#41D9F5]/75 text-[#E8F2FF]'
+                : 'bg-white/90 border-[#1D63E8]/55 text-[#051630]'
             }`}
           >
-            <div className="flex items-center justify-between px-1.5 pb-1.5 mb-1 border-b border-current/15">
+            <div className="flex items-center justify-between px-1.5 pb-1.5 mb-1 border-b border-slate-400/25">
               <span className="text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1">
-                <Clock className="w-3 h-3 text-[#0284C7]" />
+                <Clock className="w-3 h-3 text-[#1E6BFF]" />
                 Tìm kiếm gần đây ({recentSearches.slice(0, 5).length})
               </span>
               {onClearRecentSearches && (
@@ -682,7 +676,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                   key={term}
                   className={`flex items-center justify-between rounded-[7px] px-2 py-1 text-[13px] font-extrabold transition-colors ${
                     isDarkMode
-                      ? 'hover:bg-[#1E6BFF]/40 text-white'
+                      ? 'hover:bg-[#4D8DFF]/35 text-[#E8F2FF]'
                       : 'hover:bg-[#DCE8F8] text-[#051630]'
                   }`}
                 >
@@ -696,7 +690,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                     }}
                     className="flex-1 text-left truncate cursor-pointer flex items-center gap-1.5"
                   >
-                    <Clock className="w-3.5 h-3.5 shrink-0 opacity-75" />
+                    <Clock className="w-3.5 h-3.5 shrink-0 text-[#1E6BFF]" />
                     <span className="truncate">{term}</span>
                   </button>
                   {onRemoveRecentSearch && (
@@ -720,19 +714,19 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
         )}
       </div>
 
-      {/* 2B. Chọn nhanh Bài thí nghiệm (Khi chọn bài Thấu kính Hình 8.12, 7 chi tiết gợi ý tự động bày lên Kệ 2 tầng) */}
+      {/* 2B. Chọn nhanh Bài thí nghiệm */}
       {onSelectExperiment && (
         <div
           className={`mb-2 rounded-[9px] border-[1.5px] p-1.5 shrink-0 ${
             isDarkMode
-              ? 'bg-[#0F1B2E] border-[#38BDF8]/65'
-              : 'bg-[#E3EEF9] border-[#1D63E8]/55'
+              ? 'bg-[#050B18]/90 border-[#41D9F5]/35'
+              : 'bg-[#DCE8F8] border-[#88ADD8]'
           }`}
         >
           <div className="flex items-center justify-between gap-1 mb-1 px-0.5">
             <span
               className={`text-[10.5px] font-extrabold uppercase tracking-wider ${
-                isDarkMode ? 'text-sky-300' : 'text-[#0B3A7D]'
+                isDarkMode ? 'text-[#41D9F5]' : 'text-[#0B3A7D]'
               }`}
             >
               Bài thực hành (Xếp sẵn lên kệ):
@@ -756,18 +750,14 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                 setActiveCategory('biology-microscopy');
                 window.dispatchEvent(new CustomEvent('openlab:open-microscope'));
               }}
-              className={`col-span-2 px-2.5 py-1.5 rounded-[7px] text-[12px] font-black text-left leading-tight border transition-all cursor-pointer flex items-center justify-between shadow-xs ${
-                isDarkMode
-                  ? 'bg-gradient-to-r from-sky-950 via-blue-900 to-indigo-950 border-sky-400 text-sky-200'
-                  : 'bg-gradient-to-r from-sky-100 via-blue-100 to-indigo-100 border-sky-500 text-sky-950'
-              }`}
+              className="col-span-2 px-2.5 py-1.5 rounded-[7px] text-[12px] font-black text-left leading-tight border transition-all cursor-pointer flex items-center justify-between shadow-xs bg-gradient-to-r from-[#0B1930] via-[#10223D] to-[#1E1B4B] border-[#9B83FF]/75 text-[#E8F2FF] hover:border-[#41D9F5]"
               title="Mở buồng quan sát Kính hiển vi quang học 3D với 8 tiêu bản chuẩn KHTN THCS"
             >
               <span className="flex items-center gap-1.5">
                 <span className="text-sm">🔬</span>
                 <span>Soi Kính hiển vi 3D (8 Mẫu vật KHTN)</span>
               </span>
-              <ChevronRight className="w-4 h-4 text-sky-400" />
+              <ChevronRight className="w-4 h-4 text-[#41D9F5]" />
             </button>
             <button
               type="button"
@@ -777,12 +767,12 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               }}
               className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
                 activeExperimentId === 'OL3D-EXP-OPTICS-LENS-0001'
-                  ? 'bg-[#1D63E8] text-white border-[#38BDF8] shadow-xs'
+                  ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
                   : isDarkMode
-                    ? 'bg-[#162338] hover:bg-[#1E2E48] text-sky-100 border-[#3B5984]'
-                    : 'bg-white hover:bg-[#D5E5FA] text-[#051630] border-[#88ADD8]'
+                    ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
+                    : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
               }`}
-              title="Chọn bài Lắp ráp & Khảo sát Thấu kính (Hình 8.12): 7 chi tiết bộ thí nghiệm sẽ có sẵn trên Kệ trưng bày 2 tầng"
+              title="Chọn bài Lắp ráp & Khảo sát Thấu kính (Hình 8.12): 7 chi tiết bộ thí nghiệm sẽ có sẵn trên Kệ trưng bày"
             >
               🔬 Bài 8–9: Bộ Thấu kính (Hình 8.12)
             </button>
@@ -794,10 +784,10 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               }}
               className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
                 activeExperimentId === 'OL3D-EXP-DENSITY-0001'
-                  ? 'bg-[#1D63E8] text-white border-[#38BDF8] shadow-xs'
+                  ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
                   : isDarkMode
-                    ? 'bg-[#162338] hover:bg-[#1E2E48] text-sky-100 border-[#3B5984]'
-                    : 'bg-white hover:bg-[#D5E5FA] text-[#051630] border-[#88ADD8]'
+                    ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
+                    : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
               }`}
               title="Chọn bài Đo khối lượng riêng của vật rắn"
             >
@@ -807,7 +797,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
         </div>
       )}
 
-      {/* 3A. Thanh chọn nhóm thiết bị cuộn ngang trên Mobile (< 768px) để tiết kiệm chiều cao */}
+      {/* 3A. Thanh chọn nhóm thiết bị cuộn ngang trên Mobile (< 768px) */}
       <div
         className="flex md:hidden items-center gap-1.5 overflow-x-auto pb-2 mb-1.5 shrink-0 no-scrollbar"
         role="listbox"
@@ -827,9 +817,9 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               }}
               className={`min-h-[38px] px-3 py-1.5 rounded-[8px] text-[13.5px] whitespace-nowrap shrink-0 transition-colors cursor-pointer border ${
                 isSelected
-                  ? 'bg-[#1D63E8] text-white border-[#00BCEB] font-extrabold shadow-xs'
+                  ? 'bg-[#1D63E8] text-white border-[#41D9F5] font-extrabold shadow-xs'
                   : isDarkMode
-                    ? 'bg-[#162234] text-white border-[#3B5984] font-bold'
+                    ? 'bg-[#10223D] text-[#E8F2FF] border-[#41D9F5]/25 font-bold'
                     : 'bg-[#DCE8F8] text-[#051630] border-[#88ADD8] font-bold'
               }`}
             >
@@ -843,7 +833,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
       <div
         className={`hidden md:block mb-2 border-[1.5px] rounded-[10px] p-1.5 space-y-0.5 shrink-0 max-h-[176px] overflow-y-auto ${
           isDarkMode
-            ? 'bg-[#162234] border-[#3B5984]'
+            ? 'bg-[#050B18]/85 border-[#41D9F5]/30'
             : 'bg-[#E2ECF8] border-[#88ADD8]'
         }`}
         role="listbox"
@@ -861,11 +851,11 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                   onSelectCategoryTopic(cat.id, cat.label);
                 }
               }}
-              className={`w-full px-2.5 py-1.5 rounded-[7px] text-left text-[14px] flex items-center justify-between transition-colors cursor-pointer ${
+              className={`w-full px-2.5 py-1.5 rounded-[7px] text-left text-[13.5px] flex items-center justify-between transition-colors cursor-pointer ${
                 isSelected
                   ? 'bg-[#1D63E8] text-white font-extrabold shadow-xs'
                   : isDarkMode
-                    ? 'text-white hover:bg-[#1E2E48] font-bold'
+                    ? 'text-[#E8F2FF] hover:bg-[#10223D] font-bold'
                     : 'text-[#051630] hover:bg-[#C9DDF6] font-bold'
               }`}
             >
@@ -875,7 +865,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                   isSelected
                     ? 'text-white'
                     : isDarkMode
-                      ? 'text-slate-300'
+                      ? 'text-[#A8BCD5]'
                       : 'text-[#1E3A5F]'
                 }`}
               />
@@ -884,13 +874,13 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
         })}
       </div>
 
-      {/* 4. Lưới thẻ thiết bị cảm ứng (2 cột trên điện thoại nhỏ, 3 cột trên điện thoại lớn/ngang, 2 cột trên sidebar Desktop) */}
+      {/* 4. Lưới thẻ thiết bị cảm ứng (2 cột trên Desktop) */}
       <div className="flex-1 overflow-y-auto pr-0.5 min-h-0">
         {filtered.length === 0 ? (
           <div className="py-8 px-3 text-center space-y-2">
             <p
               className={`text-[15px] font-medium ${
-                isDarkMode ? 'text-slate-400' : 'text-[#4B6280]'
+                isDarkMode ? 'text-[#A8BCD5]' : 'text-[#4B6280]'
               }`}
             >
               Không tìm thấy dụng cụ.
@@ -903,7 +893,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               }}
               className={`min-h-[42px] px-4 py-1.5 rounded-[8px] text-[14px] font-bold ${
                 isDarkMode
-                  ? 'bg-[#1A273D] text-[#00BCEB] hover:bg-[#243552]'
+                  ? 'bg-[#10223D] text-[#41D9F5] border border-[#41D9F5]/40 hover:bg-[#19335A]'
                   : 'bg-[#DCE8F8] text-[#1D63E8] hover:bg-[#C4D5E8]'
               }`}
             >
@@ -967,10 +957,10 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                   className={`p-2.5 rounded-[10px] transition-all cursor-pointer flex flex-col items-center justify-between text-center relative border ${
                     isSelected
                       ? isDarkMode
-                        ? 'border-2 border-[#00BCEB] bg-[#1D63E8]/25 shadow-xs'
+                        ? 'border-2 border-[#41D9F5] bg-[#4D8DFF]/22 shadow-[0_0_16px_rgba(65,217,245,0.25)]'
                         : 'border-2 border-[#1D63E8] bg-[#DCE8F8] shadow-xs'
                       : isDarkMode
-                        ? 'bg-[#1A273D] border-[#263854] hover:border-[#00BCEB]'
+                        ? 'bg-[#10223D]/90 border-[#41D9F5]/20 hover:border-[#41D9F5]/75 hover:bg-[#152C4F]'
                         : 'bg-[#E6EEF8] border-[#C4D5E8] hover:border-[#00BCEB]'
                   }`}
                 >
@@ -993,9 +983,9 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                     }
                     className={`absolute top-1.5 left-1.5 w-7 h-7 md:w-5.5 md:h-5.5 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
                       hasRealPhotoInLibrary
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-400/50 hover:bg-emerald-500 hover:text-slate-950'
+                        ? 'bg-emerald-500/20 text-emerald-500 border border-emerald-400/50 hover:bg-emerald-500 hover:text-slate-950'
                         : isDarkMode
-                          ? 'bg-[#131E30]/90 text-slate-400 hover:bg-amber-400 hover:text-[#0B121E]'
+                          ? 'bg-[#050B18]/90 text-[#A8BCD5] border border-[#41D9F5]/25 hover:bg-[#FFB85C] hover:text-[#050B18]'
                           : 'bg-white/95 text-[#4B6280] hover:bg-[#1D63E8] hover:text-white border border-[#C4D5E8]'
                     }`}
                   >
@@ -1020,8 +1010,8 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                   </div>
 
                   <span
-                    className={`text-[14px] font-extrabold leading-snug line-clamp-2 mt-1.5 ${
-                      isDarkMode ? 'text-white' : 'text-[#051630]'
+                    className={`text-[13.5px] font-extrabold leading-snug line-clamp-2 mt-1.5 ${
+                      isDarkMode ? 'text-[#E8F2FF]' : 'text-[#051630]'
                     }`}
                   >
                     {displayName}
@@ -1033,15 +1023,15 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
         )}
       </div>
 
-      {/* Menu Chuột Phải (Right-Click Context Menu) — Glassmorphism + chữ tương phản cao */}
+      {/* Menu Chuột Phải (Right-Click Context Menu) — Planetary Cosmos Glassmorphism */}
       {contextMenu && (
         <div
           style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
           onClick={(e) => e.stopPropagation()}
-          className="fixed z-50 w-[264px] rounded-[13px] bg-[#081528]/68 backdrop-blur-2xl border-[1.5px] border-[#38BDF8] shadow-[0_18px_42px_rgba(0,0,0,0.65)] text-white p-2 space-y-1"
+          className="fixed z-50 w-[264px] rounded-[13px] bg-[#0B1930]/92 backdrop-blur-2xl border-[1.5px] border-[#41D9F5] shadow-[0_18px_42px_rgba(3,8,20,0.75)] text-[#E8F2FF] p-2 space-y-1"
         >
-          <div className="px-2.5 py-2 border-b border-white/20 flex items-center gap-2.5 bg-[#040B16]/55 rounded-[9px]">
-            <div className="w-10 h-10 rounded-[8px] bg-[#0B1526] border border-[#38BDF8]/60 flex items-center justify-center shrink-0 shadow-inner">
+          <div className="px-2.5 py-2 border-b border-[#41D9F5]/25 flex items-center gap-2.5 bg-[#050B18]/75 rounded-[9px]">
+            <div className="w-10 h-10 rounded-[8px] bg-[#0B1930] border border-[#41D9F5]/60 flex items-center justify-center shrink-0 shadow-inner">
               <EquipmentThumbnailSvg
                 archetype={contextMenu.asset.geometry.proceduralArchetype}
                 assetId={contextMenu.asset.assetId}
@@ -1166,7 +1156,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
         </div>
       )}
 
-      {/* Thẻ nổi Hướng dẫn & Thông số Glassmorphism khi rê chuột vào thiết bị (Equipment Hover Card) */}
+      {/* Thẻ nổi Hướng dẫn & Thông số Glassmorphism khi rê chuột vào thiết bị */}
       <EquipmentHoverCard
         hoverTarget={hoverTarget}
         onAddAssetToTable={handlePlaceAssetOnTable}
@@ -1179,4 +1169,3 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
     </aside>
   );
 };
-

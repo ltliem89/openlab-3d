@@ -546,14 +546,14 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     5: '5. Tính khối lượng riêng D',
   };
 
-  // STUDENT MODE HEADER — Sleek, compact icon-driven top bar to maximize 3D simulation viewport
+  // STUDENT MODE HEADER — Planetary Cosmos Command Deck (Sleek, compact icon-driven top bar to maximize 3D simulation viewport)
   if (userRole === 'student') {
     return (
       <header
-        className={`h-[50px] md:h-[54px] px-2.5 sm:px-4 border-b flex items-center justify-between gap-2 shrink-0 z-30 shadow-xs select-none transition-colors min-w-0 ${
+        className={`h-[50px] md:h-[54px] px-2.5 sm:px-4 border-b flex items-center justify-between gap-2 shrink-0 z-30 shadow-[0_6px_24px_rgba(3,8,20,0.45)] select-none transition-colors min-w-0 ${
           isDarkMode
-            ? 'bg-[#081224] border-[#1E3252]'
-            : 'bg-[#092B5E] border-[#164384]'
+            ? 'bg-[#050B18] border-[#41D9F5]/25'
+            : 'bg-[#071326] border-[#41D9F5]/30'
         }`}
       >
         {/* Left: Compact Logo OpenLab 3D + Top Quick Equipment Search Bar */}
@@ -561,18 +561,18 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <button
             type="button"
             onClick={() => onSelectStudentScreen('lab-room')}
-            className="flex items-center gap-2 text-left whitespace-nowrap shrink-0 focus:outline-none cursor-pointer min-w-0"
+            className="flex items-center gap-2 text-left whitespace-nowrap shrink-0 focus:outline-none cursor-pointer min-w-0 group"
             title="Về bàn thí nghiệm 3D"
           >
-            <div className="w-8 h-8 md:w-8.5 md:h-8.5 rounded-[8px] bg-[#1E6BFF] border border-[#00BCEB] text-white flex items-center justify-center shadow-xs shrink-0">
-              <FlaskConical className="w-4 h-4 md:w-4.5 md:h-4.5" />
+            <div className="w-8 h-8 md:w-8.5 md:h-8.5 rounded-[9px] bg-gradient-to-br from-[#4D8DFF] to-[#0B1930] border border-[#41D9F5]/75 text-[#E8F2FF] flex items-center justify-center shadow-[0_0_14px_rgba(65,217,245,0.28)] shrink-0 group-hover:border-[#41D9F5] transition-all">
+              <FlaskConical className="w-4 h-4 md:w-4.5 md:h-4.5 text-[#41D9F5]" />
             </div>
             <div className="flex items-baseline gap-1.5 min-w-0">
-              <span className="text-[17px] sm:text-[19px] leading-none font-extrabold tracking-tight text-white truncate">
-                OpenLab <span className="text-[#00BCEB]">3D</span>
+              <span className="text-[17px] sm:text-[19px] leading-none font-extrabold tracking-tight text-[#E8F2FF] truncate">
+                OpenLab <span className="text-[#41D9F5]">3D</span>
               </span>
-              <span className="hidden 2xl:inline text-[12.5px] font-semibold text-[#B8D4FF]">
-                KHTN 9
+              <span className="hidden 2xl:inline text-[11.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#0B1930] border border-[#41D9F5]/35 text-[#A8BCD5]">
+                COSMOS · KHTN 9
               </span>
             </div>
           </button>
@@ -583,16 +583,16 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           </div>
         </div>
 
-        {/* CỤM NÚT ĐIỀU HƯỚNG BƯỚC THỰC HÀNH 3/4 HÌNH TRÒN CÓ MŨI TÊN (RotateCcw & RotateCw) */}
-        <div className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-[10px] bg-[#0c244b]/80 border border-[#275AA3] shadow-inner shrink-0">
+        {/* CỤM NÚT ĐIỀU HƯỚNG BƯỚC THỰC HÀNH QUỸ ĐẠO (RotateCcw & RotateCw) */}
+        <div className="flex items-center gap-1 sm:gap-1.5 px-2 py-1 rounded-[10px] bg-[#0B1930]/95 border border-[#41D9F5]/30 shadow-inner shrink-0">
           <button
             type="button"
             onClick={handleStepBack}
             disabled={currentGuidedStep <= 1}
             className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-all ${
               currentGuidedStep <= 1
-                ? 'opacity-30 cursor-not-allowed text-slate-400'
-                : 'hover:bg-[#1E6BFF] text-[#00BCEB] hover:text-white cursor-pointer active:scale-95 shadow-xs'
+                ? 'opacity-30 cursor-not-allowed text-slate-500'
+                : 'hover:bg-[#4D8DFF] text-[#41D9F5] hover:text-white cursor-pointer active:scale-95 shadow-xs'
             }`}
             title="Quay về bước trước (⟲)"
             aria-label="Quay về bước trước"
@@ -600,12 +600,12 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <RotateCcw className="w-4 h-4 stroke-[2.4]" />
           </button>
 
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[5px] bg-[#071936] text-[12px] font-extrabold border border-[#1E4D8C]">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[#00BCEB] font-mono whitespace-nowrap">
+          <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-[6px] bg-[#050B18] text-[12px] font-extrabold border border-[#41D9F5]/35">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#48D6A0] shadow-[0_0_8px_#48D6A0] animate-pulse" />
+            <span className="text-[#41D9F5] font-mono whitespace-nowrap">
               BƯỚC {currentGuidedStep}/{maxGuidedSteps}
             </span>
-            <span className="hidden xl:inline text-[#B8D4FF] font-semibold text-[11.5px] border-l border-white/20 pl-1.5 whitespace-nowrap">
+            <span className="hidden xl:inline text-[#E8F2FF] font-semibold text-[11.5px] border-l border-[#41D9F5]/25 pl-1.5 whitespace-nowrap">
               {STEP_TITLES[currentGuidedStep] ?? ''}
             </span>
           </div>
@@ -616,8 +616,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             disabled={currentGuidedStep >= maxGuidedSteps}
             className={`w-7 h-7 rounded-[6px] flex items-center justify-center transition-all ${
               currentGuidedStep >= maxGuidedSteps
-                ? 'opacity-30 cursor-not-allowed text-slate-400'
-                : 'hover:bg-[#1E6BFF] text-[#00BCEB] hover:text-white cursor-pointer active:scale-95 shadow-xs'
+                ? 'opacity-30 cursor-not-allowed text-slate-500'
+                : 'hover:bg-[#4D8DFF] text-[#41D9F5] hover:text-white cursor-pointer active:scale-95 shadow-xs'
             }`}
             title="Tiến tới bước tiếp theo (⟳)"
             aria-label="Tiến tới bước tiếp theo"
@@ -626,7 +626,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           </button>
         </div>
 
-        {/* MOBILE ACTION BAR (< 768px): Các nút mở/ẩn danh mục, hướng dẫn và menu công cụ màu đỏ thu gọn */}
+        {/* MOBILE ACTION BAR (< 768px): Các nút mở/ẩn danh mục, hướng dẫn và menu công cụ */}
         <div className="flex md:hidden items-center gap-1 shrink-0 relative">
           <button
             type="button"
@@ -640,10 +640,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 onOpenHtmlModuleImporter?.();
               }
             }}
-            className="px-2.5 h-8 rounded-[7px] bg-[#DC2626] hover:bg-[#B91C1C] border border-[#F87171] text-white text-[12px] font-extrabold flex items-center gap-1 shadow-xs transition-colors cursor-pointer whitespace-nowrap"
+            className="px-2.5 h-8 rounded-[7px] bg-[#10223D] hover:bg-[#4D8DFF] border border-[#41D9F5]/55 text-[#E8F2FF] text-[12px] font-extrabold flex items-center gap-1 shadow-xs transition-colors cursor-pointer whitespace-nowrap"
             title={isLibraryOpen ? 'Ẩn danh mục thiết bị' : 'Mở danh mục thiết bị'}
           >
-            <Plus className="w-3.5 h-3.5 stroke-[2.8]" />
+            <Plus className="w-3.5 h-3.5 stroke-[2.8] text-[#41D9F5]" />
             <span>{isLibraryOpen ? 'Ẩn' : 'Thêm thiết bị'}</span>
           </button>
 
@@ -660,22 +660,22 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 onOpenStudentHelp();
               }
             }}
-            className="px-2 h-8 rounded-[7px] bg-[#DC2626] hover:bg-[#B91C1C] border border-[#F87171] text-white text-[12px] font-extrabold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
+            className="px-2 h-8 rounded-[7px] bg-[#10223D] hover:bg-[#4D8DFF] border border-[#48D6A0]/55 text-[#E8F2FF] text-[12px] font-extrabold flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-xs"
             title={isGuideOpen ? 'Ẩn Hướng dẫn' : 'Mở Hướng dẫn'}
             aria-label={isGuideOpen ? 'Ẩn Hướng dẫn' : 'Mở Hướng dẫn'}
           >
-            <BookOpen className="w-3.5 h-3.5 text-white" />
+            <BookOpen className="w-3.5 h-3.5 text-[#48D6A0]" />
             <span>{isGuideOpen ? 'Ẩn' : 'HD'}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setShowMobileMenuPopover((v) => !v)}
-            className="w-8 h-8 rounded-[7px] bg-[#DC2626] hover:bg-[#B91C1C] border border-[#F87171] text-white flex items-center justify-center transition-colors cursor-pointer shadow-xs"
+            className="w-8 h-8 rounded-[7px] bg-[#10223D] hover:bg-[#4D8DFF] border border-[#41D9F5]/55 text-[#E8F2FF] flex items-center justify-center transition-colors cursor-pointer shadow-xs"
             title={showMobileMenuPopover ? 'Ẩn Menu công cụ' : 'Mở Menu công cụ'}
             aria-label="Menu công cụ"
           >
-            <SlidersHorizontal className="w-4 h-4 text-white" />
+            <SlidersHorizontal className="w-4 h-4 text-[#41D9F5]" />
           </button>
 
           {showMobileMenuPopover && (
@@ -685,16 +685,16 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 onClick={() => setShowMobileMenuPopover(false)}
               />
               <div
-                className={`fixed right-2 top-[54px] z-50 w-[268px] rounded-[13px] border-[1.5px] backdrop-blur-2xl p-2.5 shadow-[0_16px_42px_rgba(0,0,0,0.58)] space-y-1 ${
+                className={`fixed right-2 top-[54px] z-50 w-[268px] rounded-[13px] border-[1.5px] backdrop-blur-2xl p-2.5 shadow-[0_16px_42px_rgba(3,8,20,0.72)] space-y-1 ${
                   isDarkMode
-                    ? 'bg-[#081528]/68 border-[#38BDF8]/80 text-white'
-                    : 'bg-white/68 border-white/90 ring-1 ring-[#1D63E8]/40 text-[#051630]'
+                    ? 'bg-[#0B1930]/92 border-[#41D9F5]/65 text-[#E8F2FF]'
+                    : 'bg-white/88 border-[#4D8DFF]/65 ring-1 ring-[#4D8DFF]/30 text-[#051630]'
                 }`}
               >
                 <div
                   className={`px-2.5 py-1.5 border-b text-[12px] font-extrabold uppercase tracking-wider flex items-center justify-between ${
                     isDarkMode
-                      ? 'border-white/25 text-[#7DD3FC]'
+                      ? 'border-[#41D9F5]/25 text-[#41D9F5]'
                       : 'border-[#7DA4D9] text-[#0B3A7D]'
                   }`}
                 >
@@ -742,10 +742,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                     setShowResetConfirmModal(true);
                   }}
                   className={`w-full min-h-[44px] px-3 py-2 rounded-[9px] text-left text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer ${
-                    isDarkMode ? 'hover:bg-white/15 text-white' : 'hover:bg-white/80 text-[#051630]'
+                    isDarkMode ? 'hover:bg-white/15 text-[#E8F2FF]' : 'hover:bg-white/80 text-[#051630]'
                   }`}
                 >
-                  <RotateCcw className="w-4 h-4 text-[#F59E0B] shrink-0" />
+                  <RotateCcw className="w-4 h-4 text-[#FFB85C] shrink-0" />
                   <span>Đặt lại bàn thí nghiệm</span>
                 </button>
 
@@ -757,13 +757,13 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                       onToggleDarkMode();
                     }}
                     className={`w-full min-h-[44px] px-3 py-2 rounded-[9px] text-left text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer ${
-                      isDarkMode ? 'hover:bg-white/15 text-white' : 'hover:bg-white/80 text-[#051630]'
+                      isDarkMode ? 'hover:bg-white/15 text-[#E8F2FF]' : 'hover:bg-white/80 text-[#051630]'
                     }`}
                   >
                     {isDarkMode ? (
-                      <Sun className="w-4 h-4 text-[#F59E0B] shrink-0" />
+                      <Sun className="w-4 h-4 text-[#FFB85C] shrink-0" />
                     ) : (
-                      <Moon className="w-4 h-4 text-[#1557D6] shrink-0" />
+                      <Moon className="w-4 h-4 text-[#4D8DFF] shrink-0" />
                     )}
                     <span>{isDarkMode ? 'Chuyển Giao diện Sáng' : 'Chuyển Giao diện Tối'}</span>
                   </button>
@@ -777,13 +777,13 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                       onToggleFullscreen();
                     }}
                     className={`w-full min-h-[44px] px-3 py-2 rounded-[9px] text-left text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer ${
-                      isDarkMode ? 'hover:bg-white/15 text-white' : 'hover:bg-white/80 text-[#051630]'
+                      isDarkMode ? 'hover:bg-white/15 text-[#E8F2FF]' : 'hover:bg-white/80 text-[#051630]'
                     }`}
                   >
                     {isFullscreen ? (
-                      <Minimize2 className="w-4 h-4 text-[#1557D6] shrink-0" />
+                      <Minimize2 className="w-4 h-4 text-[#41D9F5] shrink-0" />
                     ) : (
-                      <Maximize2 className="w-4 h-4 text-[#1557D6] shrink-0" />
+                      <Maximize2 className="w-4 h-4 text-[#41D9F5] shrink-0" />
                     )}
                     <span>{isFullscreen ? 'Thu nhỏ màn hình' : 'Phóng to toàn màn hình'}</span>
                   </button>
@@ -796,10 +796,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                     onOpenStudentHelp();
                   }}
                   className={`w-full min-h-[44px] px-3 py-2 rounded-[9px] text-left text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer ${
-                    isDarkMode ? 'hover:bg-white/15 text-white' : 'hover:bg-white/80 text-[#051630]'
+                    isDarkMode ? 'hover:bg-white/15 text-[#E8F2FF]' : 'hover:bg-white/80 text-[#051630]'
                   }`}
                 >
-                  <HelpCircle className="w-4 h-4 text-[#1557D6] shrink-0" />
+                  <HelpCircle className="w-4 h-4 text-[#41D9F5] shrink-0" />
                   <span>Trợ giúp thao tác</span>
                 </button>
 
@@ -812,10 +812,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                     );
                   }}
                   className={`w-full min-h-[44px] px-3 py-2 rounded-[9px] text-left text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer ${
-                    isDarkMode ? 'hover:bg-white/15 text-white' : 'hover:bg-white/80 text-[#051630]'
+                    isDarkMode ? 'hover:bg-white/15 text-[#E8F2FF]' : 'hover:bg-white/80 text-[#051630]'
                   }`}
                 >
-                  <Home className="w-4 h-4 text-[#1E6BFF] shrink-0" />
+                  <Home className="w-4 h-4 text-[#4D8DFF] shrink-0" />
                   <span>{studentScreen === 'home' ? 'Vào phòng 3D' : 'Về Trang chủ'}</span>
                 </button>
 
@@ -827,11 +827,11 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                   }}
                   className={`w-full min-h-[44px] px-3 py-2 rounded-[9px] text-left text-[14px] font-extrabold flex items-center gap-2.5 border-t pt-2.5 cursor-pointer ${
                     isDarkMode
-                      ? 'border-white/25 text-[#7DD3FC] hover:bg-white/15'
+                      ? 'border-[#41D9F5]/25 text-[#41D9F5] hover:bg-white/15'
                       : 'border-[#7DA4D9] text-[#0B3A7D] hover:bg-white/80'
                   }`}
                 >
-                  <SlidersHorizontal className="w-4 h-4 text-[#1557D6] shrink-0" />
+                  <SlidersHorizontal className="w-4 h-4 text-[#41D9F5] shrink-0" />
                   <span>Chế độ Kỹ thuật & Quản trị</span>
                 </button>
               </div>
@@ -845,13 +845,13 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <button
             type="button"
             onClick={downloadEquipmentStandardMd}
-            className="px-2.5 h-8 rounded-[7px] bg-[#D97706] hover:bg-[#B45309] border border-[#FBBF24] text-white text-[13px] font-extrabold flex items-center justify-center shadow-xs transition-colors cursor-pointer whitespace-nowrap"
+            className="px-2.5 h-8 rounded-[7px] bg-[#10223D] hover:bg-[#19335A] border border-[#FFB85C]/65 text-[#FFB85C] text-[13px] font-extrabold flex items-center justify-center shadow-xs transition-colors cursor-pointer whitespace-nowrap"
             title="Tải file chuẩn EQUIPMENT_MODULE_STANDARD.md (v2.4) về máy tính"
           >
             <span>.MD</span>
           </button>
 
-          {/* Nút mở/ẩn bảng Hướng dẫn thí nghiệm — Nền đỏ thu gọn */}
+          {/* Nút mở/ẩn bảng Hướng dẫn thí nghiệm */}
           <button
             type="button"
             onClick={() => {
@@ -865,11 +865,15 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 onOpenStudentHelp();
               }
             }}
-            className="px-2 h-8 rounded-[7px] bg-[#DC2626] hover:bg-[#B91C1C] border border-[#F87171] text-white flex items-center gap-1 text-[12.5px] font-extrabold transition-colors cursor-pointer shadow-xs"
+            className={`px-2.5 h-8 rounded-[7px] border flex items-center gap-1 text-[12.5px] font-extrabold transition-colors cursor-pointer shadow-xs ${
+              isGuideOpen
+                ? 'bg-[#DC2626] hover:bg-[#B91C1C] border-[#F87171] text-white'
+                : 'bg-[#10223D] hover:bg-[#19335A] border-[#48D6A0]/65 text-[#48D6A0]'
+            }`}
             title={isGuideOpen ? 'Ẩn Hướng dẫn' : 'Mở Hướng dẫn'}
             aria-label={isGuideOpen ? 'Ẩn Hướng dẫn' : 'Mở Hướng dẫn'}
           >
-            <BookOpen className="w-3.5 h-3.5 text-white shrink-0" />
+            <BookOpen className="w-3.5 h-3.5 shrink-0" />
             <span>{isGuideOpen ? 'Ẩn HD' : 'Mở HD'}</span>
           </button>
 
@@ -880,8 +884,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               onClick={onToggleNeuralGuide}
               className={`h-9 px-2.5 rounded-[8px] border flex items-center gap-1.5 transition-all cursor-pointer font-bold text-xs ${
                 isNeuralGuideEnabled
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 border-emerald-400 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]'
-                  : 'bg-[#133F7E]/70 hover:bg-[#1952A3] border-[#275AA3] text-slate-300'
+                  ? 'bg-gradient-to-r from-[#0B1930] to-[#10223D] border-[#48D6A0] text-[#48D6A0] shadow-[0_0_14px_rgba(72,214,160,0.32)]'
+                  : 'bg-[#0B1930]/85 hover:bg-[#10223D] border-[#41D9F5]/25 text-[#A8BCD5]'
               }`}
               title="Trợ lý Nơ-ron Thần kinh (Bật/Tắt tia liên kết 3D & chỉ dẫn thao tác - Phím tắt Alt + N)"
               aria-label="Trợ lý Nơ-ron"
@@ -893,17 +897,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             </button>
           )}
 
-          {/* Nút Mở Sơ đồ Nơ-ron Toàn cảnh */}
+          {/* Nút Mở Sơ đồ Nơ-ron Toàn cảnh (Planetary Cosmos Map) */}
           {onOpenNeuralModal && (
             <button
               type="button"
               onClick={onOpenNeuralModal}
-              className="h-9 px-2.5 rounded-[8px] bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-400/50 text-indigo-100 flex items-center gap-1.5 transition-colors cursor-pointer text-xs font-semibold"
-              title="Mở Sơ đồ Mạng Nơ-ron Toàn cảnh KHTN THCS"
+              className="h-9 px-2.5 rounded-[8px] bg-gradient-to-r from-[#10223D] to-[#1E1B4B] hover:from-[#19335A] hover:to-[#2E296E] border border-[#9B83FF]/65 text-[#E8F2FF] shadow-[0_0_16px_rgba(155,131,255,0.28)] flex items-center gap-1.5 transition-all cursor-pointer text-xs font-extrabold"
+              title="Mở Bản đồ Vũ trụ Tri thức & Sơ đồ Mạng Nơ-ron KHTN THCS"
               aria-label="Sơ đồ Nơ-ron"
             >
-              <span className="text-sm">🌐</span>
-              <span className="hidden xl:inline">Sơ đồ Nơ-ron</span>
+              <span className="text-sm">🪐</span>
+              <span className="hidden xl:inline text-[#41D9F5]">Sơ đồ Nơ-ron</span>
             </button>
           )}
 
@@ -914,8 +918,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               onClick={onToggleFullscreen}
               className={`w-9 h-9 rounded-[8px] border flex items-center justify-center transition-colors cursor-pointer ${
                 isFullscreen
-                  ? 'bg-[#00BCEB] text-[#081224] border-white font-bold'
-                  : 'bg-[#133F7E] hover:bg-[#1952A3] border-[#275AA3] text-white'
+                  ? 'bg-[#41D9F5] text-[#050B18] border-white font-bold'
+                  : 'bg-[#0B1930] hover:bg-[#10223D] border-[#41D9F5]/30 text-[#E8F2FF]'
               }`}
               title={isFullscreen ? 'Thu nhỏ (Esc)' : 'Toàn màn hình'}
               aria-label={isFullscreen ? 'Thu nhỏ' : 'Toàn màn hình'}
@@ -923,7 +927,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               {isFullscreen ? (
                 <Minimize2 className="w-4 h-4" />
               ) : (
-                <Maximize2 className="w-4 h-4 text-[#00BCEB]" />
+                <Maximize2 className="w-4 h-4 text-[#41D9F5]" />
               )}
             </button>
           )}
@@ -935,16 +939,16 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               onClick={onToggleDarkMode}
               className={`w-9 h-9 rounded-[8px] border flex items-center justify-center transition-colors cursor-pointer ${
                 isDarkMode
-                  ? 'bg-[#1E293B] hover:bg-[#334155] border-[#00BCEB] text-[#FFC83D]'
-                  : 'bg-[#133F7E] hover:bg-[#1952A3] border-[#275AA3] text-white'
+                  ? 'bg-[#0B1930] hover:bg-[#10223D] border-[#41D9F5]/50 text-[#FFB85C]'
+                  : 'bg-[#0B1930] hover:bg-[#10223D] border-[#41D9F5]/30 text-[#E8F2FF]'
               }`}
               title={isDarkMode ? 'Giao diện Sáng' : 'Giao diện Tối'}
               aria-label="Sáng / Tối"
             >
               {isDarkMode ? (
-                <Sun className="w-4 h-4 text-[#FFC83D]" />
+                <Sun className="w-4 h-4 text-[#FFB85C]" />
               ) : (
-                <Moon className="w-4 h-4 text-[#00BCEB]" />
+                <Moon className="w-4 h-4 text-[#41D9F5]" />
               )}
             </button>
           )}
@@ -953,22 +957,22 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <button
             type="button"
             onClick={onOpenStudentHelp}
-            className="w-9 h-9 rounded-[8px] bg-[#133F7E] hover:bg-[#1952A3] border border-[#275AA3] text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-[8px] bg-[#0B1930] hover:bg-[#10223D] border border-[#41D9F5]/30 text-[#E8F2FF] flex items-center justify-center transition-colors cursor-pointer"
             title="Trợ giúp"
             aria-label="Trợ giúp"
           >
-            <HelpCircle className="w-4 h-4 text-[#00BCEB]" />
+            <HelpCircle className="w-4 h-4 text-[#41D9F5]" />
           </button>
 
           {/* Icon Làm lại bàn thí nghiệm (Có hộp thoại xác nhận chống mất tiến trình) */}
           <button
             type="button"
             onClick={() => setShowResetConfirmModal(true)}
-            className="w-9 h-9 rounded-[8px] bg-[#133F7E] hover:bg-[#1952A3] border border-[#275AA3] text-white flex items-center justify-center transition-colors cursor-pointer"
+            className="w-9 h-9 rounded-[8px] bg-[#0B1930] hover:bg-[#10223D] border border-[#41D9F5]/30 text-[#E8F2FF] flex items-center justify-center transition-colors cursor-pointer"
             title="Đặt lại bàn thí nghiệm"
             aria-label="Đặt lại bàn thí nghiệm"
           >
-            <RotateCcw className="w-4 h-4 text-[#FFC83D]" />
+            <RotateCcw className="w-4 h-4 text-[#FFB85C]" />
           </button>
 
           {/* Icon Trang chủ */}
@@ -981,25 +985,23 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             }
             className={`w-9 h-9 rounded-[8px] flex items-center justify-center transition-colors border cursor-pointer ${
               studentScreen === 'home'
-                ? 'bg-[#1E6BFF] text-white border-[#00BCEB]'
-                : isDarkMode
-                  ? 'bg-[#1A273D] text-white border-[#2E476B] hover:bg-[#243552]'
-                  : 'bg-[#F2F6FB] text-[#092B5E] border-[#C4D5E8] hover:bg-white'
+                ? 'bg-[#4D8DFF] text-white border-[#41D9F5]'
+                : 'bg-[#0B1930] text-[#E8F2FF] border-[#41D9F5]/30 hover:bg-[#10223D]'
             }`}
             title={studentScreen === 'home' ? 'Vào phòng 3D' : 'Trang chủ'}
             aria-label="Trang chủ"
           >
-            <Home className="w-4 h-4 text-[#1E6BFF]" />
+            <Home className="w-4 h-4 text-[#41D9F5]" />
           </button>
 
           {/* Chuyển sang Chế độ Giáo viên / Kỹ thuật */}
           <button
             type="button"
             onClick={() => onChangeUserRole('teacher')}
-            className="hidden sm:flex px-2.5 h-9 rounded-[8px] bg-[#10366E] hover:bg-[#1952A3] border border-[#275AA3] text-[#B8D4FF] hover:text-white text-[13.5px] font-bold items-center gap-1.5 transition-colors cursor-pointer"
+            className="hidden sm:flex px-2.5 h-9 rounded-[8px] bg-[#0B1930] hover:bg-[#10223D] border border-[#41D9F5]/30 text-[#A8BCD5] hover:text-[#E8F2FF] text-[13.5px] font-bold items-center gap-1.5 transition-colors cursor-pointer"
             title="Chế độ Kỹ thuật & Quản trị"
           >
-            <SlidersHorizontal className="w-4 h-4 text-[#00BCEB]" />
+            <SlidersHorizontal className="w-4 h-4 text-[#41D9F5]" />
             <span className="hidden md:inline">Kỹ thuật</span>
           </button>
         </div>
@@ -1008,19 +1010,19 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     );
   }
 
-  // TEACHER / ADMIN MODE HEADER
+  // TEACHER / ADMIN MODE HEADER — Planetary Cosmos Admin Deck
   return (
-    <header className="h-[60px] px-5 bg-[#092B5E] border-b border-[#164384] flex items-center justify-between gap-5 shrink-0 z-30">
+    <header className="h-[60px] px-5 bg-[#050B18] border-b border-[#41D9F5]/25 flex items-center justify-between gap-5 shrink-0 z-30 shadow-[0_6px_24px_rgba(3,8,20,0.45)]">
       <button
         type="button"
         onClick={() => onSelectSection('lab-workspace')}
-        className="flex items-center gap-2.5 text-left whitespace-nowrap shrink-0 focus:outline-none"
+        className="flex items-center gap-2.5 text-left whitespace-nowrap shrink-0 focus:outline-none cursor-pointer"
       >
-        <div className="w-9 h-9 rounded-lg bg-[#1E6BFF] border border-[#00BCEB] flex items-center justify-center text-white">
-          <Box className="w-5 h-5" />
+        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#4D8DFF] to-[#0B1930] border border-[#41D9F5] flex items-center justify-center text-white shadow-[0_0_14px_rgba(65,217,245,0.28)]">
+          <Box className="w-5 h-5 text-[#41D9F5]" />
         </div>
-        <span className="text-[20px] font-extrabold tracking-tight text-white">
-          OpenLab 3D <span className="text-[13px] font-semibold text-[#B8D4FF]">Quản trị</span>
+        <span className="text-[20px] font-extrabold tracking-tight text-[#E8F2FF]">
+          OpenLab 3D <span className="text-[13px] font-semibold text-[#41D9F5]">Quản trị</span>
         </span>
       </button>
 

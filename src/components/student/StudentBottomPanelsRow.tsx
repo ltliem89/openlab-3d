@@ -14,6 +14,9 @@ import {
   HelpCircle,
   RotateCcw,
   RotateCw,
+  Download,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { StudentGuidedStepNumber } from './StudentGuidedStepPanel';
 
@@ -88,6 +91,7 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
   const [activeTab, setActiveTab] = useState<StudentBottomTabId>('results');
   const [unitSystem, setUnitSystem] = useState<MeasurementUnitSystem>('CGS');
   const [isDockCollapsed, setIsDockCollapsed] = useState<boolean>(true);
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [localDetailedGuides, setLocalDetailedGuides] = useState<boolean>(false);
 
   const isDetailedMode =
@@ -194,15 +198,41 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
     },
   ];
 
+  const handleExportCSV = () => {
+    const escapeCSV = (val: string) => `"${String(val).replace(/"/g, '""')}"`;
+    const headers = ['Đại lượng', 'Ký hiệu', 'Giá trị', 'Đơn vị', 'ĐCNN / Sai số'];
+    const csvLines = [
+      headers.map(escapeCSV).join(','),
+      ...rows.map((r) =>
+        [r.label, r.symbol, r.value, r.unit, r.leastCountNote].map(escapeCSV).join(','),
+      ),
+    ];
+    // Thêm BOM UTF-8 (\uFEFF) để hiển thị đúng tiếng Việt và ký hiệu khoa học trên Excel
+    const csvContent = '\uFEFF' + csvLines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `ket-qua-thi-nghiem-${unitSystem.toLowerCase()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <section
       aria-label="Khay kết quả và công thức"
       className={`border rounded-[12px] flex flex-col shrink-0 select-none transition-all overflow-hidden backdrop-blur-md ${
-        isDockCollapsed ? 'h-[38px]' : 'h-[148px] md:h-[140px]'
+        isFullScreen
+          ? 'fixed inset-2 sm:inset-4 z-50 h-auto shadow-2xl'
+          : isDockCollapsed
+            ? 'h-[38px]'
+            : 'h-[148px] md:h-[140px]'
       } ${
         isDarkMode
-          ? 'bg-[#0F1828]/80 border-[#263854]/85 text-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.28)]'
-          : 'bg-[#F2F6FB]/88 border-[#C4D5E8] text-[#123059] shadow-[0_2px_10px_rgba(18,52,107,0.06)]'
+          ? 'bg-[#0F1828]/95 border-[#263854]/85 text-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.28)]'
+          : 'bg-[#F2F6FB]/95 border-[#C4D5E8] text-[#123059] shadow-[0_2px_10px_rgba(18,52,107,0.06)]'
       }`}
     >
       {/* Thanh tiêu đề Dock ưu tiên Ký hiệu + Công thức trực tiếp + Đơn vị rõ ràng */}
@@ -368,6 +398,22 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
             </button>
           </div>
 
+          {/* Nút Xuất dữ liệu CSV */}
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className={`h-7 px-2 rounded-[7px] text-[12px] font-extrabold flex items-center gap-1 border transition-colors cursor-pointer shrink-0 ${
+              isDarkMode
+                ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-400/50 text-emerald-300 shadow-xs'
+                : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-800 shadow-xs'
+            }`}
+            title="Tải xuống bảng kết quả thí nghiệm hiện tại dưới định dạng CSV"
+            aria-label="Xuất dữ liệu"
+          >
+            <Download className="w-3.5 h-3.5 shrink-0" />
+            <span>Xuất dữ liệu</span>
+          </button>
+
           {/* Nút bật/tắt chế độ Giải thích chi tiết & Hướng dẫn trên đầu dụng cụ */}
           <button
             type="button"
@@ -390,9 +436,44 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
             {isDetailedMode && <span className="hidden sm:inline">Giải thích</span>}
           </button>
 
+          {/* Nút Phóng to toàn màn hình / Thu nhỏ lại */}
           <button
             type="button"
-            onClick={() => setIsDockCollapsed((v) => !v)}
+            onClick={() => {
+              setIsFullScreen((prev) => {
+                const next = !prev;
+                if (next && isDockCollapsed) {
+                  setIsDockCollapsed(false);
+                }
+                return next;
+              });
+            }}
+            className={`h-7 px-2 rounded-[7px] text-[12px] font-extrabold flex items-center gap-1 border transition-colors cursor-pointer shrink-0 ${
+              isFullScreen
+                ? 'bg-[#1D63E8] border-[#38BDF8] text-white shadow-xs'
+                : isDarkMode
+                  ? 'bg-white/5 hover:bg-white/15 border-white/15 text-slate-200'
+                  : 'bg-white hover:bg-[#DCE8F8] border-[#C4D5E8] text-[#123059]'
+            }`}
+            title={isFullScreen ? 'Thu nhỏ bảng về thanh dưới đáy' : 'Phóng to bảng toàn màn hình'}
+            aria-label={isFullScreen ? 'Thu lại' : 'Toàn màn hình'}
+          >
+            {isFullScreen ? (
+              <Minimize2 className="w-3.5 h-3.5 shrink-0" />
+            ) : (
+              <Maximize2 className="w-3.5 h-3.5 shrink-0" />
+            )}
+            <span className="hidden sm:inline">{isFullScreen ? 'Thu lại' : 'Toàn màn hình'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (isFullScreen) {
+                setIsFullScreen(false);
+              }
+              setIsDockCollapsed((v) => !v);
+            }}
             className="h-6.5 px-2 rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] border border-[#F87171] text-white text-[11.5px] font-extrabold flex items-center gap-0.5 transition-colors cursor-pointer shadow-xs shrink-0"
             title={isDockCollapsed ? 'Mở bảng số liệu' : 'Ẩn bảng số liệu'}
             aria-label={isDockCollapsed ? 'Mở bảng số liệu' : 'Ẩn bảng số liệu'}
@@ -556,8 +637,21 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                     : 'bg-[#E6EEF8]/70 border-[#C4D5E8]'
                 }`}
               >
-                <div className="text-[14px] font-extrabold">
-                  Thao tác nhanh:
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[13px] font-extrabold">Thao tác nhanh:</span>
+                  <button
+                    type="button"
+                    onClick={handleExportCSV}
+                    className={`px-2 py-0.5 rounded-[6px] text-[11.5px] font-bold flex items-center gap-1 border transition-colors cursor-pointer ${
+                      isDarkMode
+                        ? 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-400/50 text-emerald-300'
+                        : 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-800'
+                    }`}
+                    title="Xuất bảng kết quả đo ra tệp CSV"
+                  >
+                    <Download className="w-3 h-3 shrink-0" />
+                    <span>Xuất dữ liệu</span>
+                  </button>
                 </div>
                 <div className="space-y-1.5">
                   <button
