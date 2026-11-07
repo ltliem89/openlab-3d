@@ -6241,8 +6241,25 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             if (clickedTerminal) break;
           }
 
-          // Bổ sung: Nếu nhấp chuột gần cọc cắm của Đèn hoặc Nguồn (trong bán kính 6.5 cm), tự động nhận diện chốt cắm điện 2 chiều
-          if (!clickedTerminal && hitInst) {
+          // CHỈ CHẠY CHỐT CẮM VÀ NỐI DÂY ĐIỆN KHI CẢ NGUỒN ĐIỆN VÀ ĐÈN ĐỀU ĐANG CÓ TRÊN BÀN THÍ NGHIỆM
+          const psuActiveInst = instancesRef.current.find(
+            (i) =>
+              i.visible &&
+              i.instanceState.attachmentSlot !== 'shelf' &&
+              assetsMapRef.current.get(i.assetId)?.geometry.proceduralArchetype ===
+                'optical-power-supply',
+          );
+          const lampActiveInst = instancesRef.current.find(
+            (i) =>
+              i.visible &&
+              i.instanceState.attachmentSlot !== 'shelf' &&
+              assetsMapRef.current.get(i.assetId)?.geometry.proceduralArchetype ===
+                'optical-lamp',
+          );
+          const hasBothPsuAndLamp = Boolean(psuActiveInst && lampActiveInst);
+
+          // Bổ sung: Khi có cả Nguồn và Đèn trên bàn, nếu nhấp chuột gần cọc cắm của Đèn hoặc Nguồn, tự động nhận diện chốt cắm điện 2 chiều
+          if (!clickedTerminal && hitInst && hasBothPsuAndLamp) {
             const hitArch = assetsMapRef.current.get(hitInst.assetId)?.geometry.proceduralArchetype;
             if (hitArch === 'optical-lamp' || hitArch === 'optical-power-supply') {
               const instObj = instanceObjectsRef.current.get(hitInst.instanceId);
@@ -6252,11 +6269,18 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 const pPos = posTerm?.getWorldPosition(new THREE.Vector3());
                 const pNeg = negTerm?.getWorldPosition(new THREE.Vector3());
                 const hitPt = hits[0]?.point;
-                if (hitPt && (pPos || pNeg)) {
-                  const dPos = pPos ? hitPt.distanceTo(pPos) : Infinity;
-                  const dNeg = pNeg ? hitPt.distanceTo(pNeg) : Infinity;
-                  if (dPos < 0.065 || dNeg < 0.065) {
-                    const isPos = dPos <= dNeg;
+                if (pPos && pNeg) {
+                  const dRayPos = raycaster.ray.distanceToPoint(pPos);
+                  const dRayNeg = raycaster.ray.distanceToPoint(pNeg);
+                  const dHitPos = hitPt ? hitPt.distanceTo(pPos) : Infinity;
+                  const dHitNeg = hitPt ? hitPt.distanceTo(pNeg) : Infinity;
+
+                  const minPosD = Math.min(dRayPos, dHitPos);
+                  const minNegD = Math.min(dRayNeg, dHitNeg);
+                  const minD = Math.min(minPosD, minNegD);
+
+                  if (minD < 0.065) {
+                    const isPos = minPosD <= minNegD;
                     const termMesh =
                       ((isPos ? posTerm : negTerm) as THREE.Mesh) ||
                       (hits[0].object as THREE.Mesh);
@@ -6614,15 +6638,20 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             const distOther = otherTargetPos ? currPos.distanceTo(otherTargetPos) : Infinity;
             const distCenter = currPos.distanceTo(targetObj.position);
 
-            if (prefTargetPos && (distPref < 0.50 || isHoveringTarget || distCenter < 0.50)) {
-              snappedPos = prefTargetPos.clone();
-              snappedPolarity = wireDragRef.current.sourcePolarity;
-              snappedTargetInstId = targetInst.instanceId;
-            } else if (otherTargetPos && distOther < 0.50) {
-              snappedPos = otherTargetPos.clone();
-              snappedPolarity =
-                wireDragRef.current.sourcePolarity === 'pos' ? 'neg' : 'pos';
-              snappedTargetInstId = targetInst.instanceId;
+            const distFromStart = currPos.distanceTo(wireDragRef.current.startWorldPos);
+
+            // Chỉ kích hoạt bắt dính (snap) khi đã kéo phích cắm ra khỏi cọc xuất phát ít nhất 7 cm
+            if (distFromStart >= 0.07) {
+              if (prefTargetPos && (distPref < 0.22 || (isHoveringTarget && distCenter < 0.35))) {
+                snappedPos = prefTargetPos.clone();
+                snappedPolarity = wireDragRef.current.sourcePolarity;
+                snappedTargetInstId = targetInst.instanceId;
+              } else if (otherTargetPos && distOther < 0.16) {
+                snappedPos = otherTargetPos.clone();
+                snappedPolarity =
+                  wireDragRef.current.sourcePolarity === 'pos' ? 'neg' : 'pos';
+                snappedTargetInstId = targetInst.instanceId;
+              }
             }
           }
         }
@@ -7060,36 +7089,82 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             };
           });
 
-          // Check if hovering directly on an interactive banana terminal
+          // Check if hovering directly on an interactive banana terminal (Chỉ khi cả Nguồn và Đèn đều trên bàn)
+          const psuActiveForHover = instancesRef.current.find(
+            (i) =>
+              i.visible &&
+              i.instanceState.attachmentSlot !== 'shelf' &&
+              assetsMapRef.current.get(i.assetId)?.geometry.proceduralArchetype ===
+                'optical-power-supply',
+          );
+          const lampActiveForHover = instancesRef.current.find(
+            (i) =>
+              i.visible &&
+              i.instanceState.attachmentSlot !== 'shelf' &&
+              assetsMapRef.current.get(i.assetId)?.geometry.proceduralArchetype ===
+                'optical-lamp',
+          );
+          const hasBothPsuAndLampHover = Boolean(psuActiveForHover && lampActiveForHover);
+
           let hoveredTerm:
             | { polarity: 'pos' | 'neg'; mesh: THREE.Mesh; label: string; ownerInstId: string }
             | undefined;
-          for (const vHit of hits) {
-            let nodeScan: THREE.Object3D | null = vHit.object;
-            let termNode: THREE.Object3D | null = null;
-            while (nodeScan) {
-              if (
-                nodeScan.userData?.interactiveTerminal &&
-                nodeScan.userData?.terminalPolarity
-              ) {
-                termNode = nodeScan;
+
+          if (hasBothPsuAndLampHover) {
+            for (const vHit of hits) {
+              let nodeScan: THREE.Object3D | null = vHit.object;
+              let termNode: THREE.Object3D | null = null;
+              while (nodeScan) {
+                if (
+                  nodeScan.userData?.interactiveTerminal &&
+                  nodeScan.userData?.terminalPolarity
+                ) {
+                  termNode = nodeScan;
+                }
+                if (termNode && nodeScan.userData?.instanceId) {
+                  hoveredTerm = {
+                    polarity: termNode.userData.terminalPolarity as 'pos' | 'neg',
+                    mesh: termNode as THREE.Mesh,
+                    label:
+                      (termNode.userData.terminalLabel as string) ||
+                      (termNode.userData.terminalPolarity === 'pos'
+                        ? 'Chốt Đỏ (+)'
+                        : 'Chốt Đen (-)'),
+                    ownerInstId: nodeScan.userData.instanceId as string,
+                  };
+                  break;
+                }
+                nodeScan = nodeScan.parent;
               }
-              if (termNode && nodeScan.userData?.instanceId) {
-                hoveredTerm = {
-                  polarity: termNode.userData.terminalPolarity as 'pos' | 'neg',
-                  mesh: termNode as THREE.Mesh,
-                  label:
-                    (termNode.userData.terminalLabel as string) ||
-                    (termNode.userData.terminalPolarity === 'pos'
-                      ? 'Chốt Đỏ (+)'
-                      : 'Chốt Đen (-)'),
-                  ownerInstId: nodeScan.userData.instanceId as string,
-                };
-                break;
-              }
-              nodeScan = nodeScan.parent;
+              if (hoveredTerm) break;
             }
-            if (hoveredTerm) break;
+
+            if (!hoveredTerm && hitInst) {
+              const hitArch = assetsMapRef.current.get(hitInst.assetId)?.geometry.proceduralArchetype;
+              if (hitArch === 'optical-lamp' || hitArch === 'optical-power-supply') {
+                const instObj = instanceObjectsRef.current.get(hitInst.instanceId);
+                if (instObj) {
+                  const posTerm = instObj.getObjectByName('terminal_pos');
+                  const negTerm = instObj.getObjectByName('terminal_neg');
+                  const pPos = posTerm?.getWorldPosition(new THREE.Vector3());
+                  const pNeg = negTerm?.getWorldPosition(new THREE.Vector3());
+                  if (pPos && pNeg) {
+                    const dRayPos = raycaster.ray.distanceToPoint(pPos);
+                    const dRayNeg = raycaster.ray.distanceToPoint(pNeg);
+                    const minD = Math.min(dRayPos, dRayNeg);
+                    if (minD < 0.055) {
+                      const isPos = dRayPos <= dRayNeg;
+                      hoveredTerm = {
+                        polarity: isPos ? 'pos' : 'neg',
+                        mesh: (isPos ? posTerm : negTerm) as THREE.Mesh,
+                        label: isPos ? 'Chốt Đỏ (+)' : 'Chốt Đen (-)',
+                        ownerInstId: hitInst.instanceId,
+                      };
+                    }
+                  }
+                }
+              }
+            }
           }
 
           if (hoveredTerm) {
@@ -7180,8 +7255,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           const targetObj = instanceObjectsRef.current.get(targetInst.instanceId);
           if (targetObj) {
             const distToTarget = wd.currentWorldPos.distanceTo(targetObj.position);
-            // Nếu nhả chuột trong phạm vi 50 cm quanh thiết bị đối diện -> Tự động cắm chốt thành công!
-            if (distToTarget < 0.50) {
+            // Nếu nhả chuột trong phạm vi 28 cm quanh thiết bị đối diện -> Tự động cắm chốt thành công!
+            if (distToTarget < 0.28) {
               shouldConnect = true;
             }
           }
