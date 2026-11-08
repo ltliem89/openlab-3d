@@ -70,3 +70,24 @@ Tài liệu này là nhật ký cải tiến duy nhất theo yêu cầu tại **
 - **Điểm chưa xác minh thực nghiệm**:
   - Bộ 10 mẫu đối chiếu trong `METROLOGY_VALIDATION_BENCHMARK` được gắn nhãn trung thực là `PUBLISHED_REFERENCE` và `ANALYTICAL_REFERENCE` (chưa phải số liệu đo thực nghiệm vật lý tại phòng lab trường học `EMPIRICAL_LAB`).
   - Ghi file trực tiếp xuống `C:\Users\ltlie\Documents\libraries3DLab` trên trình duyệt phụ thuộc vào việc người dùng bấm cấp quyền qua hộp thoại `showDirectoryPicker()` (Web File System Access API); nếu chưa cấp quyền, dữ liệu được lưu bền vững trong `IndexedDB` của trình duyệt.
+
+---
+
+## Checkpoint 4 — Bản Phát Hành Gọn Nhẹ, Kính Mờ Frosted Glassmorphism & Chạy Thử Thực Nghiệm
+- **Thời điểm**: 2026-11-08.
+- **Mục tiêu**:
+  1. Tinh giản triệt để kho mã nguồn, loại bỏ toàn bộ các file nén rác zip/bundle cồng kềnh (> 250MB), đưa dự án về trạng thái 332 tệp nguồn siêu nhẹ.
+  2. Đồng bộ bảng điều khiển trong suốt mờ Frosted Glassmorphism (g-[#061122]/65 backdrop-blur-2xl) tại DeviceControlInspector.tsx và LabViewport3D.tsx, loại bỏ các thông số kích thước cơ khí CAD và mã kỹ thuật nội bộ gây rối mắt cho học sinh THCS.
+  3. Cập nhật 36 profile thiết bị chuẩn hóa không bị nhiễm chéo thuộc tính (Đòn bẩy $\sum M = 0$, Bình thông nhau đẳng mức thủy tĩnh, Kính hiển vi quang học có tiêu cự & hiệu ứng Bokeh riêng cho từng mẫu vật).
+  4. Khởi chạy máy chủ Vite Dev Server trên cổng http://localhost:3000/ (thời gian khởi động 904ms).
+  5. Kiểm tra chạy thử thực nghiệm trực tiếp qua giao diện:
+     - Kính hiển vi quang học 3D quan sát mẫu Trùng giày (*Paramecium caudatum*) ở độ phóng đại \times$, trạng thái lấy nét $\Delta z = 0.00\,\text{mm}$ (Nét hoàn hảo).
+     - Mạng Nơ-ron Tri thức Vũ trụ (Planetary Cosmos) phân tầng đồng tâm, liên kết nhân quả và công thức toán học chuẩn LaTeX $m_{\text{net}} = \max(0, m_{\text{gross}} - m_{\text{tare}})$.
+     - Tương tác cân điện tử: đặt quả cân chuẩn .00\,\text{g}$, màn hình LCD và nhãn 3D cập nhật .00\,\text{g}$, hạ thiết bị xuống mặt bàn gỗ 3D thao tác tự do.
+- **Kết quả kiểm thử**:
+  - 
+pm run lint (	sc --noEmit): 0 lỗi.
+  - 
+pm run build: Hoàn thành trong 767ms.
+  - 
+pm test: 10/10 kịch bản chất lỏng & 25/25 kịch bản tích hợp hệ thống PASS (100%).
