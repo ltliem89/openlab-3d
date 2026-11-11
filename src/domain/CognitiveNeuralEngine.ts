@@ -147,10 +147,10 @@ export class CognitiveNeuralEngine {
       if (inst.assetId.includes('BAL') || inst.assetId.includes('balance')) {
         const tagId = `TAG_MASS_${inst.instanceId}`;
         currentActiveIds.add(tagId);
-        const netMass = solverMeasurements?.[inst.instanceId]?.value ?? (inst.instanceState?.measuredMassG ?? 85.0);
+        const netMass = solverMeasurements?.[inst.instanceId]?.value ?? (inst.instanceState?.measuredMassG ?? 66.25);
         const safeMass = Number.isFinite(netMass) ? Math.max(0, netMass) : 0;
         
-        // Đo lường ISO GUM: ĐCNN = 0.01g -> u_B = 0.01 / √3 ≈ 0.0058g, u_A ≈ 0.02g -> U = 2 * √(uA² + uB²) ≈ 0.04g
+        // Đo lường ISO GUM: ĐCNN = 0.01g -> u_B = 0.01 / √3 ≈ 0.0058g, u_A ≈ 0.015g -> U = 2 * √(uA² + uB²) ≈ 0.032g
         const uB = 0.01 / Math.sqrt(3);
         const uA = 0.015;
         const U = 2 * Math.sqrt(uA * uA + uB * uB);
@@ -177,11 +177,14 @@ export class CognitiveNeuralEngine {
         });
       }
 
-      // 2. Ống đong / Bình tràn -> Biến số Thể tích V (mL)
+      // 2. Ống đong / Bình tràn -> Biến số Thể tích chiếm chỗ V (mL) = V2 - V1
       if (inst.assetId.includes('CYL') || inst.assetId.includes('cylinder') || inst.assetId.includes('OVF')) {
         const tagId = `TAG_VOL_${inst.instanceId}`;
         currentActiveIds.add(tagId);
-        const volVal = solverMeasurements?.[inst.instanceId]?.value ?? (inst.instanceState?.liquidLevelMl ?? 31.5);
+        const currentLevel = inst.instanceState?.liquidLevelMl ?? 74.5;
+        const baseLevel = inst.instanceState?.baseLiquidLevelMl ?? 50.0;
+        const deltaV = Math.max(0, currentLevel - baseLevel);
+        const volVal = solverMeasurements?.[inst.instanceId]?.value ?? (deltaV > 0 ? deltaV : 24.5);
         const safeVol = Number.isFinite(volVal) ? Math.max(0, volVal) : 0;
         
         // ĐCNN = 1 mL -> u_B = 1 / √3 ≈ 0.58 mL, U ≈ 1.2 mL
@@ -275,7 +278,7 @@ export class CognitiveNeuralEngine {
       if (inst.assetId.includes('DYN') || inst.assetId.includes('dynamometer')) {
         const tagId = `TAG_FORCE_${inst.instanceId}`;
         currentActiveIds.add(tagId);
-        const forceVal = solverMeasurements?.[inst.instanceId]?.value ?? 2.50;
+        const forceVal = solverMeasurements?.[inst.instanceId]?.value ?? (inst.instanceState?.measuredForceN ?? 0.65);
         const U = 0.05;
 
         this._variableTags.set(tagId, {
@@ -297,6 +300,112 @@ export class CognitiveNeuralEngine {
           worldPositionM: holoPos,
           isActive: true,
           isFused: this._variableTags.get(tagId)?.isFused || false,
+        });
+
+        // Thẻ độ dãn lò xo Δl
+        const tagDlId = `TAG_DL_${inst.instanceId}`;
+        currentActiveIds.add(tagDlId);
+        const springK = 50.0; // N/m
+        const dlCm = (forceVal / springK) * 100.0;
+        this._variableTags.set(tagDlId, {
+          id: tagDlId,
+          varType: 'displacement',
+          symbol: 'Δl',
+          symbolLatex: '$\\Delta l$',
+          nameVi: 'Độ dãn lò xo',
+          unitVi: 'cm',
+          value: Number(dlCm.toFixed(1)),
+          formattedValue: dlCm.toFixed(1),
+          sourceInstanceId: inst.instanceId,
+          sourceAssetId: inst.assetId,
+          sourceDeviceNameVi: nameVi,
+          uncertaintyTypeA: 0.05,
+          uncertaintyTypeB: 0.05,
+          expandedUncertainty: 0.1,
+          isoGumText: `${dlCm.toFixed(1)} ± 0.1 cm`,
+          worldPositionM: [holoPos[0] + 0.15, holoPos[1], holoPos[2]],
+          isActive: true,
+          isFused: this._variableTags.get(tagDlId)?.isFused || false,
+        });
+      }
+
+      // 6. Nhiệt kế -> Nhiệt độ T (°C)
+      if (inst.assetId.includes('THM') || inst.assetId.includes('thermometer')) {
+        const tagId = `TAG_TEMP_${inst.instanceId}`;
+        currentActiveIds.add(tagId);
+        const tempVal = solverMeasurements?.[inst.instanceId]?.value ?? (inst.instanceState?.temperatureC ?? 25.0);
+        this._variableTags.set(tagId, {
+          id: tagId,
+          varType: 'temperature',
+          symbol: 'T',
+          symbolLatex: '$T$',
+          nameVi: 'Nhiệt độ chất lỏng',
+          unitVi: '°C',
+          value: Number(tempVal.toFixed(1)),
+          formattedValue: tempVal.toFixed(1),
+          sourceInstanceId: inst.instanceId,
+          sourceAssetId: inst.assetId,
+          sourceDeviceNameVi: nameVi,
+          uncertaintyTypeA: 0.2,
+          uncertaintyTypeB: 0.29,
+          expandedUncertainty: 0.5,
+          isoGumText: `${tempVal.toFixed(1)} ± 0.5 °C`,
+          worldPositionM: holoPos,
+          isActive: true,
+          isFused: this._variableTags.get(tagId)?.isFused || false,
+        });
+      }
+
+      // 7. Quang học (Đĩa quay / Nguồn laser) -> Góc tới i và Góc khúc xạ r
+      if (inst.assetId.includes('DSK') || inst.assetId.includes('LSR') || inst.assetId.includes('OPT')) {
+        const tagIncId = `TAG_INC_${inst.instanceId}`;
+        const tagRefId = `TAG_REF_${inst.instanceId}`;
+        currentActiveIds.add(tagIncId);
+        currentActiveIds.add(tagRefId);
+
+        const incAngle = inst.instanceState?.incidentAngleDeg ?? 45.0;
+        const refAngle = Math.asin(Math.sin((incAngle * Math.PI) / 180) / 1.50) * (180 / Math.PI);
+
+        this._variableTags.set(tagIncId, {
+          id: tagIncId,
+          varType: 'incidence_angle',
+          symbol: 'i',
+          symbolLatex: '$i$',
+          nameVi: 'Góc tới',
+          unitVi: '°',
+          value: Number(incAngle.toFixed(1)),
+          formattedValue: `${incAngle.toFixed(1)}°`,
+          sourceInstanceId: inst.instanceId,
+          sourceAssetId: inst.assetId,
+          sourceDeviceNameVi: nameVi,
+          uncertaintyTypeA: 0.2,
+          uncertaintyTypeB: 0.29,
+          expandedUncertainty: 0.5,
+          isoGumText: `${incAngle.toFixed(1)}° ± 0.5°`,
+          worldPositionM: holoPos,
+          isActive: true,
+          isFused: this._variableTags.get(tagIncId)?.isFused || false,
+        });
+
+        this._variableTags.set(tagRefId, {
+          id: tagRefId,
+          varType: 'refraction_angle',
+          symbol: 'r',
+          symbolLatex: '$r$',
+          nameVi: 'Góc khúc xạ',
+          unitVi: '°',
+          value: Number(refAngle.toFixed(1)),
+          formattedValue: `${refAngle.toFixed(1)}°`,
+          sourceInstanceId: inst.instanceId,
+          sourceAssetId: inst.assetId,
+          sourceDeviceNameVi: nameVi,
+          uncertaintyTypeA: 0.2,
+          uncertaintyTypeB: 0.29,
+          expandedUncertainty: 0.5,
+          isoGumText: `${refAngle.toFixed(1)}° ± 0.5°`,
+          worldPositionM: [holoPos[0] + 0.15, holoPos[1], holoPos[2]],
+          isActive: true,
+          isFused: this._variableTags.get(tagRefId)?.isFused || false,
         });
       }
     }
@@ -437,9 +546,162 @@ export class CognitiveNeuralEngine {
       };
     }
 
+    // 3. Kiểm tra cặp Thể tích V & Lực F -> Định luật Lực đẩy Archimedes FA = ρ * g * V
+    if (types.has('volume') && types.has('force')) {
+      const volVar = varA.varType === 'volume' ? varA : varB;
+      const forceVar = varA.varType === 'force' ? varA : varB;
+
+      // F_A = ρ_water * g * V = 1000 * 9.80665 * (V * 1e-6) (N)
+      const buoyancy = 1000.0 * 9.80665 * (volVar.value * 1e-6);
+      const law = this._laws.get('LAW_ARCHIMEDES')!;
+      law.status = 'discovered';
+      law.discoveredAt = new Date().toLocaleTimeString('vi-VN');
+      law.calculatedResult = {
+        symbol: 'F_A',
+        value: Number(buoyancy.toFixed(2)),
+        unit: 'N',
+        formatted: `${buoyancy.toFixed(2)} N`,
+      };
+
+      varA.isFused = true;
+      varB.isFused = true;
+
+      const colPos: [number, number, number] = [
+        (varA.worldPositionM[0] + varB.worldPositionM[0]) / 2,
+        (varA.worldPositionM[1] + varB.worldPositionM[1]) / 2 + 0.15,
+        (varA.worldPositionM[2] + varB.worldPositionM[2]) / 2,
+      ];
+
+      const eurekaDetail: EurekaEventDetail = {
+        law,
+        varA: volVar,
+        varB: forceVar,
+        resultValue: Number(buoyancy.toFixed(2)),
+        resultUnit: 'N',
+        collisionWorldPos: colPos,
+        timestamp: new Date().toLocaleTimeString('vi-VN'),
+      };
+
+      this._discoveredLawsHistory.push(eurekaDetail);
+      labSoundEngine.playTriumphChime();
+      window.dispatchEvent(new CustomEvent('openlab:eureka-law-discovered', { detail: eurekaDetail }));
+
+      this._notify();
+      return {
+        success: true,
+        lawDiscovered: law,
+        messageVi: `KHOẢNH KHẮC EUREKA! Định luật Lực đẩy Archimedes đã bừng sáng: F_A = d · V = ${buoyancy.toFixed(2)} N!`,
+      };
+    }
+
+    // 4. Kiểm tra cặp Lực F & Độ dãn Δl -> Định luật Hooke k = F / Δl
+    if (types.has('force') && types.has('displacement')) {
+      const forceVar = varA.varType === 'force' ? varA : varB;
+      const dlVar = varA.varType === 'displacement' ? varA : varB;
+
+      if (dlVar.value <= 0) {
+        return { success: false, messageVi: 'Độ dãn lò xo bằng 0, lò xo chưa biến dạng!' };
+      }
+
+      // k = F / (Δl in meters)
+      const k = forceVar.value / (dlVar.value * 0.01);
+      const law = this._laws.get('LAW_HOOKE')!;
+      law.status = 'discovered';
+      law.discoveredAt = new Date().toLocaleTimeString('vi-VN');
+      law.calculatedResult = {
+        symbol: 'k',
+        value: Number(k.toFixed(1)),
+        unit: 'N/m',
+        formatted: `${k.toFixed(1)} N/m`,
+      };
+
+      varA.isFused = true;
+      varB.isFused = true;
+
+      const colPos: [number, number, number] = [
+        (varA.worldPositionM[0] + varB.worldPositionM[0]) / 2,
+        (varA.worldPositionM[1] + varB.worldPositionM[1]) / 2 + 0.15,
+        (varA.worldPositionM[2] + varB.worldPositionM[2]) / 2,
+      ];
+
+      const eurekaDetail: EurekaEventDetail = {
+        law,
+        varA: forceVar,
+        varB: dlVar,
+        resultValue: Number(k.toFixed(1)),
+        resultUnit: 'N/m',
+        collisionWorldPos: colPos,
+        timestamp: new Date().toLocaleTimeString('vi-VN'),
+      };
+
+      this._discoveredLawsHistory.push(eurekaDetail);
+      labSoundEngine.playTriumphChime();
+      window.dispatchEvent(new CustomEvent('openlab:eureka-law-discovered', { detail: eurekaDetail }));
+
+      this._notify();
+      return {
+        success: true,
+        lawDiscovered: law,
+        messageVi: `KHOẢNH KHẮC EUREKA! Định luật Hooke đã bừng sáng: k = F / Δl = ${k.toFixed(1)} N/m!`,
+      };
+    }
+
+    // 5. Kiểm tra cặp Góc tới i & Góc khúc xạ r -> Định luật Khúc xạ ánh sáng (Snell)
+    if (types.has('incidence_angle') && types.has('refraction_angle')) {
+      const incVar = varA.varType === 'incidence_angle' ? varA : varB;
+      const refVar = varA.varType === 'refraction_angle' ? varA : varB;
+
+      if (refVar.value <= 0) {
+        return { success: false, messageVi: 'Góc khúc xạ r = 0, tia sáng truyền thẳng!' };
+      }
+
+      const sinI = Math.sin((incVar.value * Math.PI) / 180);
+      const sinR = Math.sin((refVar.value * Math.PI) / 180);
+      const n = sinI / sinR;
+      const law = this._laws.get('LAW_SNELL')!;
+      law.status = 'discovered';
+      law.discoveredAt = new Date().toLocaleTimeString('vi-VN');
+      law.calculatedResult = {
+        symbol: 'n',
+        value: Number(n.toFixed(2)),
+        unit: '',
+        formatted: `${n.toFixed(2)}`,
+      };
+
+      varA.isFused = true;
+      varB.isFused = true;
+
+      const colPos: [number, number, number] = [
+        (varA.worldPositionM[0] + varB.worldPositionM[0]) / 2,
+        (varA.worldPositionM[1] + varB.worldPositionM[1]) / 2 + 0.15,
+        (varA.worldPositionM[2] + varB.worldPositionM[2]) / 2,
+      ];
+
+      const eurekaDetail: EurekaEventDetail = {
+        law,
+        varA: incVar,
+        varB: refVar,
+        resultValue: Number(n.toFixed(2)),
+        resultUnit: '',
+        collisionWorldPos: colPos,
+        timestamp: new Date().toLocaleTimeString('vi-VN'),
+      };
+
+      this._discoveredLawsHistory.push(eurekaDetail);
+      labSoundEngine.playTriumphChime();
+      window.dispatchEvent(new CustomEvent('openlab:eureka-law-discovered', { detail: eurekaDetail }));
+
+      this._notify();
+      return {
+        success: true,
+        lawDiscovered: law,
+        messageVi: `KHOẢNH KHẮC EUREKA! Định luật Snell đã bừng sáng: n = sin(i) / sin(r) = ${n.toFixed(2)}!`,
+      };
+    }
+
     return {
       success: false,
-      messageVi: `Hai biến số "${varA.symbol}" và "${varB.symbol}" chưa tạo thành cặp tương tác định luật trực tiếp. Hãy thử kết hợp Khối lượng (m) và Thể tích (V), hoặc Hiệu điện thế (U) và Dòng điện (I)!`,
+      messageVi: `Hai biến số "${varA.symbol}" và "${varB.symbol}" chưa tạo thành cặp tương tác định luật trực tiếp. Hãy thử kết hợp m & V (KLR), U & I (Ohm), V & F (Archimedes), F & Δl (Hooke), hoặc i & r (Snell)!`,
     };
   }
 
@@ -499,7 +761,7 @@ export class CognitiveNeuralEngine {
 
   /**
    * 🌟 KỊCH BẢN VÀNG VISEF 1-CLICK (GOLDEN DEMO RUN)
-   * Tự động thiết lập cấu hình hoàn hảo cho bài thí nghiệm đo khối lượng riêng (m = 85.0g, V = 31.5mL -> ρ = 2.70 g/cm³)
+   * Tự động thiết lập cấu hình hoàn hảo cho bài thí nghiệm đo khối lượng riêng (m = 66.25g, V = 24.5mL -> ρ = 2.70 g/cm³)
    * và kích hoạt khoảnh khắc Eureka để học sinh tự tin trình diễn trước Ban Giám khảo KHKT!
    */
   public triggerGoldenViSEFDemo(): void {
@@ -511,15 +773,15 @@ export class CognitiveNeuralEngine {
       symbolLatex: '$m$',
       nameVi: 'Khối lượng mẫu nhôm',
       unitVi: 'g',
-      value: 85.0,
-      formattedValue: '85.00',
+      value: 66.25,
+      formattedValue: '66.25',
       sourceInstanceId: 'inst_golden_balance',
       sourceAssetId: 'OL3D-EQP-BAL-0001',
       sourceDeviceNameVi: 'Cân điện tử hiện số 500g',
       uncertaintyTypeA: 0.015,
       uncertaintyTypeB: 0.0058,
       expandedUncertainty: 0.032,
-      isoGumText: '85.00 ± 0.03 g',
+      isoGumText: '66.25 ± 0.03 g',
       worldPositionM: [-0.25, 0.28, 0.0],
       isActive: true,
       isFused: false,
@@ -532,15 +794,15 @@ export class CognitiveNeuralEngine {
       symbolLatex: '$V$',
       nameVi: 'Thể tích nước dâng lên (V₂ - V₁)',
       unitVi: 'mL',
-      value: 31.5,
-      formattedValue: '31.5',
+      value: 24.5,
+      formattedValue: '24.5',
       sourceInstanceId: 'inst_golden_cylinder',
       sourceAssetId: 'OL3D-EQP-CYL-0001',
       sourceDeviceNameVi: 'Ống đong thủy tinh 100ml',
       uncertaintyTypeA: 0.25,
       uncertaintyTypeB: 0.58,
       expandedUncertainty: 1.26,
-      isoGumText: '31.5 ± 1.3 mL',
+      isoGumText: '24.5 ± 1.3 mL',
       worldPositionM: [0.25, 0.28, 0.0],
       isActive: true,
       isFused: false,

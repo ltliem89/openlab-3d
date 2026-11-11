@@ -1,6 +1,6 @@
 /**
  * OPENLAB 3D - NEURAL DEVICE TOPOLOGY DOMAIN DATA (BẢN TỐI ƯU SƯ PHẠM KHTN THCS)
- * Hệ tri thức topo Mạng Nơ-ron Thần kinh mô phỏng liên kết 36 thiết bị thí nghiệm
+ * Hệ tri thức topo Mạng Nơ-ron Thần kinh mô phỏng liên kết 40 thiết bị thí nghiệm
  * Bổ sung: Phân lớp THCS (Lớp 6, 7, 8, 9), Diễn giải ngôn ngữ học sinh, 
  * Tiến trình thực hành từng bước (Step-by-Step Guided Flows), Biểu tượng Vector & Mẹo an toàn.
  */
@@ -259,7 +259,7 @@ export const NEURAL_DEVICE_NODES: NeuralDeviceNode[] = [
     studentPorts: ['Khoang rỗng bên trong'],
     description: 'Mẫu vật khảo sát vật nổi/chìm và lực đẩy Archimedes.',
     studentTip: 'Mặc dù làm bằng kim loại nhưng có ruột rỗng chứa không khí nên vật có thể nổi trên mặt nước!',
-    mathFormula: 'F_A = \\rho_{\\text{nước}} \\cdot g \\cdot V_{\\text{chìm}}',
+    mathFormula: 'F_A = \\rho_{\\text{nuoc}} \\cdot g \\cdot V_{\\text{chim}}',
     sgkFormula: 'Lực đẩy Ac-si-met: F_A = d · V_chìm',
     glyphIcon: '🕳️'
   },
@@ -371,7 +371,7 @@ export const NEURAL_DEVICE_NODES: NeuralDeviceNode[] = [
     studentPorts: ['Miệng bình thả vật', 'Vòi xả tràn nghiêng'],
     description: 'Đo thể tích các vật không lọt ống đong qua vòi xả tràn nghiêng 30°.',
     studentTip: 'Chờ nước chảy hết qua vòi tràn trước khi thả vật vào, để chỉ hứng đúng lượng nước bị chiếm chỗ!',
-    mathFormula: 'V_{\\text{vật}} = V_{\\text{nước tràn}}',
+    mathFormula: 'V_{\\text{vat}} = V_{\\text{tran}}',
     sgkFormula: 'Vật chìm đẩy nước tràn ra cốc hứng',
     glyphIcon: '🫗'
   },
@@ -427,7 +427,7 @@ export const NEURAL_DEVICE_NODES: NeuralDeviceNode[] = [
     studentPorts: ['Tim bấc đèn', 'Nắp đậy dập lửa'],
     description: 'Nguồn gia nhiệt bằng cồn 90°, nhiệt độ ngọn lửa 600 - 800°C.',
     studentTip: 'Tuyệt đối không thổi bằng miệng! Hãy đậy nắp đèn cồn lại để dập tắt ngọn lửa an toàn.',
-    mathFormula: 'Q = m_{\\text{cồn}} \\cdot q_{\\text{cháy}}',
+    mathFormula: 'Q = m_{\\text{con}} \\cdot q',
     sgkFormula: 'Nguồn nhiệt đun sôi dung dịch',
     glyphIcon: '🔥'
   },
@@ -445,7 +445,7 @@ export const NEURAL_DEVICE_NODES: NeuralDeviceNode[] = [
     studentPorts: ['Lòng bát chịu lửa', 'Mỏ rót nhỏ'],
     description: 'Cô đặc dung dịch muối và nung chất rắn ở nhiệt độ cao.',
     studentTip: 'Dùng kẹp gắp bát sứ nóng, không dùng tay trần chạm vào bát sứ vừa đun!',
-    mathFormula: 'm_{\\text{muối}} = m_{\\text{sau}} - m_{\\text{bát}}',
+    mathFormula: 'm_{\\text{muoi}} = m_{\\text{sau}} - m_{\\text{bat}}',
     sgkFormula: 'Đun cạn nước thu muối ăn kết tinh',
     glyphIcon: '🥣'
   },
@@ -463,7 +463,7 @@ export const NEURAL_DEVICE_NODES: NeuralDeviceNode[] = [
     studentPorts: ['Khóa xả đáy', 'Miệng nạp có nút'],
     description: 'Tách hai chất lỏng không hòa tan có khối lượng riêng khác nhau.',
     studentTip: 'Vặn khóa từ từ để chất lỏng nặng ở dưới chảy hết xuống cốc thì khóa ngay lại!',
-    mathFormula: '\\rho_{\\text{dưới}} > \\rho_{\\text{trên}}',
+    mathFormula: '\\rho_{\\text{duoi}} > \\rho_{\\text{tren}}',
     sgkFormula: 'Tách dầu ăn và nước',
     glyphIcon: '⏳'
   },
@@ -663,7 +663,7 @@ export const NEURAL_DEVICE_NODES: NeuralDeviceNode[] = [
     studentPorts: ['3 mặt kính tam giác đều', 'Trục xoay giá đỡ'],
     description: 'Tán sắc chùm ánh sáng trắng thành dải 7 màu biến thiên liên tục.',
     studentTip: 'Ánh sáng trắng bị lăng kính tách thành dải màu Cầu Vồng: Đỏ, Cam, Vàng, Lục, Lam, Chàm, Tím.',
-    mathFormula: 'n_{\\text{tím}} > n_{\\text{đỏ}}',
+    mathFormula: 'n_{\\text{tim}} > n_{\\text{do}}',
     sgkFormula: 'Tách ánh sáng trắng thành 7 màu cầu vồng',
     glyphIcon: '🌈'
   },
@@ -795,7 +795,7 @@ export const NEURAL_DEVICE_NODES: NeuralDeviceNode[] = [
     studentPorts: ['Ống thị kính nhìn', 'Mâm 3 vật kính 10x, 40x', 'Ốc sơ cấp & vi cấp'],
     description: 'Phóng đại 40x..400x quan sát tế bào sinh học, điều khiển vi cấp & sơ cấp.',
     studentTip: 'Dùng ốc to (sơ cấp) để tìm thấy hình mẫu mờ mờ, sau đó vặn ốc nhỏ (vi cấp) thật khẽ để hình ảnh nét căng!',
-    mathFormula: 'M = M_{\\text{thị}} \\times M_{\\text{vật}}',
+    mathFormula: 'M = M_{\\text{thi}} \\times M_{\\text{vat}}',
     sgkFormula: 'Độ phóng đại = Thị kính × Vật kính (Ví dụ: 10 × 40 = 400 lần)',
     glyphIcon: '🔬'
   },
@@ -810,11 +810,11 @@ export const NEURAL_DEVICE_NODES: NeuralDeviceNode[] = [
     subject: 'biology',
     grades: ['grade9'],
     ports: [],
-    studentPorts: ['Trục xoắn 3D', 'Các cặp bazơ A-T, G-X'],
-    description: 'Mô hình 3D trực quan hóa nguyên tắc bổ sung A-T, G-X.',
-    studentTip: 'Ghi nhớ nguyên tắc bổ sung: Nu loại A luôn ghép đôi với T, Nu loại G luôn ghép đôi với X.',
-    mathFormula: 'A + G = T + C',
-    sgkFormula: 'Nguyên tắc bổ sung: A nối với T, G nối với X',
+    studentPorts: ['Trục xoắn 3D', 'Các cặp base A-T, G-C'],
+    description: 'Mô hình 3D trực quan hóa nguyên tắc bổ sung A-T, G-C (Chuẩn GDPT 2018).',
+    studentTip: 'Ghi nhớ nguyên tắc bổ sung: Nucleotide loại A liên kết với T qua 2 liên kết hydro, G liên kết với C qua 3 liên kết hydro.',
+    mathFormula: 'A = T, \\quad G = C',
+    sgkFormula: 'Nguyên tắc bổ sung: A nối với T, G nối với C',
     glyphIcon: '🧬'
   },
 
@@ -985,6 +985,18 @@ export const NEURAL_SYNAPSE_EDGES: NeuralSynapseEdge[] = [
     causalRule: 'Vật kích thước > 28mm thả vào bình tràn kích hoạt xả nước qua vòi tràn',
     studentCausal: 'Khối đồng to không vừa ống đong → Thả vào bình tràn làm nước trào qua vòi',
     experimentContext: 'Đo thể tích vật không bỏ lọt ống đong'
+  },
+  {
+    id: 'SYN-CYL-OVF',
+    source: 'solid-cylinder',
+    target: 'overflow-can',
+    type: 'submersion',
+    connectorId: 'CONN_OVERFLOW_CAN_APERTURE',
+    weight: 0.95,
+    signalSpeed: 1.5,
+    causalRule: 'Trụ nhôm thả ngập trong bình tràn đẩy lượng nước tràn bằng thể tích vật V = 24.5 cm³',
+    studentCausal: 'Thả chìm khối nhôm vào bình tràn → Nước tràn qua vòi 24.5 mL sang cốc hứng',
+    experimentContext: 'Thí nghiệm đo lực đẩy Archimedes bằng bình tràn'
   },
   {
     id: 'SYN-OVF-BKR',
@@ -1366,12 +1378,12 @@ export const NEURAL_SYNAPSE_EDGES: NeuralSynapseEdge[] = [
     id: 'SYN-HLW-DYN',
     source: 'hollow-cylinder',
     target: 'spring-dynamometer',
-    type: 'buoyancy_force',
+    type: 'mechanical_hook',
     connectorId: 'CONN_SPRING_DYNO_HOOK',
     weight: 0.92,
     signalSpeed: 1.4,
-    causalRule: 'Treo vật rỗng vào lực kế và nhúng nước: Lực đẩy Archimedes nâng vật làm giảm số chỉ lực kế',
-    studentCausal: 'Móc ống rỗng vào lực kế rồi hạ chìm vào nước → Lực kế giảm số chỉ do lực đẩy nâng lên',
+    causalRule: 'Móc vật rỗng Duralumin vào móc lực kế để đo trọng lượng P1 và lực căng dây P2 khi nhúng nước',
+    studentCausal: 'Móc ống rỗng vào lực kế → Đo trọng lượng vật trước và khi nhúng vào nước',
     experimentContext: 'Khảo sát lực đẩy Archimedes tác dụng lên vật rỗng'
   },
   {
@@ -1636,16 +1648,16 @@ export const EXPERIMENT_MACRO_CLUSTERS: ExperimentMacroCluster[] = [
     deviceIds: ['electronic-balance', 'graduated-cylinder', 'overflow-can', 'spring-dynamometer', 'solid-cylinder', 'beaker-250', 'water-dispenser'],
     description: 'Đo trọng lượng vật trong không khí và khi nhúng chìm trong nước. Chứng minh độ lớn lực đẩy Ác-si-mét đúng bằng trọng lượng phần nước bị vật chiếm chỗ.',
     studentGoal: 'Tại sao khi nhúng một vật vào nước ta lại cảm thấy vật nhẹ hơn?',
-    coreEquation: 'F_A = P_{\\text{khí}} - P_{\\text{nước}} = \\rho \\cdot g \\cdot V',
-    sgkFormula: 'Độ giảm trọng lượng = Trọng lượng nước tràn ra (F_A = P1 - P2)',
+    coreEquation: 'F_A = P_1 - P_2 = \\rho \\cdot g \\cdot V',
+    sgkFormula: 'Độ giảm trọng lượng = Trọng lượng nước tràn ra (F_A = P1 - P2 = 0.24 N)',
     steps: [
       {
         stepNumber: 1,
         title: 'Bước 1: Đo trọng lượng vật ngoài không khí (P1)',
-        instruction: 'Dùng lực kế lò xo móc vào mẫu vật hình trụ nhôm và đọc số chỉ P1 ngoài không khí.',
+        instruction: 'Dùng lực kế lò xo móc vào mẫu vật hình trụ nhôm ($m = 66.25\\,\\text{g}$) và đọc số chỉ $P_1$ ngoài không khí.',
         activeDeviceIds: ['solid-cylinder', 'spring-dynamometer'],
         activeSynapseIds: ['SYN-CYL-DYN'],
-        focusNote: 'Ví dụ số chỉ P1 = 2.0 Newton.'
+        focusNote: 'Số chỉ lực kế ngoài không khí $P_1 = 0.65\\,\\text{N}$.'
       },
       {
         stepNumber: 2,
@@ -1658,18 +1670,18 @@ export const EXPERIMENT_MACRO_CLUSTERS: ExperimentMacroCluster[] = [
       {
         stepNumber: 3,
         title: 'Bước 3: Nhúng vật chìm vào nước và hứng nước tràn',
-        instruction: 'Nhúng từ từ vật đang treo trên lực kế vào bình tràn. Đọc số chỉ P2 trên lực kế và hứng toàn bộ nước tràn vào cốc.',
+        instruction: 'Nhúng từ từ vật đang treo trên lực kế vào bình tràn. Đọc số chỉ $P_2$ trên lực kế và hứng toàn bộ nước tràn vào cốc.',
         activeDeviceIds: ['spring-dynamometer', 'solid-cylinder', 'overflow-can', 'beaker-250'],
-        activeSynapseIds: ['SYN-DYN-BKR', 'SYN-OVF-BKR'],
-        focusNote: 'Số chỉ lực kế giảm xuống còn P2 = 1.3 N (Nhẹ hơn 0.7 N!).'
+        activeSynapseIds: ['SYN-CYL-DYN', 'SYN-CYL-OVF', 'SYN-OVF-BKR'],
+        focusNote: 'Số chỉ lực kế giảm xuống còn $P_2 = 0.41\\,\\text{N}$ $\\implies$ Lực đẩy $F_A = 0.65 - 0.41 = 0.24\\,\\text{N}$.'
       },
       {
         stepNumber: 4,
         title: 'Bước 4: Cân lượng nước tràn để đối chiếu',
-        instruction: 'Đem cốc nước tràn đặt lên cân điện tử. Khối lượng nước tràn ra có trọng lượng đúng bằng 0.7 N!',
+        instruction: 'Đem cốc nước tràn đặt lên cân điện tử. Khối lượng nước tràn $m = 24.5\\,\\text{g}$ có trọng lượng $P_{\\text{nuoc}} = 0.24\\,\\text{N}$ đúng bằng $F_A$!',
         activeDeviceIds: ['beaker-250', 'electronic-balance'],
         activeSynapseIds: ['SYN-BKR-BAL'],
-        focusNote: 'Kết luận: Lực đẩy Ác-si-mét đúng bằng trọng lượng nước bị chiếm chỗ!'
+        focusNote: 'Kết luận: Lực đẩy Ác-si-mét đúng bằng trọng lượng nước bị chiếm chỗ ($F_A = 0.24\\,\\text{N}$).'
       }
     ]
   },
@@ -1720,7 +1732,7 @@ export const EXPERIMENT_MACRO_CLUSTERS: ExperimentMacroCluster[] = [
     deviceIds: ['microscope', 'dna-model', 'magnifying-glass'],
     description: 'Điều chỉnh ốc sơ cấp và vi cấp để hội tụ trường nhìn vào lớp tế bào biểu bì hoặc nhiễm sắc thể, liên hệ cấu trúc vi thể với mô hình DNA.',
     studentGoal: 'Tế bào sinh vật có hình dạng như thế nào dưới độ phóng đại hàng trăm lần?',
-    coreEquation: 'M_{\\text{tổng}} = M_{\\text{thị}} \\times M_{\\text{vật}}',
+    coreEquation: 'M_{\\text{tong}} = M_{\\text{thi}} \\times M_{\\text{vat}}',
     sgkFormula: 'Độ phóng đại = Thị kính 10x × Vật kính 40x = 400 lần',
     steps: [
       {

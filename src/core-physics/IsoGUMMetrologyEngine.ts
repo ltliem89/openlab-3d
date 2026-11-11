@@ -24,13 +24,13 @@
  * 
  * 3. ĐÁP ỨNG ĐỘNG HỌC GIẢM CHẤN LOADCELL CÂN ĐIỆN TỬ ($\tau = 0.8\text{ s}$):
  *    - Phương trình vi phân dao động tắt dần bậc 2:
- *      $$\ddot{m} + 2 \zeta \omega_n \dot{m} + \omega_n^2 m = \omega_n^2 m_{\text{thực}}$$
+ *      $$\ddot{m} + 2 \zeta \omega_n \dot{m} + \omega_n^2 m = \omega_n^2 m_{\text{thuc}}$$
  *      với hằng số thời gian $\tau = 0.8\text{ s}$, hệ số giảm chấn $\zeta = 0.68$, $\omega_n = \frac{1}{\tau \zeta} \approx 1.838\text{ rad/s}$.
  * 
  * 4. SAI SỐ THỊ SAI GÓC NHÌN ỐNG ĐONG CHIA ĐỘ ($\Delta V_{\text{parallax}}$):
  *    - Khi mắt quan sát lệch một góc $\theta_{\text{view}}$ so với phương ngang tiếp tuyến đáy mặt cong Meniscus:
  *      $$\Delta h_{\text{parallax}} = R_{\text{trong}} \cdot \tan(\theta_{\text{view}})$$
- *      $$\Delta V_{\text{parallax}} = S_{\text{tiết diện}} \cdot \Delta h_{\text{parallax}} = \pi R_{\text{trong}}^3 \cdot \tan(\theta_{\text{view}})$$
+ *      $$\Delta V_{\text{parallax}} = S_{\text{tiet dien}} \cdot \Delta h_{\text{parallax}} = \pi R_{\text{trong}}^3 \cdot \tan(\theta_{\text{view}})$$
  */
 
 // ==========================================
@@ -109,10 +109,10 @@ export const TT38_METROLOGY_CATALOG: Record<string, InstrumentMetrologySpec> = {
     symbol: 'F',
     equipmentCodeTT38: 'TB-VL-05',
   },
-  // 6. Thước cặp cơ khí 150mm (du xích 0.05mm)
+  // 6. Thước cặp cơ khí 150mm (du xích chuẩn 0.02mm)
   VERNIER_CALIPER_150MM: {
-    leastCount: 0.05,
-    instrumentalError: 0.05,
+    leastCount: 0.02,
+    instrumentalError: 0.02,
     unit: 'mm',
     symbol: 'd',
     equipmentCodeTT38: 'TB-VL-06',
@@ -124,6 +124,38 @@ export const TT38_METROLOGY_CATALOG: Record<string, InstrumentMetrologySpec> = {
     unit: '°C',
     symbol: 'T',
     equipmentCodeTT38: 'TB-KHTN-07',
+  },
+  // 8. Thước thẳng 300mm / 1mm
+  STEEL_RULER_300MM: {
+    leastCount: 1.0,
+    instrumentalError: 0.5,
+    unit: 'mm',
+    symbol: 'l',
+    equipmentCodeTT38: 'TB-KHTN-08',
+  },
+  // 9. Panme đo ngoài 0-25mm / 0.01mm
+  MICROMETER_25MM: {
+    leastCount: 0.01,
+    instrumentalError: 0.01,
+    unit: 'mm',
+    symbol: 'd',
+    equipmentCodeTT38: 'TB-VL-09',
+  },
+  // 10. Đồng hồ vạn năng hiện số DMM
+  DIGITAL_MULTIMETER_DMM: {
+    leastCount: 0.01,
+    instrumentalError: 0.02,
+    unit: 'V',
+    symbol: 'U',
+    equipmentCodeTT38: 'TB-VL-10',
+  },
+  // 11. Đồng hồ bấm giây hiện số 0.01s
+  DIGITAL_STOPWATCH_001S: {
+    leastCount: 0.01,
+    instrumentalError: 0.02,
+    unit: 's',
+    symbol: 't',
+    equipmentCodeTT38: 'TB-KHTN-11',
   },
 };
 
@@ -303,7 +335,7 @@ export class IsoGUMMetrologyEngine {
 
   /**
    * Mô phỏng đáp ứng dao động tắt dần bậc 2 của Loadcell cân điện tử:
-   * $$m(t) = m_{\text{đích}} \left[ 1 - e^{-\zeta \omega_n t} \left(\cos(\omega_d t) + \frac{\zeta}{\sqrt{1 - \zeta^2}}\sin(\omega_d t)\right) \right]$$
+   * $$m(t) = m_{\text{dich}} \left[ 1 - e^{-\zeta \omega_n t} \left(\cos(\omega_d t) + \frac{\zeta}{\sqrt{1 - \zeta^2}}\sin(\omega_d t)\right) \right]$$
    * với $\tau = 0.8\text{ s}$, $\zeta = 0.68$.
    * 
    * @param targetMassG Khối lượng thực đặt lên đĩa cân (gam)
@@ -417,9 +449,10 @@ export class IsoGUMMetrologyEngine {
   // ==========================================
 
   public static quantizeToLeastCount(value: number, leastCount: number): number {
-    if (leastCount <= 0) return value;
-    const factor = 1.0 / leastCount;
-    return Math.round(value * factor) / factor;
+    if (leastCount <= 0 || !Number.isFinite(leastCount)) return value;
+    const quantized = Math.round((value + Number.EPSILON) / leastCount) * leastCount;
+    const decimals = IsoGUMMetrologyEngine.getDisplayDecimals(leastCount);
+    return Number(quantized.toFixed(decimals));
   }
 
   public static getDisplayDecimals(leastCount: number): number {

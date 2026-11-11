@@ -346,7 +346,7 @@ export const NeuralSynapseIntroPanel: React.FC<NeuralSynapseIntroPanelProps> = (
                   : isDendrite
                   ? 'bg-purple-500/20 text-purple-200 border-purple-400/40'
                   : 'bg-indigo-500/20 text-indigo-200 border-indigo-400/40';
-                const dirLabel = isAxon ? 'Tác động ra (Axon)' : isDendrite ? 'Nhận vào (Dendrite)' : 'Tương tác hai chiều';
+                const dirLabel = isAxon ? 'Tác động ra (Axon)' : isDendrite ? 'Nhận vào (Dendrite · Tia tím)' : 'Tương tác hai chiều';
 
                 return (
                   <div

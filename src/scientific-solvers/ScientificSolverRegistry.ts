@@ -32,32 +32,101 @@ export class ScientificSolverRegistry {
   }
 
   /**
-   * Tự động điều phối đến solver phù hợp nhất dựa trên Archetype hoặc SolverKind
+   * Tự động điều phối đến solver phù hợp nhất dựa trên SolverKind hoặc Archetype (tránh va chạm chuỗi con)
    */
   public solve(kindOrArchetype: string, input: SolverInput): SolverResult<any> {
-    const key = kindOrArchetype.toLowerCase();
+    const key = kindOrArchetype.toLowerCase().trim();
+    const arch = (input.archetype ?? key).toLowerCase().trim();
 
     // 1. Phân loại theo SolverKind trực tiếp
-    if (key === 'circuit' || key.includes('electrical') || key.includes('multimeter') || key.includes('lamp') || key.includes('power-supply')) {
-      return CircuitSolver.solve(input);
-    }
-    if (key === 'optics' || key.includes('lens') || key.includes('prism') || key.includes('laser') || key.includes('slab') || key.includes('microscope')) {
-      return OpticsSolver.solve(input);
-    }
-    if (key === 'fluid-thermal' || key.includes('cylinder') || key.includes('beaker') || key.includes('overflow') || key.includes('burner') || key.includes('vessels') || key.includes('dish') || key.includes('flask')) {
-      return FluidThermalSolver.solve(input);
-    }
-    if (key === 'induction' || key.includes('coil') || key.includes('galvanometer') || key.includes('magnet')) {
-      return ElectromagneticInductionSolver.solve(input);
-    }
-    if (key === 'solution' || key.includes('chemical') || key.includes('nacl') || key.includes('salt') || key.includes('sugar') || key.includes('ph') || key.includes('acid') || key.includes('base') || key.includes('titration')) {
-      return ChemicalSolutionSolver.solve(input);
-    }
-    if (key === 'mechanics' || key.includes('balance') || key.includes('dynamometer') || key.includes('lever') || key.includes('caliper') || key.includes('weight') || key.includes('solid')) {
+    if (key === 'circuit') return CircuitSolver.solve(input);
+    if (key === 'optics') return OpticsSolver.solve(input);
+    if (key === 'fluid-thermal') return FluidThermalSolver.solve(input);
+    if (key === 'induction') return ElectromagneticInductionSolver.solve(input);
+    if (key === 'solution') return ChemicalSolutionSolver.solve(input);
+    if (key === 'mechanics') return MechanicsSolver.solve(input);
+
+    // 2. Điều phối chính xác theo Archetype / Specimen tránh nhầm 'solid-cylinder' hay 'hollow-cylinder' sang FluidThermal!
+    if (
+      arch === 'solid-cylinder' ||
+      arch === 'hollow-cylinder' ||
+      arch === 'solid-sphere' ||
+      arch === 'solid-block' ||
+      arch === 'calibration-weight' ||
+      arch.includes('balance') ||
+      arch.includes('dynamometer') ||
+      arch.includes('lever') ||
+      arch.includes('caliper') ||
+      arch.includes('ruler') ||
+      arch.includes('weight') ||
+      arch.includes('solid-')
+    ) {
       return MechanicsSolver.solve(input);
     }
 
-    // 2. Mặc định rơi vào Mechanics hoặc trả về kết quả rỗng có cảnh báo
+    if (
+      arch.includes('optical') ||
+      arch.includes('lens') ||
+      arch.includes('prism') ||
+      arch.includes('laser') ||
+      arch.includes('slab') ||
+      arch.includes('microscope') ||
+      arch.includes('magnifying') ||
+      arch.includes('frosted-f') ||
+      arch.includes('screen')
+    ) {
+      // optical-power-supply là nguồn điện DC cho đèn quang học, nhưng ở chế độ điện học -> CircuitSolver
+      if (arch.includes('power-supply')) {
+        return CircuitSolver.solve(input);
+      }
+      return OpticsSolver.solve(input);
+    }
+
+    if (
+      arch.includes('electrical') ||
+      arch.includes('multimeter') ||
+      arch.includes('power-supply') ||
+      arch === 'lamp'
+    ) {
+      return CircuitSolver.solve(input);
+    }
+
+    if (
+      arch.includes('thermometer') ||
+      arch.includes('alcohol') ||
+      arch.includes('burner') ||
+      arch.includes('graduated-cylinder') ||
+      arch.includes('beaker') ||
+      arch.includes('overflow') ||
+      arch.includes('vessels') ||
+      arch.includes('dish') ||
+      arch.includes('flask') ||
+      arch.includes('separatory') ||
+      arch.includes('distillation') ||
+      arch.includes('water-dispenser') ||
+      arch.includes('test-tube')
+    ) {
+      return FluidThermalSolver.solve(input);
+    }
+
+    if (arch.includes('coil') || arch.includes('galvanometer') || arch.includes('magnet')) {
+      return ElectromagneticInductionSolver.solve(input);
+    }
+
+    if (
+      arch.includes('chemical') ||
+      arch.includes('nacl') ||
+      arch.includes('salt') ||
+      arch.includes('sugar') ||
+      arch.includes('ph') ||
+      arch.includes('acid') ||
+      arch.includes('base') ||
+      arch.includes('titration')
+    ) {
+      return ChemicalSolutionSolver.solve(input);
+    }
+
+    // 3. Mặc định rơi vào MechanicsSolver
     return MechanicsSolver.solve(input);
   }
 

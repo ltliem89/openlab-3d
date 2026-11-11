@@ -36,6 +36,7 @@ export type ReferenceLibraryCategoryId =
   | 'mass-measurement'
   | 'volume-measurement'
   | 'force-measurement'
+  | 'thermal-equipment'
   | 'specimens';
 
 interface StudentEquipmentSidebarProps {
@@ -71,14 +72,15 @@ const REFERENCE_CATEGORIES: Array<{
   id: ReferenceLibraryCategoryId;
   label: string;
 }> = [
-  { id: 'all', label: 'Tất cả (34+)' },
+  { id: 'all', label: 'Tất cả (40)' },
   { id: 'optical-equipment', label: 'Quang học' },
   { id: 'electrical-equipment', label: 'Điện & Điện từ' },
   { id: 'chemical-apparatus', label: 'Hoá học' },
   { id: 'biology-microscopy', label: 'Sinh học' },
   { id: 'mass-measurement', label: 'Đo khối lượng' },
   { id: 'volume-measurement', label: 'Đo thể tích' },
-  { id: 'force-measurement', label: 'Cơ & Nhiệt' },
+  { id: 'force-measurement', label: 'Cơ học' },
+  { id: 'thermal-equipment', label: 'Nhiệt học' },
   { id: 'specimens', label: 'Vật mẫu' },
 ];
 
@@ -119,6 +121,10 @@ const SHORT_VI_NAMES: Record<string, string> = {
   'OL3D-EQP-WDP-1000': 'Bình cấp nước',
   'OL3D-EQP-LEV-0001': 'Bộ đòn bẩy',
   'OL3D-EQP-HYD-0001': 'Bình thông nhau',
+  'OL3D-EQP-ALC-0001': 'Đèn cồn',
+  'OL3D-EQP-STW-0001': 'Đồng hồ bấm giây',
+  'OL3D-EQP-RLR-0001': 'Thước dẹt 30 cm',
+  'OL3D-EQP-TUB-0001': 'Ống nghiệm',
 };
 
 export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = ({
@@ -772,7 +778,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
                 setActiveCategory('all');
                 onSelectExperiment('OL3D-EXP-DISPLACEMENT-0001');
               }}
-              className={`col-span-2 px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
+              className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
                 activeExperimentId === 'OL3D-EXP-DISPLACEMENT-0001'
                   ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
                   : isDarkMode
@@ -781,7 +787,24 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               }`}
               title="Chọn bài Đo thể tích vật rắn bằng Bình tràn & Lực đẩy Archimedes"
             >
-              ⚓ Bài 15: Bình tràn Eureka & Lực đẩy Ác-si-mét
+              ⚓ Bài 15: Bình tràn & Ác-si-mét
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveCategory('thermal-equipment');
+                onSelectExperiment('OL3D-EXP-THERMAL-BOIL-0001');
+              }}
+              className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
+                activeExperimentId === 'OL3D-EXP-THERMAL-BOIL-0001'
+                  ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
+                  : isDarkMode
+                    ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
+                    : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
+              }`}
+              title="Chọn bài Khảo sát Truyền nhiệt, Đo nhiệt độ sôi & Bảo toàn năng lượng"
+            >
+              🔥 Bài 27: Đo Nhiệt độ sôi & Q
             </button>
           </div>
         </div>

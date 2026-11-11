@@ -491,6 +491,75 @@ export default function App() {
     return map;
   }, [allAssets]);
 
+  const liveWaterTempC = useMemo(() => {
+    const bkr = scene.instances.find(
+      (i) => i.visible && assetsMap.get(i.assetId)?.geometry.proceduralArchetype === 'beaker-250',
+    );
+    const thm = scene.instances.find(
+      (i) => i.visible && assetsMap.get(i.assetId)?.geometry.proceduralArchetype === 'thermometer',
+    );
+    return thm?.instanceState.temperatureC ?? bkr?.instanceState.temperatureC ?? 25.0;
+  }, [scene.instances, assetsMap]);
+
+  const isLiveFlameLit = useMemo(() => {
+    const burner = scene.instances.find(
+      (i) =>
+        i.visible &&
+        assetsMap.get(i.assetId)?.geometry.proceduralArchetype === 'alcohol-burner',
+    );
+    return Boolean(burner?.instanceState.isFlameLit || burner?.instanceState.isHeating);
+  }, [scene.instances, assetsMap]);
+
+  const liveOpticsParams = useMemo(() => {
+    const lens = scene.instances.find(
+      (i) => i.visible && assetsMap.get(i.assetId)?.geometry.proceduralArchetype === 'optical-lens',
+    );
+    return {
+      dCm: lens?.instanceState.objectDistanceDCm ?? 20.0,
+      dPrimeCm: lens?.instanceState.projectedImageDPrimeCm ?? 20.0,
+      fCm: lens?.instanceState.focalLengthCm ?? 10.0,
+    };
+  }, [scene.instances, assetsMap]);
+
+  const liveArchimedesParams = useMemo(() => {
+    const dyn = scene.instances.find(
+      (i) => i.visible && assetsMap.get(i.assetId)?.geometry.proceduralArchetype === 'spring-dynamometer',
+    );
+    const ovf = scene.instances.find(
+      (i) => i.visible && assetsMap.get(i.assetId)?.geometry.proceduralArchetype === 'overflow-can',
+    );
+    const hooked = dyn
+      ? scene.instances.find(
+          (i) =>
+            i.visible &&
+            i.instanceState.attachedToInstanceId === dyn.instanceId &&
+            i.instanceState.attachmentSlot === 'dynamometer-hook',
+        )
+      : undefined;
+    const isSubmerged = scene.instances.some(
+      (i) =>
+        i.visible &&
+        assetsMap.get(i.assetId)?.kind === 'specimen' &&
+        i.instanceState.attachmentSlot === 'inside-vessel',
+    );
+    const rawAirN = hooked
+      ? Number(((assetsMap.get(hooked.assetId)?.scientificProperties.referenceMass?.value ?? 66.25) * 0.00980665).toFixed(2))
+      : dyn?.instanceState.springExtensionN ?? null;
+    const spilledMl = ovf?.instanceState.overflowingVolumeMl ?? 0;
+    const displacedMl = spilledMl > 0 ? spilledMl : isSubmerged ? 24.5 : null;
+    const forceAir = rawAirN && rawAirN > 0 ? rawAirN : studentGuidedStep >= 2 ? 0.65 : null;
+    const forceSub = isSubmerged && forceAir
+      ? Number(Math.max(0, forceAir - (displacedMl ?? 24.5) * 0.00980665).toFixed(2))
+      : studentGuidedStep >= 3
+        ? 0.41
+        : null;
+    return {
+      measuredForceAirN: forceAir,
+      measuredForceSubN: forceSub,
+      displacedVolumeMl: displacedMl ?? (studentGuidedStep >= 3 ? 24.5 : null),
+    };
+  }, [scene.instances, assetsMap, studentGuidedStep]);
+
   // Đồng bộ metadata ảnh thực tế của toàn bộ thiết bị vào EquipmentImagePreviewController (Mục 5.1)
   useEffect(() => {
     equipmentImagePreviewController.syncLibraryEntries(allAssets, (asset) => {
@@ -1407,6 +1476,60 @@ export default function App() {
           }
         }
 
+        // Sync 3D position of items submerged inside a vessel ('inside-vessel') or hooked onto a dynamometer ('dynamometer-hook')
+        if (
+          inst.instanceState.attachedToInstanceId &&
+          inst.instanceState.attachmentSlot === 'inside-vessel'
+        ) {
+          const parentVessel = rawInstances.find(
+            (v) => v.instanceId === inst.instanceState.attachedToInstanceId,
+          );
+          if (parentVessel) {
+            const vRotY = parentVessel.transform.rotationRad[1] ?? 0;
+            const vX = parentVessel.transform.positionM[0];
+            const vZ = parentVessel.transform.positionM[2];
+            const vY =
+              parentVessel.instanceState.attachmentSlot === 'shelf'
+                ? shelfRaisedTierLocalY
+                : 0;
+            const subY = arch === 'thermometer' ? 0.035 : 0.016;
+            inst = {
+              ...inst,
+              transform: {
+                ...inst.transform,
+                positionM: [vX, Number((vY + subY).toFixed(3)), vZ],
+                rotationRad: [0, vRotY, 0],
+              },
+            };
+          }
+        }
+
+        if (
+          inst.instanceState.attachedToInstanceId &&
+          inst.instanceState.attachmentSlot === 'dynamometer-hook'
+        ) {
+          const parentDyn = rawInstances.find(
+            (d) => d.instanceId === inst.instanceState.attachedToInstanceId,
+          );
+          if (parentDyn) {
+            const dY =
+              parentDyn.instanceState.attachmentSlot === 'shelf'
+                ? shelfRaisedTierLocalY
+                : 0;
+            inst = {
+              ...inst,
+              transform: {
+                ...inst.transform,
+                positionM: [
+                  parentDyn.transform.positionM[0],
+                  Number((dY + 0.02).toFixed(3)),
+                  parentDyn.transform.positionM[2],
+                ],
+              },
+            };
+          }
+        }
+
         // 1. Electronic Balance: sum the masses of ALL items on its pan
         if (arch === 'electronic-balance') {
           const itemsOnPan = panItemsByBalance.get(inst.instanceId) ?? [];
@@ -1445,12 +1568,30 @@ export default function App() {
               }
             }
           }
+          let isDirectlyHeated = false;
+          if (arch === 'beaker-250') {
+            const activeBurner = rawInstances.find((b) => {
+              if (!b.visible) return false;
+              const bArch = assetsMap.get(b.assetId)?.geometry.proceduralArchetype;
+              return (
+                (bArch === 'alcohol-burner' || bArch === 'distillation-flask') &&
+                Boolean(b.instanceState.isHeating || b.instanceState.isFlameLit)
+              );
+            });
+            if (activeBurner) {
+              const dx = activeBurner.transform.positionM[0] - inst.transform.positionM[0];
+              const dz = activeBurner.transform.positionM[2] - inst.transform.positionM[2];
+              const distHorizontalM = Math.sqrt(dx * dx + dz * dz);
+              isDirectlyHeated = distHorizontalM <= 0.35;
+            }
+          }
           return {
             ...inst,
             instanceState: {
               ...inst.instanceState,
               baseLiquidLevelMl: baseMl,
               liquidLevelMl: Number((baseMl + displacedVolCm3).toFixed(1)),
+              isHeating: arch === 'beaker-250' ? isDirectlyHeated : inst.instanceState.isHeating,
             },
           };
         }
@@ -1511,7 +1652,7 @@ export default function App() {
               totalHookedMassG += computeItemTotalMassG(sub);
             }
           }
-          const totalForceN = Number((totalHookedMassG * 0.00981).toFixed(2));
+          const totalForceN = Number((totalHookedMassG * 0.00980665).toFixed(2));
           return {
             ...inst,
             instanceState: {
@@ -1552,7 +1693,7 @@ export default function App() {
         if (arch === 'porcelain-dish' || arch === 'distillation-flask') {
           let isDirectlyHeated = false;
           if (arch === 'distillation-flask') {
-            isDirectlyHeated = Boolean(inst.instanceState.isHeating === true);
+            isDirectlyHeated = Boolean(inst.instanceState.isHeating === true || inst.instanceState.isFlameLit === true);
           } else {
             const activeBurner = rawInstances.find((b) => {
               if (!b.visible) return false;
@@ -1567,18 +1708,34 @@ export default function App() {
               const dz = activeBurner.transform.positionM[2] - inst.transform.positionM[2];
               const distHorizontalM = Math.sqrt(dx * dx + dz * dz);
               const dy = inst.transform.positionM[1] - activeBurner.transform.positionM[1];
-              isDirectlyHeated = distHorizontalM <= 0.10 && dy >= -0.05 && dy <= 0.25;
+              isDirectlyHeated = distHorizontalM <= 0.35 && dy >= -0.05 && dy <= 0.35;
             }
           }
-          const targetTempC = isDirectlyHeated ? 78.5 : 25.0;
+          const curTemp = inst.instanceState.temperatureC ?? 25.0;
           return {
             ...inst,
             instanceState: {
               ...inst.instanceState,
               isHeating: isDirectlyHeated,
-              temperatureC: targetTempC,
+              temperatureC: curTemp,
             },
           };
+        }
+
+        // Nhiệt kế đồng bộ nhiệt độ với bình chứa đang nhúng bên trong
+        if (arch === 'thermometer') {
+          if (inst.instanceState.attachedToInstanceId && inst.instanceState.attachmentSlot === 'inside-vessel') {
+            const parentVessel = rawInstances.find((v) => v.instanceId === inst.instanceState.attachedToInstanceId);
+            if (parentVessel) {
+              return {
+                ...inst,
+                instanceState: {
+                  ...inst.instanceState,
+                  temperatureC: parentVessel.instanceState.temperatureC ?? 25.0,
+                },
+              };
+            }
+          }
         }
 
         // 7. Electromagnetic Induction & Galvanometer (P05):
@@ -1805,18 +1962,90 @@ export default function App() {
         ).toFixed(2),
       );
 
-      const draftInstances = scene.instances.map((inst) => {
+      const targetWasOnShelf =
+        Boolean(targetInst) &&
+        targetInst?.instanceState.attachmentSlot === 'shelf' &&
+        slot !== 'shelf' &&
+        slot !== 'bench';
+      const targetBenchOrigin: [number, number, number] | null = targetInst
+        ? targetWasOnShelf
+          ? [
+              targetArch === 'electronic-balance'
+                ? -0.22
+                : targetArch === 'graduated-cylinder'
+                  ? 0.06
+                  : targetArch === 'overflow-can'
+                    ? 0.10
+                    : targetArch === 'beaker-250'
+                      ? 0.24
+                      : targetArch === 'spring-dynamometer'
+                        ? -0.14
+                        : targetArch === 'alcohol-burner'
+                          ? 0.00
+                          : Number(
+                              Math.max(
+                                -0.55,
+                                Math.min(0.55, targetInst.transform.positionM[0]),
+                              ).toFixed(3),
+                            ),
+              0,
+              0.08,
+            ]
+          : targetInst.transform.positionM
+        : null;
+
+      let effectiveFinalPosM = finalPositionM;
+      if (targetWasOnShelf && targetBenchOrigin) {
+        if (slot === 'balance-pan') {
+          const rotY = targetInst?.transform.rotationRad[1] ?? 0;
+          effectiveFinalPosM = [
+            Number((targetBenchOrigin[0] - Math.sin(rotY) * 0.02).toFixed(3)),
+            0.068,
+            Number((targetBenchOrigin[2] - Math.cos(rotY) * 0.02).toFixed(3)),
+          ];
+        } else if (slot === 'inside-vessel') {
+          effectiveFinalPosM = [
+            targetBenchOrigin[0],
+            0.016,
+            targetBenchOrigin[2],
+          ];
+        } else if (slot === 'dynamometer-hook') {
+          effectiveFinalPosM = [
+            targetBenchOrigin[0],
+            0.02,
+            targetBenchOrigin[2],
+          ];
+        }
+      }
+
+      const unitScale: [number, number, number] = [1, 1, 1];
+      const draftInstances: SceneInstance[] = scene.instances.map(
+        (inst): SceneInstance => {
         // Case A0: Bidirectional Vernier Caliper Measurement ('caliper-jaws')
         if (slot === 'caliper-jaws' && caliperPeer && measuredPeer) {
           if (inst.instanceId === caliperPeer.instanceId) {
+            const isCalOnShelf = inst.instanceState.attachmentSlot === 'shelf';
             return {
               ...inst,
               transform:
                 inst.instanceId === draggedInstanceId
-                  ? { ...inst.transform, positionM: finalPositionM }
-                  : inst.transform,
+                  ? {
+                      ...inst.transform,
+                      positionM: effectiveFinalPosM,
+                      displayScale: [1, 1, 1],
+                    }
+                  : isCalOnShelf
+                    ? {
+                        ...inst.transform,
+                        positionM: [-0.08, 0, 0.16] as [number, number, number],
+                        displayScale: [1, 1, 1],
+                      }
+                    : inst.transform,
               instanceState: {
                 ...inst.instanceState,
+                ...(isCalOnShelf
+                  ? { attachedToInstanceId: null, attachmentSlot: 'bench' as const }
+                  : {}),
                 jawOpeningMm: measuredPeerWidthMm,
               },
             };
@@ -1826,8 +2055,12 @@ export default function App() {
               ...inst,
               transform:
                 inst.instanceId === draggedInstanceId
-                  ? { ...inst.transform, positionM: finalPositionM }
-                  : inst.transform,
+                  ? {
+                      ...inst.transform,
+                      positionM: effectiveFinalPosM,
+                      displayScale: [1, 1, 1],
+                    }
+                  : { ...inst.transform, displayScale: [1, 1, 1] },
               instanceState: {
                 ...inst.instanceState,
                 attachedToInstanceId: caliperPeer.instanceId,
@@ -1866,14 +2099,28 @@ export default function App() {
               0,
               Number((dispenserAvailMl - autoDispenseMl).toFixed(1)),
             );
+            const isDispOnShelf = inst.instanceState.attachmentSlot === 'shelf';
             return {
               ...inst,
               transform:
                 inst.instanceId === draggedInstanceId
-                  ? { ...inst.transform, positionM: finalPositionM }
-                  : inst.transform,
+                  ? {
+                      ...inst.transform,
+                      positionM: effectiveFinalPosM,
+                      displayScale: [1, 1, 1],
+                    }
+                  : isDispOnShelf
+                    ? {
+                        ...inst.transform,
+                        positionM: [0.35, 0, 0.08] as [number, number, number],
+                        displayScale: [1, 1, 1],
+                      }
+                    : inst.transform,
               instanceState: {
                 ...inst.instanceState,
+                ...(isDispOnShelf
+                  ? { attachedToInstanceId: null, attachmentSlot: 'bench' as const }
+                  : {}),
                 baseLiquidLevelMl: nextDispMl,
                 liquidLevelMl: nextDispMl,
                 isValveOpen: autoDispenseMl > 0.1,
@@ -1884,14 +2131,12 @@ export default function App() {
             const nextVesselMl = Number(
               (vesselPeerCurBaseMl + autoDispenseMl).toFixed(1),
             );
-            const dispRotY =
-              (isDraggingDispenser
-                ? finalPositionM
-                : dispenserPeer.transform.positionM) &&
-              (dispenserPeer.transform.rotationRad[1] ?? 0);
+            const dispRotY = dispenserPeer.transform.rotationRad[1] ?? 0;
             const dispPos = isDraggingDispenser
-              ? finalPositionM
-              : dispenserPeer.transform.positionM;
+              ? effectiveFinalPosM
+              : dispenserPeer.instanceState.attachmentSlot === 'shelf'
+                ? [0.35, 0, 0.08]
+                : dispenserPeer.transform.positionM;
             const dockSpoutPos: [number, number, number] = [
               Number((dispPos[0] + Math.cos(dispRotY) * 0.095).toFixed(3)),
               0,
@@ -1901,7 +2146,8 @@ export default function App() {
               ...inst,
               transform: {
                 ...inst.transform,
-                positionM: isDraggingDispenser ? dockSpoutPos : finalPositionM,
+                positionM: isDraggingDispenser ? dockSpoutPos : effectiveFinalPosM,
+                displayScale: [1, 1, 1],
               },
               instanceState: {
                 ...inst.instanceState,
@@ -1951,7 +2197,8 @@ export default function App() {
             ...inst,
             transform: {
               ...inst.transform,
-              positionM: finalPositionM,
+              positionM: effectiveFinalPosM,
+              displayScale: slot === 'shelf' ? inst.transform.displayScale : [1, 1, 1],
             },
             instanceState: {
               ...inst.instanceState,
@@ -1980,8 +2227,20 @@ export default function App() {
           const nextMl = Number((targetCurBaseMl + pourAmountMl).toFixed(1));
           return {
             ...inst,
+            ...(targetWasOnShelf && targetBenchOrigin
+              ? {
+                  transform: {
+                    ...inst.transform,
+                    positionM: targetBenchOrigin,
+                    displayScale: [1, 1, 1] as [number, number, number],
+                  },
+                }
+              : {}),
             instanceState: {
               ...inst.instanceState,
+              ...(targetWasOnShelf
+                ? { attachedToInstanceId: null, attachmentSlot: 'bench' as const }
+                : {}),
               liquidLevelMl: nextMl,
               baseLiquidLevelMl: nextMl,
             },
@@ -2001,15 +2260,25 @@ export default function App() {
             0,
             Number((canCurLevelMl + specimenVolumeCm3 - 210).toFixed(1)),
           );
-          if (actualSpillMl > 0.05) {
-            return {
-              ...inst,
-              instanceState: {
-                ...inst.instanceState,
-                isValveOpen: true,
-              },
-            };
-          }
+          return {
+            ...inst,
+            ...(targetWasOnShelf && targetBenchOrigin
+              ? {
+                  transform: {
+                    ...inst.transform,
+                    positionM: targetBenchOrigin,
+                    displayScale: [1, 1, 1] as [number, number, number],
+                  },
+                }
+              : {}),
+            instanceState: {
+              ...inst.instanceState,
+              ...(targetWasOnShelf
+                ? { attachedToInstanceId: null, attachmentSlot: 'bench' as const }
+                : {}),
+              isValveOpen: actualSpillMl > 0.05,
+            },
+          };
         }
 
         // Beaker catches actual overflow water exceeding 210.0 ml when a specimen is newly dropped into Overflow Can
@@ -2021,6 +2290,7 @@ export default function App() {
           draggedArch !== 'thermometer' &&
           draggedInst.instanceState.attachedToInstanceId !== targetInstanceId
         ) {
+          const ovfPos = targetBenchOrigin ?? targetInst.transform.positionM;
           const canCurLevelMl = targetInst.instanceState.liquidLevelMl ?? 210;
           const actualSpillMl = Math.max(
             0,
@@ -2033,23 +2303,32 @@ export default function App() {
           const nextBeakerMl = Number(
             (curBeakerBase + actualSpillMl).toFixed(1),
           );
-          // Automatically position beaker right under the overflow spout (+X side of overflow can) if it is on the bench
+          // Automatically position beaker right under the overflow spout (+X side of overflow can)
           const nextBeakerPos: [number, number, number] =
             inst.instanceState.attachmentSlot === 'balance-pan'
               ? inst.transform.positionM
               : [
-                  Number(Math.min(1.15, targetInst.transform.positionM[0] + 0.122).toFixed(3)),
+                  Number(Math.min(1.15, ovfPos[0] + 0.122).toFixed(3)),
                   0,
-                  Number(targetInst.transform.positionM[2].toFixed(3)),
+                  Number(ovfPos[2].toFixed(3)),
                 ];
           return {
             ...inst,
             transform: {
               ...inst.transform,
               positionM: nextBeakerPos,
+              displayScale: [1, 1, 1],
             },
             instanceState: {
               ...inst.instanceState,
+              attachedToInstanceId:
+                inst.instanceState.attachmentSlot === 'shelf'
+                  ? null
+                  : inst.instanceState.attachedToInstanceId,
+              attachmentSlot:
+                inst.instanceState.attachmentSlot === 'shelf'
+                  ? ('bench' as const)
+                  : inst.instanceState.attachmentSlot,
               baseLiquidLevelMl: nextBeakerMl,
               liquidLevelMl: nextBeakerMl,
             },
@@ -2061,12 +2340,41 @@ export default function App() {
           if (slot === 'caliper-jaws' && inst.instanceId === targetInstanceId) {
             return {
               ...inst,
+              ...(targetWasOnShelf && targetBenchOrigin
+                ? {
+                    transform: {
+                      ...inst.transform,
+                      positionM: targetBenchOrigin,
+                      displayScale: [1, 1, 1] as [number, number, number],
+                    },
+                  }
+                : {}),
               instanceState: {
                 ...inst.instanceState,
+                ...(targetWasOnShelf
+                  ? { attachedToInstanceId: null, attachmentSlot: 'bench' as const }
+                  : {}),
                 jawOpeningMm: specimenWidthMm,
               },
             };
           }
+        }
+
+        // Bring any other target apparatus (e.g. Electronic Balance, Graduated Cylinder, Dynamometer) down from shelf to bench
+        if (targetWasOnShelf && inst.instanceId === targetInstanceId && targetBenchOrigin) {
+          return {
+            ...inst,
+            transform: {
+              ...inst.transform,
+              positionM: targetBenchOrigin,
+              displayScale: [1, 1, 1],
+            },
+            instanceState: {
+              ...inst.instanceState,
+              attachedToInstanceId: null,
+              attachmentSlot: 'bench' as const,
+            },
+          };
         }
 
         return inst;
@@ -2391,11 +2699,15 @@ export default function App() {
     );
     if (!specimen || !balance) return;
 
+    const balanceBenchPos: [number, number, number] =
+      balance.instanceState.attachmentSlot === 'shelf'
+        ? [-0.22, 0, 0.08]
+        : balance.transform.positionM;
     const rotY = balance.transform.rotationRad[1] ?? 0;
     const targetPos: [number, number, number] = [
-      Number((balance.transform.positionM[0] - Math.sin(rotY) * 0.02).toFixed(3)),
+      Number((balanceBenchPos[0] - Math.sin(rotY) * 0.02).toFixed(3)),
       0.068,
-      Number((balance.transform.positionM[2] - Math.cos(rotY) * 0.02).toFixed(3)),
+      Number((balanceBenchPos[2] - Math.cos(rotY) * 0.02).toFixed(3)),
     ];
     setSelectedInstanceId(specimen.instanceId);
     handlePhysicalDockInteraction(
@@ -2423,10 +2735,14 @@ export default function App() {
     );
     if (!specimen || !cylinder) return;
 
+    const cylBenchPos: [number, number, number] =
+      cylinder.instanceState.attachmentSlot === 'shelf'
+        ? [0.06, 0, 0.08]
+        : cylinder.transform.positionM;
     const targetPos: [number, number, number] = [
-      cylinder.transform.positionM[0],
+      cylBenchPos[0],
       0.016,
-      cylinder.transform.positionM[2],
+      cylBenchPos[2],
     ];
     setSelectedInstanceId(specimen.instanceId);
     handlePhysicalDockInteraction(
@@ -2451,9 +2767,12 @@ export default function App() {
         expId === 'OL3D-EXP-DENSITY-0001';
       const isOptics = expId === 'OL3D-EXP-OPTICS-LENS-0001';
       const isDisplacement = expId === 'OL3D-EXP-DISPLACEMENT-0001';
+      const isThermal = expId === 'OL3D-EXP-THERMAL-BOIL-0001';
 
       if (isDensity) {
-        if (nextStep === 2) {
+        if (nextStep === 1) {
+          handlePlaceAllRequiredForExperiment();
+        } else if (nextStep === 2) {
           handleQuickWeighSpecimen();
         } else if (nextStep === 3) {
           handleQuickSubmergeSpecimen();
@@ -2487,17 +2806,190 @@ export default function App() {
         if (nextStep === 1) {
           handlePlaceAllRequiredForExperiment();
         } else if (nextStep === 2) {
+          const dyn = scene.instances.find(
+            (i) => assetsMap.get(i.assetId)?.geometry.proceduralArchetype === 'spring-dynamometer',
+          );
+          const sp = scene.instances.find((i) => {
+            const a = assetsMap.get(i.assetId);
+            return a?.geometry.proceduralArchetype === 'solid-cylinder' || a?.kind === 'specimen';
+          });
+          if (dyn && sp) {
+            const dynPos: [number, number, number] =
+              dyn.instanceState.attachmentSlot === 'shelf' ? [-0.14, 0, 0.08] : dyn.transform.positionM;
+            handlePhysicalDockInteraction(
+              sp.instanceId,
+              dyn.instanceId,
+              'dynamometer-hook',
+              [dynPos[0], 0.02, dynPos[2]],
+            );
+          }
           notify('Lực kế lò xo 5 N đo trọng lượng vật trong không khí: $P = 0.65\\,\\text{N}$.', 'info');
         } else if (nextStep === 3) {
+          const ovf = scene.instances.find(
+            (i) => assetsMap.get(i.assetId)?.geometry.proceduralArchetype === 'overflow-can',
+          );
+          const sp = scene.instances.find((i) => {
+            const a = assetsMap.get(i.assetId);
+            return a?.geometry.proceduralArchetype === 'solid-cylinder' || a?.kind === 'specimen';
+          });
+          if (ovf && sp) {
+            const ovfPos: [number, number, number] =
+              ovf.instanceState.attachmentSlot === 'shelf' ? [0.10, 0, 0.08] : ovf.transform.positionM;
+            handlePhysicalDockInteraction(
+              sp.instanceId,
+              ovf.instanceId,
+              'inside-vessel',
+              [ovfPos[0], 0.016, ovfPos[2]],
+            );
+          }
           notify('Lực đẩy Archimedes: $F_A = P - F = 0.65 - 0.41 = 0.24\\,\\text{N}$ ($V = 24.5\\,\\text{mL}$).', 'success');
+        }
+      } else if (isThermal) {
+        const placeThermalBenchIfOnShelf = (
+          list: SceneInstance[],
+          mode: 'ambient' | 'heating' | 'boiling',
+        ): SceneInstance[] => {
+          const beakerInst = list.find(
+            (x) => assetsMap.get(x.assetId)?.geometry.proceduralArchetype === 'beaker-250',
+          );
+          return reconcileCumulativeLabMeasurements(
+            list.map((i) => {
+              const a = assetsMap.get(i.assetId)?.geometry.proceduralArchetype;
+              const offShelf = i.instanceState.attachmentSlot === 'shelf';
+              if (a === 'alcohol-burner') {
+                return {
+                  ...i,
+                  transform: offShelf
+                    ? { ...i.transform, positionM: [0.0, 0, 0.08] as [number, number, number], displayScale: [1, 1, 1] as [number, number, number] }
+                    : i.transform,
+                  instanceState: {
+                    ...i.instanceState,
+                    ...(offShelf ? { attachedToInstanceId: null, attachmentSlot: 'bench' as const } : {}),
+                    isFlameLit: mode !== 'ambient',
+                    isHeating: mode !== 'ambient',
+                  },
+                };
+              }
+              if (a === 'beaker-250') {
+                return {
+                  ...i,
+                  transform: offShelf
+                    ? { ...i.transform, positionM: [0.13, 0, 0.08] as [number, number, number], displayScale: [1, 1, 1] as [number, number, number] }
+                    : i.transform,
+                  instanceState: {
+                    ...i.instanceState,
+                    ...(offShelf ? { attachedToInstanceId: null, attachmentSlot: 'bench' as const } : {}),
+                    liquidLevelMl: i.instanceState.liquidLevelMl ?? 100,
+                    baseLiquidLevelMl: i.instanceState.baseLiquidLevelMl ?? 100,
+                    temperatureC:
+                      mode === 'ambient'
+                        ? 25.0
+                        : mode === 'boiling'
+                          ? 100.0
+                          : i.instanceState.temperatureC ?? 25.0,
+                  },
+                };
+              }
+              if (a === 'thermometer') {
+                const bx = beakerInst
+                  ? beakerInst.instanceState.attachmentSlot === 'shelf'
+                    ? 0.13
+                    : beakerInst.transform.positionM[0]
+                  : 0.13;
+                const bz = beakerInst
+                  ? beakerInst.instanceState.attachmentSlot === 'shelf'
+                    ? 0.08
+                    : beakerInst.transform.positionM[2]
+                  : 0.08;
+                return {
+                  ...i,
+                  transform: offShelf
+                    ? { ...i.transform, positionM: [bx, 0.035, bz] as [number, number, number], displayScale: [1, 1, 1] as [number, number, number] }
+                    : i.transform,
+                  instanceState: {
+                    ...i.instanceState,
+                    ...(beakerInst
+                      ? { attachedToInstanceId: beakerInst.instanceId, attachmentSlot: 'inside-vessel' as const }
+                      : offShelf
+                        ? { attachedToInstanceId: null, attachmentSlot: 'bench' as const }
+                        : {}),
+                    temperatureC:
+                      mode === 'ambient'
+                        ? 25.0
+                        : mode === 'boiling'
+                          ? 100.0
+                          : i.instanceState.temperatureC ?? 25.0,
+                  },
+                };
+              }
+              if (a === 'digital-stopwatch' && offShelf) {
+                return {
+                  ...i,
+                  transform: {
+                    ...i.transform,
+                    positionM: [0.28, 0, 0.08] as [number, number, number],
+                    displayScale: [1, 1, 1] as [number, number, number],
+                  },
+                  instanceState: {
+                    ...i.instanceState,
+                    attachedToInstanceId: null,
+                    attachmentSlot: 'bench' as const,
+                    isTimerRunning: mode === 'heating',
+                  },
+                };
+              }
+              return i;
+            }),
+          );
+        };
+
+        if (nextStep === 1) {
+          handlePlaceAllRequiredForExperiment();
+        } else if (nextStep === 2) {
+          setScene((prev) => ({
+            ...prev,
+            sceneRevision: prev.sceneRevision + 1,
+            instances: placeThermalBenchIfOnShelf(prev.instances, 'ambient'),
+          }));
+          labSoundEngine.play('probe-measure', { value: 25 });
+          notify(
+            'Nhiệt độ ban đầu của 100 mL nước: $T_1 = 25{,}0^\\circ\\text{C}$ (ĐCNN nhiệt kế: $1{,}0^\\circ\\text{C}$).',
+            'info',
+          );
+        } else if (nextStep === 3) {
+          setScene((prev) => ({
+            ...prev,
+            sceneRevision: prev.sceneRevision + 1,
+            instances: placeThermalBenchIfOnShelf(prev.instances, 'heating'),
+          }));
+          labSoundEngine.play('burner-ignite');
+          notify(
+            'Đã châm lửa đèn cồn: Công suất nhiệt truyền vào nước $P_{\\text{toa}} \\approx 250\\text{ W}$, nhiệt độ đang tăng dần.',
+            'warning',
+          );
+        } else if (nextStep === 4) {
+          setScene((prev) => ({
+            ...prev,
+            sceneRevision: prev.sceneRevision + 1,
+            instances: placeThermalBenchIfOnShelf(prev.instances, 'boiling'),
+          }));
+          labSoundEngine.play('water-boil-rumble');
+          notify(
+            'Nước đạt nhiệt độ sôi ổn định tại $T_{\\text{soi}} = 100{,}0^\\circ\\text{C}$ (ở 1 atm). Nhiệt lượng thu vào: $Q = m \\cdot c \\cdot \\Delta T = 0{,}10 \\cdot 4184 \\cdot (100 - 25) = 31380\\text{ J}$.',
+            'success',
+          );
         }
       }
     },
     [
       activeExperiment.experimentId,
+      assetsMap,
+      scene.instances,
+      handlePhysicalDockInteraction,
       handleQuickWeighSpecimen,
       handleQuickSubmergeSpecimen,
       handlePlaceAllRequiredForExperiment,
+      reconcileCumulativeLabMeasurements,
       selectedInstanceId,
       measuredMassG,
       finalVolumeCm3,
@@ -2505,6 +2997,184 @@ export default function App() {
       notify,
     ],
   );
+
+  // Quick Thermal Actions (Burner Toggle & Cool Water)
+  const handleQuickToggleBurnerFlame = useCallback(() => {
+    const curBurner = scene.instances.find(
+      (i) => assetsMap.get(i.assetId)?.geometry.proceduralArchetype === 'alcohol-burner',
+    );
+    const nextLit = !Boolean(curBurner?.instanceState.isFlameLit || curBurner?.instanceState.isHeating);
+    setScene((prev) => {
+      const beakerInst = prev.instances.find(
+        (x) => assetsMap.get(x.assetId)?.geometry.proceduralArchetype === 'beaker-250',
+      );
+      const nextList = prev.instances.map((item) => {
+        const a = assetsMap.get(item.assetId)?.geometry.proceduralArchetype;
+        const offShelf = item.instanceState.attachmentSlot === 'shelf';
+        if (a === 'alcohol-burner') {
+          return {
+            ...item,
+            transform: offShelf
+              ? { ...item.transform, positionM: [0.0, 0, 0.08] as [number, number, number], displayScale: [1, 1, 1] as [number, number, number] }
+              : item.transform,
+            instanceState: {
+              ...item.instanceState,
+              ...(offShelf ? { attachedToInstanceId: null, attachmentSlot: 'bench' as const } : {}),
+              isFlameLit: nextLit,
+              isHeating: nextLit,
+            },
+          };
+        }
+        if (nextLit && a === 'beaker-250' && offShelf) {
+          return {
+            ...item,
+            transform: { ...item.transform, positionM: [0.13, 0, 0.08] as [number, number, number], displayScale: [1, 1, 1] as [number, number, number] },
+            instanceState: {
+              ...item.instanceState,
+              attachedToInstanceId: null,
+              attachmentSlot: 'bench' as const,
+              liquidLevelMl: item.instanceState.liquidLevelMl ?? 100,
+              baseLiquidLevelMl: item.instanceState.baseLiquidLevelMl ?? 100,
+            },
+          };
+        }
+        if (nextLit && a === 'thermometer' && offShelf) {
+          return {
+            ...item,
+            transform: { ...item.transform, positionM: [0.13, 0.035, 0.08] as [number, number, number], displayScale: [1, 1, 1] as [number, number, number] },
+            instanceState: {
+              ...item.instanceState,
+              attachedToInstanceId: beakerInst?.instanceId ?? null,
+              attachmentSlot: beakerInst ? ('inside-vessel' as const) : ('bench' as const),
+            },
+          };
+        }
+        return item;
+      });
+      return {
+        ...prev,
+        sceneRevision: prev.sceneRevision + 1,
+        instances: reconcileCumulativeLabMeasurements(nextList),
+      };
+    });
+    labSoundEngine.play(nextLit ? 'burner-ignite' : 'burner-extinguish');
+    notify(
+      nextLit
+        ? '🔥 Đã châm lửa đèn cồn: Ngọn lửa tỏa nhiệt đun sôi nước.'
+        : '🛑 Đã đậy nắp dập tắt ngọn lửa đèn cồn an toàn.',
+      nextLit ? 'warning' : 'info',
+    );
+  }, [scene.instances, assetsMap, reconcileCumulativeLabMeasurements, notify]);
+
+  const handleQuickCoolWater = useCallback(() => {
+    setScene((prev) => ({
+      ...prev,
+      sceneRevision: prev.sceneRevision + 1,
+      instances: reconcileCumulativeLabMeasurements(
+        prev.instances.map((item) => {
+          const a = assetsMap.get(item.assetId)?.geometry.proceduralArchetype;
+          if (a === 'beaker-250' || a === 'thermometer' || a === 'porcelain-dish') {
+            return {
+              ...item,
+              instanceState: {
+                ...item.instanceState,
+                temperatureC: 25.0,
+                isHeating: false,
+              },
+            };
+          }
+          if (a === 'alcohol-burner') {
+            return {
+              ...item,
+              instanceState: {
+                ...item.instanceState,
+                isFlameLit: false,
+                isHeating: false,
+              },
+            };
+          }
+          if (a === 'digital-stopwatch') {
+            return {
+              ...item,
+              instanceState: {
+                ...item.instanceState,
+                isTimerRunning: false,
+              },
+            };
+          }
+          return item;
+        }),
+      ),
+    }));
+    labSoundEngine.play('water-splash');
+    notify('❄️ Đã tắt đèn cồn và làm nguội nước về nhiệt độ phòng $T = 25{,}0^\\circ\\text{C}$.', 'info');
+  }, [assetsMap, reconcileCumulativeLabMeasurements, notify]);
+
+  // Continuous Thermal Boiling Loop when Burner is Lit
+  useEffect(() => {
+    const hasLitBurner = scene.instances.some((i) => {
+      if (!i.visible) return false;
+      const arch = assetsMap.get(i.assetId)?.geometry.proceduralArchetype;
+      return (
+        (arch === 'alcohol-burner' || arch === 'distillation-flask') &&
+        Boolean(i.instanceState.isHeating || i.instanceState.isFlameLit)
+      );
+    });
+    if (!hasLitBurner) return;
+
+    const timer = window.setInterval(() => {
+      setScene((prev) => {
+        let changed = false;
+        let peakTemp = 25.0;
+        const nextInstances = prev.instances.map((item) => {
+          const arch = assetsMap.get(item.assetId)?.geometry.proceduralArchetype;
+          if (arch === 'beaker-250' || arch === 'thermometer' || arch === 'porcelain-dish') {
+            const curT = item.instanceState.temperatureC ?? 25.0;
+            if (curT < 100.0) {
+              const nextT = Math.min(100.0, Number((curT + 1.5).toFixed(1)));
+              changed = true;
+              peakTemp = Math.max(peakTemp, nextT);
+              return {
+                ...item,
+                instanceState: {
+                  ...item.instanceState,
+                  temperatureC: nextT,
+                },
+              };
+            }
+            peakTemp = Math.max(peakTemp, curT);
+          }
+          if (arch === 'digital-stopwatch') {
+            changed = true;
+            return {
+              ...item,
+              instanceState: {
+                ...item.instanceState,
+                recordedTimeS: (item.instanceState.recordedTimeS ?? 0) + 1,
+                isTimerRunning: true,
+              },
+            };
+          }
+          return item;
+        });
+
+        if (peakTemp >= 75.0 && peakTemp < 77.0) {
+          labSoundEngine.play('water-simmer', { intensity: 0.7 });
+        } else if (peakTemp >= 99.0 && peakTemp <= 100.0 && changed) {
+          labSoundEngine.play('water-boil-rumble', { intensity: 0.9 });
+        }
+
+        if (!changed) return prev;
+        return {
+          ...prev,
+          sceneRevision: prev.sceneRevision + 1,
+          instances: nextInstances,
+        };
+      });
+    }, 450);
+
+    return () => window.clearInterval(timer);
+  }, [scene.instances, assetsMap]);
 
   // Header 4-step bar click handler
   const handleChangeHeaderProgressStep = useCallback(
@@ -2655,11 +3325,15 @@ export default function App() {
             ? nextUnweighedSpecimen ?? specimen
             : inst ?? nextUnweighedSpecimen ?? specimen;
         if (!itemToWeigh || !balance) return;
+        const balancePos: [number, number, number] =
+          balance.instanceState.attachmentSlot === 'shelf'
+            ? [-0.22, 0, 0.08]
+            : balance.transform.positionM;
         const rotY = balance.transform.rotationRad[1] ?? 0;
         const targetPos: [number, number, number] = [
-          Number((balance.transform.positionM[0] - Math.sin(rotY) * 0.02).toFixed(3)),
+          Number((balancePos[0] - Math.sin(rotY) * 0.02).toFixed(3)),
           0.068,
-          Number((balance.transform.positionM[2] - Math.cos(rotY) * 0.02).toFixed(3)),
+          Number((balancePos[2] - Math.cos(rotY) * 0.02).toFixed(3)),
         ];
         setSelectedInstanceId(itemToWeigh.instanceId);
         handlePhysicalDockInteraction(
@@ -2715,10 +3389,14 @@ export default function App() {
           return;
         }
 
+        const cylPos: [number, number, number] =
+          cylinder.instanceState.attachmentSlot === 'shelf'
+            ? [0.06, 0, 0.08]
+            : cylinder.transform.positionM;
         const targetPos: [number, number, number] = [
-          cylinder.transform.positionM[0],
+          cylPos[0],
           0.016,
-          cylinder.transform.positionM[2],
+          cylPos[2],
         ];
         setSelectedInstanceId(itemToSubmerge.instanceId);
         handlePhysicalDockInteraction(
@@ -3288,7 +3966,7 @@ export default function App() {
       }
 
       if (action === 'toggle-burner-flame' && inst && asset) {
-        const nextHeat = inst.instanceState.isHeating === false;
+        const nextHeat = !(inst.instanceState.isHeating || inst.instanceState.isFlameLit);
         setScene((prev) => ({
           ...prev,
           sceneRevision: prev.sceneRevision + 1,
@@ -3299,6 +3977,7 @@ export default function App() {
                   instanceState: {
                     ...item.instanceState,
                     isHeating: nextHeat,
+                    isFlameLit: nextHeat,
                   },
                 }
               : item,
@@ -4254,6 +4933,11 @@ export default function App() {
         experimentId: exp.experimentId,
         environmentId: exp.recommendedEnvironmentId || prev.environmentId,
       }));
+      if (clearWorkbenchForNewLesson) {
+        setMeasuredMassG(null);
+        setFinalVolumeCm3(null);
+        setInitialVolumeCm3(50);
+      }
       setSelectedInstanceId(null);
       setCurrentStepIndex(0);
       setStudentGuidedStep(1);
@@ -4328,6 +5012,13 @@ export default function App() {
           'OL3D-EQP-SLD-0001',
           'OL3D-EQP-WGT-0001',
         ],
+        'thermal-equipment': [
+          'OL3D-EQP-STD-0001',
+          'OL3D-EQP-BKR-0001',
+          'OL3D-EQP-ALC-0001',
+          'OL3D-EQP-THM-0001',
+          'OL3D-EQP-STW-0001',
+        ],
         specimens: [
           'OL3D-EQP-SLD-0001',
           'OL3D-EQP-SPH-0001',
@@ -4356,6 +5047,11 @@ export default function App() {
         setScene((prev) => ({
           ...prev,
           experimentId: 'OL3D-EXP-OPTICS-LENS-0001',
+        }));
+      } else if (categoryId === 'thermal-equipment') {
+        setScene((prev) => ({
+          ...prev,
+          experimentId: 'OL3D-EXP-THERMAL-BOIL-0001',
         }));
       }
     },
@@ -4713,6 +5409,16 @@ export default function App() {
                         selectedInstanceId ?? '',
                       )
                     }
+                    waterTemperatureC={liveWaterTempC}
+                    isFlameLit={isLiveFlameLit}
+                    onQuickIgniteBurner={handleQuickToggleBurnerFlame}
+                    onQuickCoolWater={handleQuickCoolWater}
+                    measuredForceAirN={liveArchimedesParams.measuredForceAirN}
+                    measuredForceSubN={liveArchimedesParams.measuredForceSubN}
+                    displacedVolumeMl={liveArchimedesParams.displacedVolumeMl}
+                    opticalDCm={liveOpticsParams.dCm}
+                    opticalDPrimeCm={liveOpticsParams.dPrimeCm}
+                    opticalFCm={liveOpticsParams.fCm}
                   />
                 )}
               </div>

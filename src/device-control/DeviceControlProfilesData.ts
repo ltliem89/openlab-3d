@@ -528,7 +528,7 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
     equations: [
       {
         id: 'eq-cal-1',
-        latex: 'L = N_{\\text{chính}} + (k_{\\text{du\\,xích}} \\times 0.02\\,\\text{mm})',
+        latex: 'L = N_{\\text{chinh}} + (k_{\\text{du\\,xich}} \\times 0.02\\,\\text{mm})',
         meaningVi: 'Số đo bằng số milimét trên thước chính cộng với vạch du xích trùng nhân 0.02 mm',
       },
     ],
@@ -674,10 +674,10 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
     titleVi: 'Vật rắn hình cầu thép không gỉ',
     group: 'G02/G01',
     curriculumLessonVi: 'KHTN 8 · Bài 14: Đo khối lượng riêng của vật rắn hình cầu',
-    technicalStandardVi: 'SUS304 · Đường kính Ø30.0 mm · m = 110.27 g',
+    technicalStandardVi: 'SUS304 · Đường kính Ø20.0 mm · m = 33.0 g (thả lọt ống đong Ø28 mm)',
     initialState: {
-      diameterMm: 30.0,
-      massG: 110.27,
+      diameterMm: 20.0,
+      massG: 33.0,
     },
     stateSchema: {
       diameterMm: 'number',
@@ -698,21 +698,21 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
           partNameVi: 'Khối cầu thép không gỉ',
           functionVi: 'Kiểm nghiệm thể tích hình cầu V = 4/3*pi*R^3 và khối lượng riêng thép.',
           operationGuideVi: 'Kẹp đo đường kính bằng thước cặp du xích tại 3 hướng khác nhau lấy trung bình.',
-          expectedFeedbackVi: 'D = 30.0 mm -> V = 14.14 cm3 -> D = 7.80 g/cm3.',
+          expectedFeedbackVi: 'D = 20.0 mm -> V = 4.19 cm3 -> D = 7.88 g/cm3.',
           commonErrorsVi: 'Để bi lăn rơi khỏi bàn thí nghiệm.',
-          safetyNotesVi: 'Bi thép nặng 110 g, tránh để rơi vào chân.',
+          safetyNotesVi: 'Bi thép nặng 33 g, tránh để rơi vào chân.',
         },
       },
     ],
     equations: [
       {
         id: 'eq-sph-1',
-        latex: 'V = \\frac{4}{3}\\pi R^3 = \\frac{\\pi D^3}{6} \\approx 14.14\\,\\text{cm}^3',
-        meaningVi: 'Thể tích hình cầu đường kính 30.0 mm',
+        latex: 'V = \\frac{4}{3}\\pi R^3 = \\frac{\\pi D^3}{6} \\approx 4.19\\,\\text{cm}^3',
+        meaningVi: 'Thể tích hình cầu đường kính 20.0 mm',
       },
       {
         id: 'eq-sph-2',
-        latex: 'D = \\frac{m}{V} = \\frac{110.27}{14.14} \\approx 7.80\\,\\text{g/cm}^3',
+        latex: 'D = \\frac{m}{V} = \\frac{33.0}{4.19} \\approx 7.88\\,\\text{g/cm}^3',
         meaningVi: 'Khối lượng riêng của thép không gỉ',
       },
     ],
@@ -721,10 +721,10 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
       { key: 'sphereDensity', labelVi: 'Khối lượng riêng (D)', unit: 'g/cm³', formulaTex: 'D', formatDecimals: 2 },
     ],
     safetyRules: ['Đặt bi vào khay lõm chống lăn rơi tự do.'],
-    testCases: [{ id: 'TC-SPH-01', name: 'Sphere density', expected: 'D = 7.80 g/cm3' }],
+    testCases: [{ id: 'TC-SPH-01', name: 'Sphere density', expected: 'D = 7.88 g/cm3' }],
     evaluateOutputs: () => ({
-      sphereVolumeCm3: 14.14,
-      sphereDensity: 7.80,
+      sphereVolumeCm3: 4.19,
+      sphereDensity: 7.88,
     }),
   },
 
@@ -804,7 +804,7 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
     titleVi: 'Ống trụ kim loại rỗng có khoang kín',
     group: 'G02/G04',
     curriculumLessonVi: 'KHTN 8 · Bài 17: Lực đẩy Archimedes – Điều kiện chìm nổi của vật rỗng',
-    technicalStandardVi: 'Đồng thau · D_ngoài = 30 mm, D_trong = 24 mm, H = 50 mm · Khoang kín nắp ren',
+    technicalStandardVi: 'Hợp kim nhôm Al-6061 · D_ngoài = 24 mm, D_trong = 21 mm, H = 55 mm · V_bao = 24.88 cm³, m_vỏ = 18.6 g · Khoang kín nắp ren',
     initialState: {
       isWaterSealed: true,
       submergedState: 'FLOATING',
@@ -827,9 +827,9 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
         help: {
           title: 'Nắp ren kín khí',
           partNameVi: 'Nắp vặn có gioăng cao su chống nước',
-          functionVi: 'Minh chứng nguyên lý chìm nổi: khi khoang rỗng chứa không khí, khối lượng riêng trung bình nhỏ hơn nước nên vật nổi; khi ngập nước, vật chìm.',
+          functionVi: 'Minh chứng nguyên lý chìm nổi: khi khoang kín chứa không khí, khối lượng riêng trung bình (0.75 g/cm³) nhỏ hơn nước nên vật nổi; khi ngập nước (m_tổng = 36.6 g), trọng lượng vượt lực đẩy nên vật chìm.',
           operationGuideVi: 'Bật ON để giữ khoang kín (Vật NỔI); Tắt OFF để nước ngập khoang rỗng (Vật CHÌM).',
-          expectedFeedbackVi: 'Trạng thái nổi trên mặt nước hoặc chìm xuống đáy cốc đổi tức thời.',
+          expectedFeedbackVi: 'Trạng thái nổi trên mặt nước (ngập 74.8%) hoặc chìm xuống đáy cốc đổi tức thời.',
           commonErrorsVi: 'Vặn nắp lỏng làm nước rò rỉ vào khoang.',
           safetyNotesVi: 'Kiểm tra gioăng cao su trước khi làm thí nghiệm.',
         },
@@ -838,7 +838,7 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
     equations: [
       {
         id: 'eq-hlw-1',
-        latex: 'F_A = d_{nước} \\cdot V_{bao} > P_{tổng} \\implies \\text{Vật NỔI}',
+        latex: 'F_A = d_{\\text{nuoc}} \\cdot V_{\\text{bao}} > P_{\\text{vo}} \\implies \\text{Vat NOI}',
         meaningVi: 'Điều kiện nổi: Lực đẩy Archimedes của thể tích bao lớn hơn trọng lượng',
       },
     ],
@@ -848,7 +848,7 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
     safetyRules: ['Lau khô bên trong khoang rỗng sau buổi thực hành.'],
     testCases: [{ id: 'TC-HLW-01', name: 'Flotation check', expected: 'Kín khí -> Nổi; Ngập nước -> Chìm' }],
     evaluateOutputs: (state) => ({
-      buoyancyStatusVi: state.isWaterSealed ? '🟢 Nổi trên mặt nước (F_A > P)' : '🔴 Chìm xuống đáy (F_A < P)',
+      buoyancyStatusVi: state.isWaterSealed ? '🟢 Nổi trên mặt nước (F_A > P, chìm 74.8%)' : '🔴 Chìm xuống đáy (F_A < P_ngập)',
     }),
   },
 
@@ -1273,13 +1273,13 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
     equations: [
       {
         id: 'eq-scr-1',
-        latex: '\\text{Độ nét} = 100\\% \\times \\exp\\left(-\\frac{(x_{màn} - x_{ảnh})^2}{2\\sigma^2}\\right)',
+        latex: '\\text{Do net} = 100\\% \\times \\exp\\left(-\\frac{(x_{màn} - x_{ảnh})^2}{2\\sigma^2}\\right)',
         meaningVi: 'Hàm Gauss mô tả độ nét của ảnh khi dịch chuyển màn qua tiêu diện',
       },
     ],
     outputs: [
       { key: 'screenPositionCm', labelVi: 'Vị trí màn trên ray', unit: 'cm', formulaTex: 'x_{màn}', formatDecimals: 1 },
-      { key: 'sharpnessPercent', labelVi: 'Độ rõ nét của ảnh', unit: '%', formulaTex: '\\text{Nét}', formatDecimals: 0 },
+      { key: 'sharpnessPercent', labelVi: 'Độ rõ nét của ảnh', unit: '%', formulaTex: '\\text{Net}', formatDecimals: 0 },
     ],
     safetyRules: ['Chỉ ảnh thật mới hứng được trên màn chắn. Ảnh ảo không hứng được.'],
     testCases: [{ id: 'TC-SCR-01', name: 'Sharpness test', expected: 'Đặt đúng tiêu diện đạt độ nét >= 90%' }],
@@ -1698,7 +1698,7 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
       },
       {
         id: 'eq-prm-2',
-        latex: 'n_{\\text{đỏ}} < n_{\\text{cam}} < \\dots < n_{\\text{tím}}',
+        latex: 'n_{\\text{do}} < n_{\\text{cam}} < \\dots < n_{\\text{tim}}',
         meaningVi: 'Chiết suất của thủy tinh tăng dần từ ánh sáng đỏ đến ánh sáng tím khiến tia tím bị lệch nhiều nhất',
       },
     ],
@@ -2056,7 +2056,7 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
     equations: [
       {
         id: 'eq-dsh-1',
-        latex: 'm_{\\text{muối}} = m_{dd} \\cdot \\frac{C\\%}{100\\%}',
+        latex: 'm_{\\text{muoi}} = m_{dd} \\cdot \\frac{C\\%}{100\\%}',
         meaningVi: 'Khối lượng chất tan kết tinh sau khi nước bay hơi hoàn toàn',
       },
     ],
@@ -2122,7 +2122,7 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
     equations: [
       {
         id: 'eq-sep-1',
-        latex: '\\rho_{\\text{dầu}} \\approx 0.8\\,\\text{g/ml} < \\rho_{\\text{nước}} = 1.0\\,\\text{g/ml}',
+        latex: '\\rho_{\\text{dau}} \\approx 0.8\\,\\text{g/ml} < \\rho_{\\text{nuoc}} = 1.0\\,\\text{g/ml}',
         meaningVi: 'Chất lỏng không tan phân lớp: Lớp nhẹ hơn nổi lên trên, lớp nặng hơn chìm xuống dưới',
       },
     ],
@@ -2188,7 +2188,7 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
     equations: [
       {
         id: 'eq-dst-1',
-        latex: 'T_{\\text{sôi, ethanol}} = 78.3^\\circ\\text{C} < T_{\\text{sôi, nước}} = 100^\\circ\\text{C}',
+        latex: 'T_{\\text{soi, ethanol}} = 78.3^\\circ\\text{C} < T_{\\text{soi, nuoc}} = 100^\\circ\\text{C}',
         meaningVi: 'Chưng cất phân đoạn dựa trên sự khác biệt về nhiệt độ sôi của các cấu tử',
       },
     ],
@@ -2385,7 +2385,7 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
       },
       {
         id: 'eq-dna-2',
-        latex: '1\\,\\text{chu kỳ} = 10\\,\\text{cặp base} = 3.4\\,\\text{nm},\\quad \\Phi = 2.0\\,\\text{nm}',
+        latex: '1\\,\\text{chu ky} = 10\\,\\text{cap base} = 3.4\\,\\text{nm},\\quad \\Phi = 2.0\\,\\text{nm}',
         meaningVi: 'Kích thước chuẩn không gian của chuỗi xoắn kép DNA dạng B',
       },
     ],
@@ -2722,7 +2722,7 @@ export const DEVICE_CONTROL_PROFILES: Record<string, DeviceControlProfile> = {
       },
       {
         id: 'eq-hyd-2',
-        latex: 'h_1 = h_2 = h_3 = \\text{hằng số}',
+        latex: 'h_1 = h_2 = h_3 = \\text{hang so}',
         meaningVi: 'Trong bình thông nhau chứa cùng một chất lỏng đứng yên, các mực chất lỏng luôn ở cùng một độ cao',
       },
     ],

@@ -10,33 +10,33 @@
  *      $$\dot{Q}_{\text{in}} = \eta \cdot P_{\text{Joule}}$$
  *      $$\dot{Q}_{\text{loss}} = h \cdot S \cdot (T - T_{\text{mt}})$$
  *      $$\dot{Q}_{\text{net}} = \dot{Q}_{\text{in}} - \dot{Q}_{\text{loss}}$$
- *      $$\frac{dT}{dt} = \frac{\dot{Q}_{\text{net}}}{m_{\text{lỏng}} c_{\text{lỏng}} + C_{\text{cốc}}}$$
- *    - Trạng thái sôi và bốc hơi chất lỏng ở nhiệt độ sôi ($T \ge T_{\text{sôi}} = 100^\circ\text{C}$):
- *      $$\frac{dm_{\text{lỏng}}}{dt} = -\frac{\max(0, \dot{Q}_{\text{net}})}{L_{\text{hóa hơi}}}$$
+ *      $$\frac{dT}{dt} = \frac{\dot{Q}_{\text{net}}}{m_{\text{long}} c_{\text{long}} + C_{\text{coc}}}$$
+ *    - Trạng thái sôi và bốc hơi chất lỏng ở nhiệt độ sôi ($T \ge T_{\text{soi}} = 100^\circ\text{C}$):
+ *      $$\frac{dm_{\text{long}}}{dt} = -\frac{\max(0, \dot{Q}_{\text{net}})}{L_{\text{hoa hoi}}}$$
  *      với nhiệt hóa hơi của nước $L = 2.26 \times 10^6\text{ J/kg}$.
  *    - Cột chất lỏng và áp suất thủy tĩnh biến thiên liên tục:
- *      $$V(t) = \frac{m(t)}{\rho(T)}, \quad h(t) = \frac{V(t)}{S_{\text{đáy}}}, \quad p = p_0 + \rho g h(t)$$
+ *      $$V(t) = \frac{m(t)}{\rho(T)}, \quad h(t) = \frac{V(t)}{S_{\text{day}}}, \quad p = p_0 + \rho g h(t)$$
  * 
  * 2. TỪ -> ĐIỆN -> CƠ:
  *    - Cảm ứng điện từ Faraday: Nam châm rơi qua ống dây làm biến thiên từ thông:
- *      $$\mathcal{E}_{\text{ind}} = -N \frac{d\Phi}{dt} = -N \left(\frac{\partial B_z}{\partial z} S_{\text{ống}}\right) v$$
+ *      $$\mathcal{E}_{\text{ind}} = -N \frac{d\Phi}{dt} = -N \left(\frac{\partial B_z}{\partial z} S_{\text{ong}}\right) v$$
  *    - Dòng điện cảm ứng trong mạch cuộn dây:
- *      $$i = \frac{\mathcal{E}_{\text{ind}}}{R_{\text{tổng}}} = -\frac{N}{R_{\text{tổng}}}\frac{d\Phi}{dt}$$
+ *      $$i = \frac{\mathcal{E}_{\text{ind}}}{R_{\text{tong}}} = -\frac{N}{R_{\text{tong}}}\frac{d\Phi}{dt}$$
  *    - Lực hãm Lenz-Lorentz hãm chuyển động rơi của nam châm:
- *      $$F_{\text{Lenz}} = -\left(N \frac{\partial B}{\partial z}\right)^2 \frac{v}{R_{\text{tổng}}}$$
+ *      $$F_{\text{Lenz}} = -\left(N \frac{\partial B}{\partial z}\right)^2 \frac{v}{R_{\text{tong}}}$$
  *    - Phương trình động lực học nam châm:
- *      $$m \frac{dv}{dt} = m g + F_{\text{Lenz}} - \gamma_{\text{khí}} v, \quad \frac{dz}{dt} = v$$
+ *      $$m \frac{dv}{dt} = m g + F_{\text{Lenz}} - \gamma_{\text{khi}} v, \quad \frac{dz}{dt} = v$$
  *      đạt vận tốc tới hạn (Terminal Eddy Current Velocity) khi $F_{\text{Lenz}} + m g = 0$.
  * 
  * 3. DÂY TÓC BÓNG ĐÈN PHI TUYẾN THEO NHIỆT ĐỘ & DÒNG XUNG KÍCH (INRUSH CURRENT):
  *    - Điện trở dây tóc vonfram biến thiên phi tuyến theo nhiệt độ:
  *      $$R(T) = R_0 [1 + \alpha(T - T_0) + \beta(T - T_0)^2]$$
  *      với $T_0 = 293.15\text{ K}$, $\alpha = 4.5 \times 10^{-3}\text{ K}^{-1}$, $\beta = 1.0 \times 10^{-6}\text{ K}^{-2}$.
- *    - Khi dây tóc nguội ($T = 293\text{ K}$), $R_{\text{nguội}} = R_0 \approx 1\ \Omega$.
+ *    - Khi dây tóc nguội ($T = 293\text{ K}$), $R_{\text{nguoi}} = R_0 \approx 1\ \Omega$.
  *    - Dòng xung kích tức thời (Inrush current) vọt cao gấp 10-12 lần dòng danh định khi đóng mạch:
- *      $$I(0) = \frac{U}{R_0 + R_{\text{mạch}}} \gg I_{\text{định mức}}$$
+ *      $$I(0) = \frac{U}{R_0 + R_{\text{mach}}} \gg I_{\text{dinh muc}}$$
  *    - Phương trình cân bằng nhiệt dây tóc:
- *      $$C_{\text{dây tóc}} \frac{dT}{dt} = I^2 R(T) - \varepsilon \sigma S_{\text{dây tóc}} (T^4 - T_{\text{mt}}^4) - h_{\text{khí}} S (T - T_{\text{mt}})$$
+ *      $$C_{\text{day toc}} \frac{dT}{dt} = I^2 R(T) - \varepsilon \sigma S_{\text{day toc}} (T^4 - T_{\text{mt}}^4) - h_{\text{khi}} S (T - T_{\text{mt}})$$
  */
 
 import { ContinuousIntegratorRK4, DerivativeFunction } from './ContinuousIntegratorRK4';
@@ -352,7 +352,7 @@ export class MultiPhysicsCouplingBus {
    */
   private _evaluateDerivatives: DerivativeFunction = (_t, y, dydt) => {
     const tFluidC = y[0];
-    const mLiquidKg = y[1];
+    const mLiquidKg = Math.max(0.0, y[1]);
     const zMagnet = y[2];
     const vMagnet = y[3];
     const tFilamentK = y[4];
@@ -368,30 +368,24 @@ export class MultiPhysicsCouplingBus {
     let dTFluidDt = 0.0;
     let dMLiquidDt = 0.0;
 
+    const rBeaker = this._etf_beakerRadiusM;
+    const baseArea = Math.PI * rBeaker * rBeaker;
+    const liquidVolM3 = Math.max(1e-6, mLiquidKg / WATER_ROOM_DENSITY_KG_M3);
+    const hLiquid = liquidVolM3 / baseArea;
+    const sideArea = 2.0 * Math.PI * rBeaker * hLiquid;
+    const topSurfaceArea = baseArea; // Mặt thoáng tự do bốc hơi & bức xạ
+    const surfaceArea = baseArea + sideArea + topSurfaceArea;
+
     if (this._etf_closed && this._etf_U > 0.0) {
       // Công suất Joule: P = U^2 / R
       const pJoule = (this._etf_U * this._etf_U) / this._etf_R_heater;
       const qIn = pJoule * this._etf_efficiency;
-
-      // Diện tích truyền nhiệt thành cốc + mặt thoáng chất lỏng
-      const rBeaker = this._etf_beakerRadiusM;
-      const baseArea = Math.PI * rBeaker * rBeaker;
-      // Chiều cao chất lỏng xấp xỉ
-      const liquidVolM3 = Math.max(1e-6, mLiquidKg / WATER_ROOM_DENSITY_KG_M3);
-      const hLiquid = liquidVolM3 / baseArea;
-      const sideArea = 2.0 * Math.PI * rBeaker * hLiquid;
-      const surfaceArea = baseArea + sideArea;
 
       // Làm nguội Newton: Q_loss = h * S * (T - T_mt)
       const qLoss = this._etf_heatTransferCoeff_h * surfaceArea * Math.max(0.0, tFluidC - ambientTempC);
       qNetW = qIn - qLoss;
     } else {
       // Khi ngắt điện: chỉ làm nguội tự nhiên
-      const rBeaker = this._etf_beakerRadiusM;
-      const baseArea = Math.PI * rBeaker * rBeaker;
-      const liquidVolM3 = Math.max(1e-6, mLiquidKg / WATER_ROOM_DENSITY_KG_M3);
-      const hLiquid = liquidVolM3 / baseArea;
-      const surfaceArea = baseArea + 2.0 * Math.PI * rBeaker * hLiquid;
       const qLoss = this._etf_heatTransferCoeff_h * surfaceArea * (tFluidC - ambientTempC);
       qNetW = -qLoss;
     }

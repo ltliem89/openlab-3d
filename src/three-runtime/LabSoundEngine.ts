@@ -53,6 +53,8 @@ export type LabSoundPhenomenonType =
   | 'spring-stretch'
   | 'burner-ignite'
   | 'burner-extinguish'
+  | 'water-simmer'
+  | 'water-boil-rumble'
   | 'laser-switch'
   | 'optics-angle'
   | 'electric-induction'
@@ -531,6 +533,100 @@ class LabSoundEngineImpl {
         case 'burner-extinguish': {
           // Tiếng đậy nắp chụp dập tắt đèn cồn
           this.play('glass-clink');
+          break;
+        }
+
+        case 'water-simmer': {
+          // Tiếng nước bắt đầu reo / sôi lăn tăn ở 70..90°C (tiếng sủi bọt khí nhỏ li ti)
+          const simDur = 0.55;
+          const buf = ctx.createBuffer(
+            1,
+            Math.floor(ctx.sampleRate * simDur),
+            ctx.sampleRate,
+          );
+          const ch = buf.getChannelData(0);
+          for (let i = 0; i < ch.length; i++) {
+            const env = Math.sin((i / ch.length) * Math.PI);
+            ch[i] = (Math.random() * 2 - 1) * env * 0.45;
+          }
+          const noise = ctx.createBufferSource();
+          noise.buffer = buf;
+
+          const hp = ctx.createBiquadFilter();
+          hp.type = 'bandpass';
+          hp.frequency.setValueAtTime(1400 + ratio * 900, now);
+          hp.Q.value = 3.2;
+
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.08 + ratio * 0.08, now);
+          noise.connect(hp);
+          hp.connect(g);
+          g.connect(out);
+          noise.start(now);
+          noise.stop(now + simDur);
+
+          // 4 tiếng bọt khí li ti vỡ trên mặt thoáng
+          [0.05, 0.17, 0.29, 0.43].forEach((offset, idx) => {
+            const osc = ctx.createOscillator();
+            const bg = ctx.createGain();
+            osc.type = 'sine';
+            const f0 = 920 + idx * 180 + Math.random() * 220;
+            osc.frequency.setValueAtTime(f0, now + offset);
+            osc.frequency.exponentialRampToValueAtTime(f0 * 1.45, now + offset + 0.035);
+            bg.gain.setValueAtTime(0.045, now + offset);
+            bg.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.04);
+            osc.connect(bg);
+            bg.connect(out);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.045);
+          });
+          break;
+        }
+
+        case 'water-boil-rumble': {
+          // Tiếng nước sôi sùng sục mạnh ở 100°C (rền trầm đối lưu + bọt khí vỡ liên tục)
+          const boilDur = 0.85;
+          const buf = ctx.createBuffer(
+            1,
+            Math.floor(ctx.sampleRate * boilDur),
+            ctx.sampleRate,
+          );
+          const ch = buf.getChannelData(0);
+          for (let i = 0; i < ch.length; i++) {
+            const env = Math.sin((i / ch.length) * Math.PI);
+            ch[i] = (Math.random() * 2 - 1) * env * 0.7;
+          }
+          const noise = ctx.createBufferSource();
+          noise.buffer = buf;
+
+          const lp = ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.setValueAtTime(520 + ratio * 220, now);
+          lp.Q.value = 1.8;
+
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.18 + ratio * 0.1, now);
+          noise.connect(lp);
+          lp.connect(g);
+          g.connect(out);
+          noise.start(now);
+          noise.stop(now + boilDur);
+
+          // Bọt khí lớn vỡ trên mặt nước sôi
+          [0.06, 0.14, 0.24, 0.35, 0.47, 0.59, 0.71].forEach((offset, idx) => {
+            const osc = ctx.createOscillator();
+            const bg = ctx.createGain();
+            osc.type = 'sine';
+            const f0 = 320 + (idx % 3) * 150 + Math.random() * 140;
+            osc.frequency.setValueAtTime(f0, now + offset);
+            osc.frequency.exponentialRampToValueAtTime(f0 * 1.8, now + offset + 0.055);
+            bg.gain.setValueAtTime(0.08, now + offset);
+            bg.gain.exponentialRampToValueAtTime(0.002, now + offset + 0.06);
+            osc.connect(bg);
+            bg.connect(out);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.065);
+          });
           break;
         }
 

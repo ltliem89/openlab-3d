@@ -30,7 +30,7 @@ export class ElectromagneticInductionSolver {
   public static readonly VERSION = '1.0.0';
 
   public static solve(input: SolverInput): SolverResult<InductionDerivedOutputs> {
-    const { state } = input;
+    const { state, environment } = input;
     const warnings: string[] = [];
     const errors: string[] = [];
 
@@ -54,8 +54,12 @@ export class ElectromagneticInductionSolver {
     const rawLenzForce = -((electromechanicalCoupling * electromechanicalCoupling) / totalResistanceOhms) * magnetVelocityMps;
     const lenzDampingForceNewtons = Math.max(-100.0, Math.min(100.0, rawLenzForce));
     const magnetMassKg = Math.max(0.001, Number(state.magnetMassKg ?? 0.08));
-    const gravityMps2 = 9.80665;
+    const gravityMps2 = Number(environment?.gravityMps2 ?? 9.80665);
     const netMagnetAccelerationMps2 = Math.max(-50.0, Math.min(50.0, gravityMps2 + (lenzDampingForceNewtons / magnetMassKg)));
+
+    // Ngưỡng điện áp mở bán dẫn điốt phát quang LED: V_F ~ 1.65 V (hoặc 0.2 V nếu không nối trực tiếp diode ngưỡng cao)
+    const ledThresholdV = Number(state.ledForwardVoltageV ?? 1.65);
+    const absEmf = Math.abs(inducedEmfVolts);
 
     let ledRedIntensity = 0.0;
     let ledGreenIntensity = 0.0;
@@ -65,25 +69,19 @@ export class ElectromagneticInductionSolver {
 
     if (Math.abs(magnetVelocityMps) < 1e-4) {
       // Nam châm đứng yên -> dPhi/dt = 0 -> không có dòng điện cảm ứng
-      ledRedIntensity = 0.0;
-      ledGreenIntensity = 0.0;
-      isLedRedOn = false;
-      isLedGreenOn = false;
       reasonVi = 'Nam châm đứng yên (dΦ/dt = 0): Từ thông qua cuộn dây không biến thiên, cả 2 LED đều tắt';
+    } else if (absEmf < ledThresholdV) {
+      reasonVi = `Nam châm dịch chuyển quá chậm (|E| = ${absEmf.toFixed(2)} V < V_F = ${ledThresholdV.toFixed(2)} V): Chưa đủ điện áp ngưỡng kích sáng LED`;
     } else if (magnetVelocityMps > 0) {
       // Nam châm tiến lại gần -> dPhi/dt > 0 -> Dòng điện chiều thuận kích LED đỏ
-      ledRedIntensity = Math.min(2.0, 1.4);
-      ledGreenIntensity = 0.0;
+      ledRedIntensity = Math.min(2.0, Math.max(0.25, (absEmf - ledThresholdV + 0.5) * 0.8));
       isLedRedOn = true;
-      isLedGreenOn = false;
-      reasonVi = `Nam châm tiến lại gần (v = ${magnetVelocityMps.toFixed(2)} m/s > 0): Từ thông tăng, LED Đỏ phát sáng (${ledRedIntensity.toFixed(1)})`;
+      reasonVi = `Nam châm tiến lại gần (v = ${magnetVelocityMps.toFixed(2)} m/s > 0, |E| = ${absEmf.toFixed(2)} V): Từ thông tăng, LED Đỏ phát sáng (${ledRedIntensity.toFixed(1)})`;
     } else {
       // Nam châm rút ra xa -> dPhi/dt < 0 -> Dòng điện chiều nghịch kích LED xanh
-      ledRedIntensity = 0.0;
-      ledGreenIntensity = Math.min(2.0, 1.4);
-      isLedRedOn = false;
+      ledGreenIntensity = Math.min(2.0, Math.max(0.25, (absEmf - ledThresholdV + 0.5) * 0.8));
       isLedGreenOn = true;
-      reasonVi = `Nam châm rút ra xa (v = ${magnetVelocityMps.toFixed(2)} m/s < 0): Từ thông giảm, LED Xanh phát sáng (${ledGreenIntensity.toFixed(1)})`;
+      reasonVi = `Nam châm rút ra xa (v = ${magnetVelocityMps.toFixed(2)} m/s < 0, |E| = ${absEmf.toFixed(2)} V): Từ thông giảm, LED Xanh phát sáng (${ledGreenIntensity.toFixed(1)})`;
     }
 
     const uncertainty = MetrologyEngine.calculateUncertaintyBudget({

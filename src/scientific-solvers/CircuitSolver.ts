@@ -101,51 +101,71 @@ export class CircuitSolver {
         }
 
         const totalResistanceOhms = Math.max(1e-4, lampResistanceOhms + internalResistanceOhms + wireResistanceOhms);
-        currentAmperes = voltageSettingV / totalResistanceOhms;
+        const rawCurrentA = voltageSettingV / totalResistanceOhms;
+        // Bảo vệ quá dòng (OCP 3.0 A) khi chập mạch / ngắn mạch
+        const maxCurrentOCP = 3.0;
+        if (rawCurrentA > maxCurrentOCP) {
+          currentAmperes = maxCurrentOCP;
+          warnings.push('OVERCURRENT_PROTECTION_TRIPPED');
+          reasonVi = `CẢNH BÁO QUÁ DÒNG (OCP > ${maxCurrentOCP.toFixed(1)} A): Mạch tự ngắt bảo vệ đoản mạch!`;
+        } else {
+          currentAmperes = rawCurrentA;
+        }
         voltageAtLampV = Math.max(0.0, currentAmperes * lampResistanceOhms);
         const voltageSagVolts = Math.max(0.0, voltageSettingV - voltageAtLampV);
         lampPowerWatts = Math.max(0.0, voltageAtLampV * currentAmperes);
 
-        if (voltageAtLampV < LAMP_IGNITION_THRESHOLD_VOLTAGE_V) {
-          isLampLit = false;
-          relativeIllumination = 0.0;
-          reasonVi = `Điện áp (${voltageAtLampV.toFixed(1)} V) dưới ngưỡng kích phát xạ của tim đèn vonfram (2.5 V)`;
-        } else {
-          isLampLit = true;
-          relativeIllumination = Math.min(1.0, Math.max(0.08, voltageAtLampV / 12.0));
-          reasonVi = `Đèn sáng rực rỡ ở điện áp ${voltageAtLampV.toFixed(1)} V, dòng điện ${currentAmperes.toFixed(2)} A`;
+        if (rawCurrentA <= maxCurrentOCP) {
+          if (voltageAtLampV < LAMP_IGNITION_THRESHOLD_VOLTAGE_V) {
+            isLampLit = false;
+            relativeIllumination = 0.0;
+            reasonVi = `Điện áp (${voltageAtLampV.toFixed(1)} V) dưới ngưỡng kích phát xạ của tim đèn vonfram (2.5 V)`;
+          } else {
+            isLampLit = true;
+            relativeIllumination = Math.min(1.0, Math.max(0.08, voltageAtLampV / 12.0));
+            reasonVi = `Đèn sáng rực rỡ ở điện áp ${voltageAtLampV.toFixed(1)} V, dòng điện ${currentAmperes.toFixed(2)} A`;
+          }
         }
       }
     }
 
     // Tính toán số chỉ đồng hồ vạn năng DMM
     let dmmReading = '0.00';
+    let uncertaintyUnit = 'V';
     const dmmMode = state.multimeterMode || 'DCV';
     if (dmmMode === 'DCV' || dmmMode === 'V') {
+      uncertaintyUnit = 'V';
       if (!isCircuitClosed || !psuPoweredOn) {
         dmmReading = '0.00 V';
       } else {
         dmmReading = `${MetrologyEngine.formatReading(voltageAtLampV, 0.01)} V`;
       }
     } else if (dmmMode === 'DCA' || dmmMode === 'A') {
+      uncertaintyUnit = 'A';
       if (!isCircuitClosed || !psuPoweredOn || !lampSwitchOn) {
         dmmReading = '0.00 A';
       } else {
         dmmReading = `${MetrologyEngine.formatReading(currentAmperes, 0.01)} A`;
       }
     } else if (dmmMode === 'OHM' || dmmMode === 'Ω') {
-      if (!isCircuitClosed) {
+      uncertaintyUnit = 'Ω';
+      if (isCircuitClosed && psuPoweredOn && voltageSettingV > 0.1) {
+        // Quy tắc an toàn đo lường: Tuyệt đối không đo điện trở khi mạch đang có điện!
+        dmmReading = 'ERR.LIVE';
+        warnings.push('LIVE_OHM_MEASUREMENT_PROHIBITED');
+      } else if (!isCircuitClosed) {
         dmmReading = 'O.L'; // Open Loop / Vô cùng lớn
       } else {
-        dmmReading = '12.0 Ω';
+        const staticOhms = Number(state.lampResistanceOhms ?? 12.0);
+        dmmReading = `${staticOhms.toFixed(1)} Ω`;
       }
     }
 
     const uncertainty = MetrologyEngine.calculateUncertaintyBudget({
-      leastCount: 0.01,
-      instrumentalError: 0.02,
+      leastCount: uncertaintyUnit === 'Ω' ? 0.1 : 0.01,
+      instrumentalError: uncertaintyUnit === 'Ω' ? 0.2 : 0.02,
       repeatabilitySigma: 0.005,
-      unit: 'V',
+      unit: uncertaintyUnit,
     });
 
     return {

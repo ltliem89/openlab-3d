@@ -45,7 +45,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
     subject: 'physics',
     gradeLevel: 6,
     descriptionVi: 'Học sinh làm quen với quy trình chuẩn hóa điểm 0, đặt cốc đong, bấm phím TARE để trừ bì và xác định khối lượng tịnh của chất lỏng / mẫu vật.',
-    targetCompetenciesVi: ['Kỹ năng sử dụng cân điện tử chính xác', 'Kỹ thuật trừ bì (TARE)', 'Xác định khối lượng tịnh $m_{\\text{tịnh}} = m_{\\text{tổng}} - m_{\\text{bì}}$'],
+    targetCompetenciesVi: ['Kỹ năng sử dụng cân điện tử chính xác', 'Kỹ thuật trừ bì (TARE)', 'Xác định khối lượng tịnh $m_{\\text{tinh}} = m_{\\text{tong}} - m_{\\text{bi}}$'],
     steps: [
       {
         stepIndex: 1,
@@ -69,8 +69,8 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         stepId: 'WF01-STEP-02',
         titleVi: 'Bước 2: Đặt cốc đong lên đĩa cân để đọc khối lượng vỏ cốc',
         instructionVi: 'Đặt cốc đong (Beaker 250ml) vào chính tâm đĩa cân để ghi nhận khối lượng bì ban đầu.',
-        scientificConceptVi: 'Khối lượng thô gồm cả vật chứa (khối lượng bì $m_{\\text{bì}}$).',
-        mathFormulaLatex: '$m_{\\text{bì}} \\approx 85.0\\text{ g}$',
+        scientificConceptVi: 'Khối lượng thô gồm cả vật chứa (khối lượng bì $m_{\\text{bi}}$).',
+        mathFormulaLatex: '$m_{\\text{bi}} \\approx 85.0\\text{ g}$',
         requiredArchetypes: ['electronic-balance', 'beaker-250'],
         suggestedActionVi: 'Thả cốc đong lên đĩa cân',
         validationGuard: (instances) => {
@@ -79,7 +79,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
           if (!balance || !beaker) return { isPassed: false, reasonVi: 'Cần có cả cân điện tử và cốc đong trên bàn' };
           const rawMass = Number(balance.instanceState.measuredMassG ?? 0);
           if (rawMass <= 10.0) return { isPassed: false, reasonVi: 'Chưa đặt cốc đong lên đĩa cân', hintVi: 'Kéo cốc đong đặt lên đĩa cân' };
-          return { isPassed: true, reasonVi: `Đã đặt cốc lên đĩa cân ($m_{\\text{bì}} = ${rawMass.toFixed(1)}\\text{ g}$)` };
+          return { isPassed: true, reasonVi: `Đã đặt cốc lên đĩa cân ($m_{\\text{bi}} = ${rawMass.toFixed(1)}\\text{ g}$)` };
         },
       },
       {
@@ -88,7 +88,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 3: Bấm phím TARE để trừ bì về 0.00 g',
         instructionVi: 'Bấm phím TARE trên cân điện tử để trừ khối lượng vỏ cốc, chuẩn bị đo chất lỏng hoặc mẫu vật.',
         scientificConceptVi: 'Quy không cảm ứng tải trọng để đo trực tiếp khối lượng tịnh.',
-        mathFormulaLatex: '$m_{\\text{hiển thị}} = m_{\\text{tổng}} - m_{\\text{bì}} = 0.00\\text{ g}$',
+        mathFormulaLatex: '$m_{\\text{hien thi}} = m_{\\text{tong}} - m_{\\text{bi}} = 0.00\\text{ g}$',
         requiredArchetypes: ['electronic-balance'],
         suggestedActionVi: 'Nhấn nút TARE trên cân',
         validationGuard: (instances) => {
@@ -96,7 +96,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
           if (!balance) return { isPassed: false, reasonVi: 'Không tìm thấy cân điện tử' };
           const tareOffset = Number(balance.instanceState.tareOffsetG ?? 0);
           if (tareOffset <= 0) return { isPassed: false, reasonVi: 'Chưa bấm phím TARE để trừ bì', hintVi: 'Nhấn nút TARE trên bảng điều khiển cân' };
-          return { isPassed: true, reasonVi: `Trừ bì thành công ($m_{\\text{bì}} = ${tareOffset.toFixed(1)}\\text{ g}$, màn hình = $0.00\\text{ g}$)` };
+          return { isPassed: true, reasonVi: `Trừ bì thành công ($m_{\\text{bi}} = ${tareOffset.toFixed(1)}\\text{ g}$, màn hình = $0.00\\text{ g}$)` };
         },
       },
       {
@@ -105,14 +105,14 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 4: Rót chất lỏng vào cốc và đọc khối lượng tịnh',
         instructionVi: 'Rót khoảng 50 - 100 ml nước vào cốc đong và đọc số chỉ khối lượng tịnh của lượng nước.',
         scientificConceptVi: 'Mối quan hệ giữa khối lượng và thể tích thông qua khối lượng riêng: $m = D \\cdot V$.',
-        mathFormulaLatex: '$m_{\\text{nước}} = D_{\\text{nước}} \\cdot V_{\\text{nước}}$',
+        mathFormulaLatex: '$m_{\\text{nuoc}} = D_{\\text{nuoc}} \\cdot V_{\\text{nuoc}}$',
         requiredArchetypes: ['electronic-balance', 'beaker-250'],
         suggestedActionVi: 'Nghiêng bình rót nước vào cốc đong đang đặt trên cân',
         validationGuard: (instances) => {
           const beaker = instances.find((i) => i.assetId.includes('BKR'));
           const balance = instances.find((i) => i.assetId.includes('BAL'));
           if (!beaker || !balance) return { isPassed: false, reasonVi: 'Thiếu cân hoặc cốc đong' };
-          const fluidLevel = Number(beaker.instanceState.fluidLevelMl ?? 0);
+          const fluidLevel = Number(beaker.instanceState.liquidLevelMl ?? beaker.instanceState.fluidLevelMl ?? 0);
           const netMass = Number(balance.instanceState.measuredMassG ?? 0);
           if (fluidLevel < 15.0 && netMass < 15.0) return { isPassed: false, reasonVi: 'Chưa rót chất lỏng vào cốc', hintVi: 'Cầm bình nước rót vào cốc' };
           return { isPassed: true, reasonVi: `Khối lượng tịnh đo được: $m = ${netMass > 0 ? netMass.toFixed(1) : fluidLevel.toFixed(1)}\\text{ g}$` };
@@ -139,7 +139,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 1: Bố trí ống đong 100 ml trên mặt phẳng thăng bằng',
         instructionVi: 'Đặt ống đong chia độ 100 ml thẳng đứng trên mặt bàn thí nghiệm phẳng.',
         scientificConceptVi: 'Chất lỏng chịu tác dụng của trọng lực nên bề mặt tự do luôn vuông góc với phương dây dọi.',
-        mathFormulaLatex: '$\\text{ĐCNN} = 1\\text{ ml}, \\quad \\text{GHĐ} = 100\\text{ ml}$',
+        mathFormulaLatex: '$\\text{DCNN} = 1\\text{ ml}, \\quad \\text{GHD} = 100\\text{ ml}$',
         requiredArchetypes: ['graduated-cylinder-100'],
         suggestedActionVi: 'Kéo ống đong 100 ml ra bàn',
         validationGuard: (instances) => {
@@ -160,7 +160,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         validationGuard: (instances) => {
           const cyl = instances.find((i) => i.assetId.includes('CYL') || i.assetId.includes('GRD'));
           if (!cyl) return { isPassed: false, reasonVi: 'Thiếu ống đong' };
-          const vol = Number(cyl.instanceState.fluidLevelMl ?? 0);
+          const vol = Number(cyl.instanceState.liquidLevelMl ?? cyl.instanceState.fluidLevelMl ?? 0);
           if (vol < 20.0) return { isPassed: false, reasonVi: 'Chưa rót đủ chất lỏng vào ống đong', hintVi: 'Rót nước từ cốc vào ống đong' };
           return { isPassed: true, reasonVi: `Đã rót lưu chất vào ống đong ($V = ${vol.toFixed(1)}\\text{ ml}$)` };
         },
@@ -171,13 +171,13 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 3: Đặt mắt ngang bằng với đáy mặt khum để đọc thể tích',
         instructionVi: 'Đặt tầm nhìn ngang đáy mặt khum chất lỏng để triệt tiêu sai số thị sai (parallax error).',
         scientificConceptVi: 'Do sức căng bề mặt chất lỏng và tương tác dính ướt, bề mặt tạo thành mặt khum lõm.',
-        mathFormulaLatex: '$V = V_{\\text{đáy khum}} \\pm \\frac{\\text{ĐCNN}}{2}$',
+        mathFormulaLatex: '$V = V_{\\text{day khum}} \\pm \\frac{\\text{DCNN}}{2}$',
         requiredArchetypes: ['graduated-cylinder-100'],
         suggestedActionVi: 'Căn chỉnh góc nhìn trực diện vào vạch chia',
         validationGuard: (instances) => {
           const cyl = instances.find((i) => i.assetId.includes('CYL') || i.assetId.includes('GRD'));
           if (!cyl) return { isPassed: false, reasonVi: 'Thiếu ống đong' };
-          const vol = Number(cyl.instanceState.fluidLevelMl ?? 0);
+          const vol = Number(cyl.instanceState.liquidLevelMl ?? cyl.instanceState.fluidLevelMl ?? 0);
           return { isPassed: vol > 0, reasonVi: `Thể tích chất lỏng chuẩn xác: $V = ${vol.toFixed(1)}\\text{ ml}$` };
         },
       },
@@ -232,7 +232,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 3: Móc quả nặng 50 g vào đầu móc và đọc độ dãn',
         instructionVi: 'Móc 1 quả nặng 50 g ($P \\approx 0.5\\text{ N}$) vào khuyên móc dưới của lực kế và ghi nhận độ dãn.',
         scientificConceptVi: 'Độ dãn của lò xo tỉ lệ thuận với lực tác dụng: $\\Delta l = \\frac{F}{k}$.',
-        mathFormulaLatex: '$F_{\\text{đh}} = k \\cdot |\\Delta l| = m \\cdot g$',
+        mathFormulaLatex: '$F_{\\text{dh}} = k \\cdot |\\Delta l| = m \\cdot g$',
         requiredArchetypes: ['spring-dynamometer-5n', 'hook-weight-50g'],
         suggestedActionVi: 'Móc quả nặng 50 g vào khuyên móc lực kế',
         validationGuard: (instances) => {
@@ -327,7 +327,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 1: Bố trí nguồn điện DC và khóa K mở',
         instructionVi: 'Đặt bộ nguồn DC (hoặc hộp pin) và công tắc đóng ngắt (khóa K) ở trạng thái MỞ.',
         scientificConceptVi: 'Luật an toàn mạch điện: Chỉ thao tác cắm nối khi khóa K đang mở để tránh đoản mạch.',
-        mathFormulaLatex: '$I_{\\text{hở mạch}} = 0\\text{ A}$',
+        mathFormulaLatex: '$I_{\\text{ho mach}} = 0\\text{ A}$',
         requiredArchetypes: ['dc-power-supply', 'switch-spst'],
         suggestedActionVi: 'Đặt nguồn DC và khóa K lên bàn',
         validationGuard: (instances) => {
@@ -342,8 +342,8 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         stepId: 'WF05-STEP-02',
         titleVi: 'Bước 2: Mắc ampe kế nối tiếp với bóng đèn tải',
         instructionVi: 'Nối cực dương nguồn -> khóa K -> cực (+) ampe kế -> cực (-) ampe kế -> bóng đèn -> cực (-) nguồn.',
-        scientificConceptVi: 'Dòng điện qua các phần tử mắc nối tiếp là như nhau: $I = I_A = I_{\\text{đèn}}$.',
-        mathFormulaLatex: '$R_{\\text{ampe kế}} \\approx 0\\,\\Omega \\implies \\text{Mắc nối tiếp}$',
+        scientificConceptVi: 'Dòng điện qua các phần tử mắc nối tiếp là như nhau: $I = I_A = I_{\\text{den}}$.',
+        mathFormulaLatex: '$R_A \\approx 0\\,\\Omega \\implies \\text{Mac noi tiep}$',
         requiredArchetypes: ['ammeter-dc', 'incandescent-lamp-socket'],
         suggestedActionVi: 'Cắm dây dẫn nối tiếp qua ampe kế',
         validationGuard: (instances) => {
@@ -359,7 +359,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 3: Mắc vôn kế song song với hai đầu bóng đèn',
         instructionVi: 'Nối chốt (+) của vôn kế vào đầu vào bóng đèn và chốt (-) vào đầu ra của bóng đèn.',
         scientificConceptVi: 'Vôn kế có điện trở rất lớn, mắc song song để đo hiệu điện thế rơi trên tải tiêu thụ.',
-        mathFormulaLatex: '$R_{\\text{vôn kế}} \\to \\infty \\implies \\text{Mắc song song}$',
+        mathFormulaLatex: '$R_V \\to \\infty \\implies \\text{Mac song song}$',
         requiredArchetypes: ['voltmeter-dc'],
         suggestedActionVi: 'Nối 2 dây vôn kế song song hai cực bóng đèn',
         validationGuard: (instances) => {
@@ -421,7 +421,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 2: Cắm dây dẫn điện và bật công tắc đèn',
         instructionVi: 'Nối 2 dây cáp bắp chuối (+ và -) từ nguồn sang đèn chiếu, bật công tắc nguồn và công tắc đèn.',
         scientificConceptVi: 'Nguồn phát quang học cung cấp chùm sáng đồng trục.',
-        mathFormulaLatex: '$U_{\\text{đèn}} = 12\\text{ V}$',
+        mathFormulaLatex: '$U_{\\text{den}} = 12\\text{ V}$',
         requiredArchetypes: ['optical-power-supply', 'optical-lamp'],
         suggestedActionVi: 'Cắm dây cáp và bật công tắc đèn',
         validationGuard: (instances) => {
@@ -475,7 +475,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 1: Bố trí đĩa chia độ tròn và đặt bản bán nguyệt',
         instructionVi: 'Đặt đĩa chia độ tròn $360^\\circ$ trên bàn, đặt tâm mặt phẳng của bản bán nguyệt trùng gốc O của đĩa.',
         scientificConceptVi: 'Tâm hình học của bản cong tròn trùng với gốc tọa độ để tia khúc xạ ra không bị bẻ cong lần hai.',
-        mathFormulaLatex: '$O(0, 0) \\equiv \\text{Tâm bản bán nguyệt}$',
+        mathFormulaLatex: '$O(0, 0) \\equiv \\text{Tam ban ban nguyet}$',
         requiredArchetypes: ['optical-disk', 'semicircular-glass-block'],
         suggestedActionVi: 'Đặt đĩa chia độ và gá bản bán nguyệt',
         validationGuard: (instances) => {
@@ -578,7 +578,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
     curriculumLessonVi: 'KHTN 8 · Bài 16: Áp suất chất lỏng | Bài 17: Lực đẩy Archimedes',
     subject: 'physics',
     gradeLevel: 8,
-    descriptionVi: 'Xác định độ lớn lực đẩy Archimedes $F_A = P_1 - P_2$ và so sánh với trọng lượng phần chất lỏng bị chiếm chỗ $P_{\\text{nước tràn}}$.',
+    descriptionVi: 'Xác định độ lớn lực đẩy Archimedes $F_A = P_1 - P_2$ và so sánh với trọng lượng phần chất lỏng bị chiếm chỗ $P_{\\text{tran}}$.',
     targetCompetenciesVi: ['Sử dụng bình tràn', 'Tính lực đẩy Archimedes', 'Đo thể tích vật chìm'],
     steps: [
       {
@@ -587,7 +587,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 1: Đổ nước tới miệng vòi tràn của bình tràn',
         instructionVi: 'Đổ nước vào bình tràn cho tới khi nước vừa chớm chảy qua vòi xả rồi đặt cốc hứng dưới vòi.',
         scientificConceptVi: 'Bình tràn xác định thể tích vật choán chỗ thông qua lượng nước tràn ra.',
-        mathFormulaLatex: '$V_{\\text{chiếm chỗ}} = V_{\\text{tràn}}$',
+        mathFormulaLatex: '$V_{\\text{chiem cho}} = V_{\\text{tran}}$',
         requiredArchetypes: ['overflow-can', 'beaker-250'],
         suggestedActionVi: 'Đổ nước đầy bình tràn và hứng cốc dưới vòi',
         validationGuard: (instances) => {
@@ -599,26 +599,26 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         stepIndex: 2,
         stepId: 'WF09-STEP-02',
         titleVi: 'Bước 2: Móc khối kim loại vào lực kế đo trọng lượng trong không khí',
-        instructionVi: 'Treo khối kim loại vào lực kế ngoài không khí, đọc số chỉ trọng lượng $P_1$.',
+        instructionVi: 'Treo khối kim loại ($m = 66.25\\,\\text{g}$) vào lực kế ngoài không khí, đọc số chỉ trọng lượng $P_1$.',
         scientificConceptVi: 'Trọng lượng thực trong không khí coi như bằng lực hút Trái Đất.',
-        mathFormulaLatex: '$P_1 = m \\cdot g \\approx 1.35\\text{ N}$',
+        mathFormulaLatex: '$P_1 = m \\cdot g \\approx 0.65\\text{ N}$',
         requiredArchetypes: ['spring-dynamometer-5n', 'metal-cylinder-block'],
-        suggestedActionVi: 'Móc khối nhôm/đồng vào móc lực kế',
+        suggestedActionVi: 'Móc khối nhôm vào móc lực kế',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Trọng lượng vật ngoài không khí: $P_1 = 1.35\\text{ N}$' };
+          return { isPassed: true, reasonVi: 'Trọng lượng vật ngoài không khí: $P_1 = 0.65\\text{ N}$' };
         },
       },
       {
         stepIndex: 3,
         stepId: 'WF09-STEP-03',
         titleVi: 'Bước 3: Nhúng chìm vật vào bình tràn và hứng lượng nước tràn',
-        instructionVi: 'Từ từ hạ vật chìm hoàn toàn vào nước trong bình tràn, đọc số chỉ lực kế $P_2$ và cân nước tràn.',
+        instructionVi: 'Từ từ hạ vật chìm hoàn toàn vào nước trong bình tràn, đọc số chỉ lực kế $P_2 = 0.41\\,\\text{N}$ và cân nước tràn.',
         scientificConceptVi: 'Lực đẩy Archimedes bằng hiệu trọng lượng và bằng trọng lượng nước tràn: $F_A = P_1 - P_2 = d \\cdot V$.',
-        mathFormulaLatex: '$F_A = 1.35 - 0.85 = 0.50\\text{ N} = P_{\\text{nước tràn}}$',
+        mathFormulaLatex: '$F_A = 0.65 - 0.41 = 0.24\\text{ N} = P_{\\text{tran}}$',
         requiredArchetypes: ['overflow-can', 'spring-dynamometer-5n'],
         suggestedActionVi: 'Nhúng ngập vật vào lòng bình tràn',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Lực đẩy Archimedes đo được: $F_A = 0.50\\text{ N}$, bằng đúng trọng lượng khối nước tràn!' };
+          return { isPassed: true, reasonVi: 'Lực đẩy Archimedes đo được: $F_A = 0.24\\text{ N}$, bằng đúng trọng lượng khối nước tràn ($V = 24.5\\text{ mL}$)!' };
         },
       },
     ],
@@ -653,9 +653,9 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         stepIndex: 2,
         stepId: 'WF10-STEP-02',
         titleVi: 'Bước 2: Đong 90 ml nước cất bằng ống đong 100 ml',
-        instructionVi: 'Rót nước cất vào ống đong tới đúng vạch 90 ml ($m_{\\text{nước}} \\approx 90.0\\text{ g}$).',
+        instructionVi: 'Rót nước cất vào ống đong tới đúng vạch 90 ml ($m_{\\text{nuoc}} \\approx 90.0\\text{ g}$).',
         scientificConceptVi: 'Khối lượng riêng của nước nguyên chất ở $20^\\circ\\text{C}$ xấp xỉ $1.0\\text{ g/ml}$.',
-        mathFormulaLatex: '$m_{\\text{nước}} = D \\cdot V = 1.0 \\times 90 = 90.0\\text{ g}$',
+        mathFormulaLatex: '$m_{\\text{nuoc}} = D \\cdot V = 1.0 \\times 90 = 90.0\\text{ g}$',
         requiredArchetypes: ['graduated-cylinder-100', 'distilled-water'],
         suggestedActionVi: 'Đong 90 ml nước cất',
         validationGuard: (instances) => {
@@ -696,7 +696,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 1: Lắp kiềng sắt, lưới tản nhiệt amiăng và cốc nước',
         instructionVi: 'Đặt kiềng sắt trên bàn, trải lưới amiăng lên trên và đặt cốc 150 ml nước cùng nhiệt kế.',
         scientificConceptVi: 'Lưới amiăng phân tán nhiệt lượng đều dưới đáy cốc thủy tinh, ngăn sốc nhiệt gây nứt vỡ.',
-        mathFormulaLatex: '$m_{\\text{nước}} = 0.15\\text{ kg}, \\quad c = 4186\\text{ J/(kg}\\cdot\\text{K)}$',
+        mathFormulaLatex: '$m_{\\text{nuoc}} = 0.10\\text{ kg}, \\quad c = 4184\\text{ J/(kg}\\cdot\\text{K)}$',
         requiredArchetypes: ['tripod-gauze', 'beaker-250', 'thermometer'],
         suggestedActionVi: 'Đặt kiềng đun, lưới amiăng và cốc nước lên giá',
         validationGuard: (instances) => {
@@ -709,13 +709,14 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 2: Đặt đèn cồn vào dưới kiềng và châm lửa đun',
         instructionVi: 'Mở nắp đèn cồn, đặt vào tâm kiềng và châm lửa để truyền nhiệt lượng vào đáy cốc.',
         scientificConceptVi: 'Quá trình đốt cháy cồn ethanol tỏa nhiệt lượng: $C_2H_5OH + 3O_2 \\to 2CO_2 + 3H_2O + Q$.',
-        mathFormulaLatex: '$P_{\\text{ngọn lửa}} \\approx 350\\text{ W}$',
+        mathFormulaLatex: '$P_{\\text{lua}} \\approx 350\\text{ W}$',
         requiredArchetypes: ['alcohol-burner'],
         suggestedActionVi: 'Bật ngọn lửa đèn cồn',
         validationGuard: (instances) => {
           const burner = instances.find((i) => i.assetId.includes('ALC') || i.assetId.includes('BRN'));
-          const isLit = burner ? burner.instanceState.isFlameLit !== false : true;
-          return { isPassed: isLit, reasonVi: 'Ngọn lửa đèn cồn cháy xanh đều, bắt đầu truyền nhiệt lượng' };
+          if (!burner) return { isPassed: false, reasonVi: 'Chưa đặt đèn cồn lên bàn thí nghiệm' };
+          const isLit = Boolean(burner.instanceState.isFlameLit ?? burner.instanceState.isHeating);
+          return { isPassed: isLit, reasonVi: isLit ? 'Ngọn lửa đèn cồn cháy xanh đều, bắt đầu truyền nhiệt lượng' : 'Đèn cồn chưa được châm lửa' };
         },
       },
       {
@@ -728,7 +729,14 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         requiredArchetypes: ['thermometer'],
         suggestedActionVi: 'Quan sát nhiệt kế đạt mốc 100 độ C',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Nước đã sôi sùng sục ở $100^\\circ\\text{C}$ và nhiệt độ giữ nguyên không đổi' };
+          const thm = instances.find((i) => i.assetId.includes('THM'));
+          const temp = Number(thm?.instanceState.temperatureC ?? 25);
+          return {
+            isPassed: temp >= 99.5,
+            reasonVi: temp >= 99.5
+              ? `Nước đã sôi ở $T = ${temp.toFixed(1)}^\\circ\\text{C}$ và nhiệt độ duy trì bình nguyên`
+              : `Nhiệt độ hiện tại đang là $T = ${temp.toFixed(1)}^\\circ\\text{C}$, tiếp tục đun tới $100^\\circ\\text{C}$`,
+          };
         },
       },
     ],
@@ -752,7 +760,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 1: Mắc đoạn mạch nối tiếp nguồn, biến trở, điện trở mẫu và ampe kế',
         instructionVi: 'Lắp ráp mạch kín gồm nguồn DC, biến trở con chạy điều khiển, điện trở $R = 10\\,\\Omega$ và ampe kế.',
         scientificConceptVi: 'Biến trở con chạy đóng vai trò phân áp điều chỉnh dòng điện mượt mà.',
-        mathFormulaLatex: '$I = \\frac{U}{R_x + R_{\\text{biến}}}$',
+        mathFormulaLatex: '$I = \\frac{U}{R_x + R_b}$',
         requiredArchetypes: ['resistor-sample', 'rheostat', 'ammeter-dc'],
         suggestedActionVi: 'Cắm dây nối các linh kiện trên đế thí nghiệm',
         validationGuard: (instances) => {
@@ -817,7 +825,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         stepIndex: 2,
         stepId: 'WF13-STEP-02',
         titleVi: 'Bước 2: Đo hiệu điện thế và quan sát độ sáng mạch nối tiếp',
-        instructionVi: 'Đo $U_1 = 3.0\\text{ V}$ và $U_2 = 3.0\\text{ V}$ ($U_{\\text{tổng}} = 6.0\\text{ V}$), hai đèn sáng mờ hơn bình thường.',
+        instructionVi: 'Đo $U_1 = 3.0\\text{ V}$ và $U_2 = 3.0\\text{ V}$ ($U_{\\text{tong}} = 6.0\\text{ V}$), hai đèn sáng mờ hơn bình thường.',
         scientificConceptVi: 'Điện áp nguồn bị chia đôi cho 2 tải tiêu thụ có cùng điện trở.',
         mathFormulaLatex: '$U_1 = U_2 = \\frac{U}{2} = 3.0\\text{ V}$',
         requiredArchetypes: ['voltmeter-dc'],
@@ -860,7 +868,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 1: Chuẩn bị 2 bình tam giác có chứa nước và lớp dầu nổi',
         instructionVi: 'Đổ 100 ml nước vào 2 bình tam giác, nhỏ vài giọt dầu ăn tạo màng ngăn nước bay hơi tự do từ mặt thoáng.',
         scientificConceptVi: 'Lớp màng dầu ngăn sự bay hơi tự nhiên, đảm bảo lượng nước mất đi chỉ do cây hút.',
-        mathFormulaLatex: '$\\Delta V_{\\text{bốc hơi tự nhiên}} \\approx 0\\text{ ml}$',
+        mathFormulaLatex: '$\\Delta V_{\\text{boc hoi}} \\approx 0\\text{ ml}$',
         requiredArchetypes: ['erlenmeyer-flask'],
         suggestedActionVi: 'Rót nước và nhỏ dầu vào 2 bình tam giác',
         validationGuard: (instances) => {
@@ -873,7 +881,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 2: Cắm cành có lá vào bình A và cành tỉa hết lá vào bình B',
         instructionVi: 'Cắm cành tươi nguyên vẹn lá vào bình A (thực nghiệm) và cành đã ngắt sạch lá vào bình B (đối chứng).',
         scientificConceptVi: 'Thiết kế thí nghiệm đối chứng đơn biến để cô lập yếu tố thoát hơi nước qua bề mặt lá.',
-        mathFormulaLatex: '$A: \\text{Có lá (Thực nghiệm)} \\quad \\text{vs} \\quad B: \\text{Không lá (Đối chứng)}$',
+        mathFormulaLatex: '$A: \\text{Co la} \\quad \\text{vs} \\quad B: \\text{Khong la}$',
         requiredArchetypes: ['erlenmeyer-flask', 'plant-twig'],
         suggestedActionVi: 'Cắm 2 cành cây vào 2 bình',
         validationGuard: (instances) => {
@@ -940,7 +948,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         titleVi: 'Bước 3: So sánh thang màu chuẩn và xác định giá trị pH',
         instructionVi: 'Đối chiếu màu sắc của giấy quỳ / giấy pH với dải màu chuẩn: Đỏ cam (Axit pH ~ 3), Xanh thẫm (Bazơ pH ~ 11), Vàng lục (Nước cất pH = 7).',
         scientificConceptVi: 'Phân loại dung dịch theo thang đo: $\\text{pH} < 7$ (axit), $\\text{pH} = 7$ (trung tính), $\\text{pH} > 7$ (bazơ).',
-        mathFormulaLatex: '$\\text{Axit: } \\text{pH} = 3.0, \\quad \\text{Nước cất: } \\text{pH} = 7.0, \\quad \\text{Bazơ: } \\text{pH} = 11.5$',
+        mathFormulaLatex: '$\\text{pH}_{\\text{axit}} = 3.0, \\quad \\text{pH}_{\\text{nuoc}} = 7.0, \\quad \\text{pH}_{\\text{bazo}} = 11.5$',
         requiredArchetypes: ['ph-indicator-strip'],
         suggestedActionVi: 'So sánh màu với bảng màu chuẩn',
         validationGuard: (instances) => {

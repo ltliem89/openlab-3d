@@ -45,7 +45,7 @@ export function stripMathDelimiters(raw: string): string {
     }
   }
 
-  // Khử các dấu $ còn sót bên trong nếu có dạng: $\frac{1}{f} = ...$ \quad \text{và} \quad $...$
+  // Khử các dấu $ còn sót bên trong nếu có dạng: $\frac{1}{f} = ...$ \quad \text{va} \quad $...$
   tex = tex.replace(/\$/g, '');
 
   return tex.trim();

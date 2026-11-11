@@ -119,7 +119,7 @@ export const PHYSICAL_LAW_MAPPINGS: Record<SynapseKind, {
   mechanical_hook: {
     actionVerb: 'Móc vào khuyên treo đàn hồi',
     lawName: 'Định luật Hooke về biến dạng đàn hồi lò xo',
-    formula: '$F_{\\text{đh}} = k \\cdot |\\Delta l| = P = m \\cdot g$',
+    formula: '$F_{\\text{dh}} = k \\cdot |\\Delta l| = P = m \\cdot g$',
     defaultSafety: 'Không treo vật nặng vượt quá giới hạn đo 5N làm biến dạng dão lò xo vĩnh viễn.',
   },
   mechanical_rail: {
@@ -131,55 +131,55 @@ export const PHYSICAL_LAW_MAPPINGS: Record<SynapseKind, {
   optical_carrier: {
     actionVerb: 'Lắp cố định lên đế trượt quang học',
     lawName: 'Cố định cao độ tâm quang học trên trục quang',
-    formula: '$h_{\\text{quang}} = \\text{const} = 150\\text{ mm}$',
+    formula: '$h_{\\text{quang}} = \\text{const} = 95\\text{ mm}$',
     defaultSafety: 'Giữ sạch khe gá, không để bụi bẩn làm nghiêng lệch trục quang học.',
   },
   optical_alignment: {
     actionVerb: 'Căn chỉnh đồng trục chùm tia sáng',
     lawName: 'Định luật truyền thẳng ánh sáng trong môi trường trong suốt',
-    formula: '$\\text{Tâm đèn} \\parallel \\text{Tâm F} \\parallel \\text{Quang tâm O} \\parallel \\text{Tâm màn}$',
+    formula: '$y_{\\text{den}} = y_{\\text{F}} = y_{\\text{lens}} = y_{\\text{man}}$',
     defaultSafety: 'Không nhìn trực diện vào tim đèn halogen hoặc nguồn phát laser ở cự ly gần.',
   },
   optical_refraction: {
     actionVerb: 'Chiếu qua môi trường trong suốt khúc xạ',
     lawName: 'Định luật khúc xạ Snell & Công thức thấu kính mỏng',
-    formula: '$\\frac{1}{f} = \\frac{1}{d} + \\frac{1}{d\'} \\quad \\text{và} \\quad n_1 \\sin(i) = n_2 \\sin(r)$',
+    formula: '$\\frac{1}{f} = \\frac{1}{d} + \\frac{1}{d\'} \\quad \\text{va} \\quad n_1 \\sin(i) = n_2 \\sin(r)$',
     defaultSafety: 'Chỉ cầm vào vành kim loại bảo vệ của thấu kính, tuyệt đối không chạm ngón tay vào bề mặt kính.',
   },
   electrical_terminal: {
     actionVerb: 'Cắm dây dẫn bắp chuối Ø4mm khép kín mạch',
     lawName: 'Định luật Ôm cho đoạn mạch kín Kirchhoff',
-    formula: '$I = \\frac{U}{R} \\quad (U \\ge 2.5\\text{ V})$',
+    formula: '$I = \\frac{U}{R}$',
     defaultSafety: 'Tắt công tắc nguồn điện trước khi cắm/rút dây. Cấm chập trực tiếp 2 cực (+) và (-) gây đoản mạch!',
   },
   electrical_interlock: {
     actionVerb: 'Khóa liên động tiếp xúc điện',
     lawName: 'Điều kiện đóng mạch dẫn truyền electron tự do',
-    formula: '$R_{\\text{tiếp xúc}} \\approx 0\\,\\Omega \\implies \\text{Mạch kín}$',
+    formula: '$R_{\\text{tiep xuc}} \\approx 0\\,\\Omega \\implies \\text{Mach kin}$',
     defaultSafety: 'Đảm bảo phích cắm bắp chuối cắm ngập sâu vào lỗ cọc nguồn để tiếp xúc điện tốt nhất.',
   },
   fluid_spout: {
     actionVerb: 'Rót chất lỏng qua miệng vòi dẫn',
     lawName: 'Bảo toàn thể tích chất lỏng',
-    formula: '$V_{\\text{tràn}} = V_{\\text{chiếm chỗ}} = V_{\\text{chìm}}$',
+    formula: '$V_{\\text{tran}} = V_{\\text{chiem cho}} = V_{\\text{chim}}$',
     defaultSafety: 'Chờ nước chảy hết từng giọt cuối cùng trước khi đọc thể tích trên ống đong / cốc hứng.',
   },
   fluid_receptacle: {
     actionVerb: 'Hứng nhận chất lỏng vào bình chứa',
     lawName: 'Định luật bình thông nhau & Đo thể tích',
-    formula: '$V_{\\text{tổng}} = V_0 + \\Delta V$',
+    formula: '$V_{\\text{tong}} = V_0 + \\Delta V$',
     defaultSafety: 'Đặt cốc trên mặt phẳng nằm ngang, đọc vạch thể tích theo đáy mặt khum (meniscus).',
   },
   submersion: {
     actionVerb: 'Thả chìm nhẹ nhàng vào lòng chất lỏng',
     lawName: 'Định luật chiếm chỗ Ác-si-mét',
-    formula: '$V_{\\text{vật}} = V_2 - V_1$',
+    formula: '$V_{\\text{vat}} = V_2 - V_1$',
     defaultSafety: 'Nghiêng ống đong 45 độ và cho vật trượt từ từ, không thả rơi thẳng đứng làm vỡ đáy thủy tinh.',
   },
   buoyancy_force: {
     actionVerb: 'Chịu tác dụng của lực đẩy Ác-si-mét',
     lawName: 'Định luật lực đẩy Ác-si-mét',
-    formula: '$F_A = d_{\\text{lỏng}} \\cdot V = \\rho \\cdot g \\cdot V$',
+    formula: '$F_A = d_{\\text{l}} \\cdot V = \\rho \\cdot g \\cdot V$',
     defaultSafety: 'Vật phải chìm hoàn toàn trong nước và không chạm đáy / thành bình để số đo chính xác.',
   },
   electromagnetic_induction: {
@@ -191,13 +191,13 @@ export const PHYSICAL_LAW_MAPPINGS: Record<SynapseKind, {
   thermal_exchange: {
     actionVerb: 'Truyền nhiệt lượng đối lưu & dẫn nhiệt',
     lawName: 'Phương trình cân bằng nhiệt lượng',
-    formula: '$Q_{\\text{tỏa}} = Q_{\\text{thu}} = m \\cdot c \\cdot \\Delta T$',
+    formula: '$Q_{\\text{toa}} = Q_{\\text{thu}} = m \\cdot c \\cdot \\Delta T$',
     defaultSafety: 'Phải dùng lưới amiăng lót dưới bát sứ/cốc để tản nhiệt đều, dùng kẹp gắp khi dụng cụ đang nóng.',
   },
   microscopy_dock: {
     actionVerb: 'Gá kẹp tiêu bản vi thể trên bàn sa trượt',
     lawName: 'Quang học vi mô & Độ phóng đại kính hiển vi',
-    formula: '$M = M_{\\text{vật kính}} \\times M_{\\text{thị kính}}$',
+    formula: '$M = M_{\\text{vat kinh}} \\times M_{\\text{thi kinh}}$',
     defaultSafety: 'Hạ vật kính sát tiêu bản bằng ốc sơ cấp khi nhìn nghiêng ngoài, sau đó mới nhìn vào thị kính vặn ốc vi cấp.',
   },
 };
@@ -295,7 +295,7 @@ export class NeuralConnectionEngine {
 
       // 3. Lực kế lò xo phát tín hiệu FORCE_NEWTON
       if (inst.assetId === 'OL3D-EQP-DYN-0001') {
-        const forceN = Number(st.measuredForceN ?? st.forceN ?? 0);
+        const forceN = Number(st.springExtensionN ?? st.measuredForceN ?? st.forceN ?? 0);
         if (forceN > 0.01) {
           this._activeSignals.set(`${inst.instanceId}:FORCE_NEWTON`, {
             id: `${inst.instanceId}:FORCE_NEWTON`,
@@ -313,8 +313,8 @@ export class NeuralConnectionEngine {
 
       // 4. Hộp nguồn điện phát tín hiệu VOLTAGE_VOLT
       if (inst.assetId === 'OL3D-EQP-PSU-0001') {
-        const isOn = Boolean(st.isPoweredOn ?? st.powerOn ?? true);
-        const volts = isOn ? Number(st.voltageV ?? st.outputVoltageV ?? 6) : 0;
+        const isOn = Boolean(st.isPoweredOn ?? st.powerOn ?? false);
+        const volts = isOn ? Number(st.supplyVoltageV ?? st.voltageSetting ?? st.voltageV ?? st.outputVoltageV ?? 6) : 0;
         if (volts > 0) {
           this._activeSignals.set(`${inst.instanceId}:VOLTAGE_VOLT`, {
             id: `${inst.instanceId}:VOLTAGE_VOLT`,
@@ -330,9 +330,9 @@ export class NeuralConnectionEngine {
         }
       }
 
-      // 5. Đèn Laser / Nguồn sáng quang học phát tín hiệu LIGHT_RAY
-      if (inst.assetId === 'OL3D-EQP-LAS-0001' || inst.assetId === 'OL3D-EQP-LBX-0001') {
-        const isLit = Boolean(st.isLaserOn ?? st.isLightOn ?? st.isPoweredOn ?? true);
+      // 5. Đèn Laser / Đèn chiếu sáng quang học phát tín hiệu LIGHT_RAY
+      if (inst.assetId === 'OL3D-EQP-LSR-0001' || inst.assetId === 'OL3D-EQP-OLP-0001') {
+        const isLit = Boolean(st.isLampLit ?? st.isLaserOn ?? st.isLightOn ?? st.isPoweredOn ?? false);
         if (isLit) {
           this._activeSignals.set(`${inst.instanceId}:LIGHT_RAY`, {
             id: `${inst.instanceId}:LIGHT_RAY`,
@@ -350,8 +350,9 @@ export class NeuralConnectionEngine {
 
       // 6. Nhiệt kế / Đèn cồn phát tín hiệu TEMPERATURE_C
       if (inst.assetId === 'OL3D-EQP-THM-0001' || inst.assetId === 'OL3D-EQP-ALC-0001') {
-        const tempC = Number(st.temperatureC ?? (inst.assetId === 'OL3D-EQP-ALC-0001' && st.isLit ? 650 : 25));
-        if (tempC > 26) {
+        const isFlameActive = Boolean(st.isFlameLit ?? st.isHeating ?? st.isLit ?? false);
+        const tempC = Number(st.temperatureC ?? (inst.assetId === 'OL3D-EQP-ALC-0001' && isFlameActive ? 650 : 25));
+        if (tempC > 26 || isFlameActive) {
           this._activeSignals.set(`${inst.instanceId}:TEMPERATURE_C`, {
             id: `${inst.instanceId}:TEMPERATURE_C`,
             sourceInstanceId: inst.instanceId,
@@ -401,7 +402,7 @@ export class NeuralConnectionEngine {
       inferences.push({
         id: 'causal-density-eureka',
         titleVi: 'Liên kết Cân ↔ Ống đong: Khối lượng riêng',
-        formulaLatex: 'D = m / V',
+        formulaLatex: '$D = \\frac{m}{V}$',
         computedValueText: `D = ${massSig.value.toFixed(1)} / ${volSig.value.toFixed(1)} = ${density.toFixed(2)} g/cm³ (${materialHint})`,
         participatingAssetIds: [massSig.sourceAssetId, volSig.sourceAssetId],
         explanationVi: `${massSig.sourceNameVi} gửi khối lượng m kết hợp với ${volSig.sourceNameVi} gửi độ dâng thể tích ΔV để tính ngay khối lượng riêng vật chất.`,
@@ -410,12 +411,12 @@ export class NeuralConnectionEngine {
 
     // Suy luận 2: Trọng lượng & Lực đẩy Archimedes (Cân / Lực kế)
     if (massSig && forceSig) {
-      const weightN = (massSig.value / 1000) * 9.81;
+      const weightN = (massSig.value / 1000) * 9.80665;
       const diffN = Math.max(0, weightN - forceSig.value);
       inferences.push({
         id: 'causal-archimedes-eureka',
         titleVi: 'Liên kết Trọng lực ↔ Lực kế: Lực đẩy Ác-si-mét',
-        formulaLatex: 'F_A = P - F_kế',
+        formulaLatex: '$F_A = P - F_{\\text{ke}}$',
         computedValueText: `P = ${weightN.toFixed(2)} N | F_kế = ${forceSig.value.toFixed(2)} N ⇒ F_A ≈ ${diffN.toFixed(2)} N`,
         participatingAssetIds: [massSig.sourceAssetId, forceSig.sourceAssetId],
         explanationVi: 'So sánh trọng lượng thực P từ khối lượng với số chỉ lực kế khi vật chìm trong chất lỏng.',
@@ -427,7 +428,7 @@ export class NeuralConnectionEngine {
       inferences.push({
         id: 'causal-ohm-circuit',
         titleVi: 'Mạch điện liên kết: Định luật Ohm',
-        formulaLatex: 'I = U / R',
+        formulaLatex: '$I = \\frac{U}{R}$',
         computedValueText: `Hiệu điện thế cấp U = ${voltSig.value.toFixed(1)} V (Đủ ngưỡng nuôi phụ tải)`,
         participatingAssetIds: [voltSig.sourceAssetId],
         explanationVi: `${voltSig.sourceNameVi} đang phát tín hiệu điện áp U sang các thiết bị tiêu thụ và đồng hồ đo nối liền.`,
@@ -439,7 +440,7 @@ export class NeuralConnectionEngine {
       inferences.push({
         id: 'causal-optics-ray',
         titleVi: 'Truyền quang đồng trục: Khúc xạ & Hội tụ',
-        formulaLatex: '1/f = 1/d + 1/d\'',
+        formulaLatex: '$\\frac{1}{f} = \\frac{1}{d} + \\frac{1}{d\'}$',
         computedValueText: 'Chùm tia chuẩn trực sẵn sàng tương tác với thấu kính và màn hứng',
         participatingAssetIds: [lightSig.sourceAssetId],
         explanationVi: `${lightSig.sourceNameVi} truyền vector chùm tia tới các linh kiện quang học đặt cùng trục quang chính.`,
@@ -728,7 +729,7 @@ export class NeuralConnectionEngine {
       (instA.assetId === 'OL3D-EQP-ALC-0001' && instB.assetId === 'OL3D-EQP-MIC-0001') ||
       (instB.assetId === 'OL3D-EQP-ALC-0001' && instA.assetId === 'OL3D-EQP-MIC-0001')
     ) {
-      if (distanceM < 0.35) {
+      if (distanceM < 0.50) {
         return {
           isHazard: true,
           severity: 'critical',
@@ -739,10 +740,10 @@ export class NeuralConnectionEngine {
       }
     }
 
-    // 2. An toàn Điện học: Khoảng cách kéo dây bắp chuối quá giới hạn 0.70m
+    // 2. An toàn Điện học: Khoảng cách kéo dây bắp chuối giữa Hộp nguồn PSU và Đèn chiếu / Laser quá giới hạn 0.70m
     if (
-      (instA.assetId === 'OL3D-EQP-PSU-0001' && instB.assetId === 'OL3D-EQP-LBX-0001') ||
-      (instB.assetId === 'OL3D-EQP-PSU-0001' && instA.assetId === 'OL3D-EQP-LBX-0001')
+      (instA.assetId === 'OL3D-EQP-PSU-0001' && (instB.assetId === 'OL3D-EQP-OLP-0001' || instB.assetId === 'OL3D-EQP-LSR-0001')) ||
+      (instB.assetId === 'OL3D-EQP-PSU-0001' && (instA.assetId === 'OL3D-EQP-OLP-0001' || instA.assetId === 'OL3D-EQP-LSR-0001'))
     ) {
       if (distanceM > MAX_ELECTRICAL_CABLE_LENGTH_M) {
         return {
@@ -764,9 +765,9 @@ export class NeuralConnectionEngine {
         return {
           isHazard: true,
           severity: 'medium',
-          hazardMessageVi: 'MẸO THAO TÁC AN TOÀN: Tránh thả rơi tự do khối kim loại vào ống đong!',
-          scientificReasonVi: 'Động lượng va chạm của khối kim loại nặng 135g có thể làm nứt vỡ đáy thủy tinh mỏng của ống đong.',
-          suggestedCorrectionVi: 'Nghiêng ống đong 45 độ và cho vật trượt nhẹ nhàng dọc theo thành ống.',
+          hazardMessageVi: 'MẸO THAO TÁC AN TOÀN: Tránh thả rơi tự do khối đồng thau 219g vào ống đong!',
+          scientificReasonVi: 'Động lượng va chạm của khối kim loại đồng thau nặng 219 g và kích thước 40 mm có thể làm kẹt vỡ miệng và đáy thủy tinh ống đong Ø28 mm.',
+          suggestedCorrectionVi: 'Hãy dùng Bình tràn Eureka Ø60 mm cho mẫu vật khối hộp đồng thau lớn.',
         };
       }
     }

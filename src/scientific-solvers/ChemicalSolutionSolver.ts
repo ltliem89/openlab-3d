@@ -6,7 +6,7 @@
  * 2. Đường cong độ tan theo nhiệt độ: $S(T) = S_0 + k_S (T - 20)$
  * 3. Nồng độ phần trăm: $C\% = \frac{m_{\text{ct\_tan}}}{m_{\text{dd}}} \times 100\%$
  * 4. Nồng độ mol: $C_M = \frac{n}{V} = \frac{m / M}{V_{\text{L}}}$
- * 5. Khối lượng riêng thực nghiệm dung dịch nước: $\rho(C) = \rho_{\text{nước}} \times (1 + \beta_C \cdot C\%)$
+ * 5. Khối lượng riêng thực nghiệm dung dịch nước: $\rho(C) = \rho_{\text{nuoc}} \times (1 + \beta_C \cdot C\%)$
  * 6. Thang đo pH Sorensen & Cân bằng ion nước: $[H^+][OH^-] = 10^{-14}$, $pH = -\log_{10}[H^+]$
  * 7. Quang phổ màu chỉ thị pH vạn năng & Giấy quỳ tím chuẩn SGK KHTN 8.
  */
@@ -87,6 +87,8 @@ export class ChemicalSolutionSolver {
         return 342.3; // C12H22O11
       case 'cuso4':
         return 159.6; // Cu (64) + S (32) + O4 (64)
+      case 'caco3':
+        return 100.09; // Ca (40.08) + C (12.01) + O3 (48.00)
       case 'hcl':
         return 36.46;
       case 'naoh':

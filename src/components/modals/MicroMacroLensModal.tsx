@@ -376,7 +376,7 @@ export const MicroMacroLensModal: React.FC<MicroMacroLensModalProps> = ({ isOpen
             <span className="font-bold text-cyan-300 uppercase tracking-wider">Phương trình vật lý đang mô phỏng:</span>
             <div className="text-amber-200 font-semibold">
               {mode === 'water_boiling' && (
-                <MathFormula math={`E_k = \\frac{3}{2} k_B T \\quad | \\quad T = ${temperatureC}^\\circ\\text{C} \\; ${temperatureC >= 100 ? '\\ge 100^\\circ\\text{C (Bẻ gãy liên kết H)}' : '< 100^\\circ\\text{C (Lỏng)}'}`} />
+                <MathFormula math={`E_k = \\frac{3}{2} k_B T \\quad | \\quad T = ${temperatureC}^\\circ\\text{C} \\; ${temperatureC >= 100 ? '\\ge 100^\\circ\\text{C (Be gay lien ket H)}' : '< 100^\\circ\\text{C (Long)}'}`} />
               )}
               {mode === 'joule_lenz' && (
                 <MathFormula math={`Q = I^2 R t \\quad | \\quad I = ${currentA.toFixed(2)}\\,\\text{A}`} />

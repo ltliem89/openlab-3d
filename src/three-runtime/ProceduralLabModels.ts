@@ -1766,6 +1766,97 @@ function createLensHeadTagCanvasTexture(
   return tex;
 }
 
+function createRulerScaleTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.fillStyle = '#e2e8f0';
+  ctx.fillRect(0, 0, 1024, 128);
+  ctx.strokeStyle = '#64748b';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(2, 2, 1020, 124);
+
+  const marginPx = 42;
+  const spanPx = 1024 - 2 * marginPx;
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 20px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+
+  for (let mm = 0; mm <= 300; mm++) {
+    const x = marginPx + (mm / 300) * spanPx;
+    const isCm = mm % 10 === 0;
+    const isHalfCm = mm % 5 === 0;
+    const tickLen = isCm ? 34 : isHalfCm ? 24 : 14;
+    ctx.strokeStyle = isCm ? '#0f172a' : '#334155';
+    ctx.lineWidth = isCm ? 2.5 : 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x, 4);
+    ctx.lineTo(x, 4 + tickLen);
+    ctx.stroke();
+
+    if (isCm) {
+      ctx.fillText(String(mm / 10), x, 58);
+    }
+  }
+
+  ctx.font = 'bold 16px "Inter", sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#1e3a8a';
+  ctx.fillText('INOX 300 mm · ĐCNN: 1 mm', 1024 - marginPx, 105);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function createStopwatchDisplayTexture(seconds: number, isRunning: boolean): THREE.CanvasTexture {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d')!;
+
+  // Classic greenish LCD background
+  ctx.fillStyle = '#cbd5c0';
+  ctx.fillRect(0, 0, 256, 128);
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(3, 3, 250, 122);
+
+  const safeSec = Math.max(0, Number.isFinite(seconds) ? seconds : 0);
+  const mins = Math.floor(safeSec / 60);
+  const remSec = safeSec % 60;
+  const wholeSec = Math.floor(remSec);
+  const hundredths = Math.floor((remSec - wholeSec) * 100);
+
+  const mm = String(mins).padStart(2, '0');
+  const ss = String(wholeSec).padStart(2, '0');
+  const hh = String(hundredths).padStart(2, '0');
+
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 46px "JetBrains Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${mm}:${ss}.${hh}`, 128, 70);
+
+  ctx.font = 'bold 14px "Inter", sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = isRunning ? '#15803d' : '#475569';
+  ctx.fillText(isRunning ? '● RUN' : '⏸ STOP', 18, 22);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#1e293b';
+  ctx.fillText('0.01 s', 238, 22);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 function createPowerSupplyPanelCanvasTexture(
   isPoweredOn: boolean,
   voltageV: number,
@@ -3372,6 +3463,59 @@ export function buildProceduralEquipmentGroup(
       liquidGroup.add(liquidMesh);
 
       addConcaveMeniscusAndRipples(liquidGroup, 0.0338, 0.038, 'clean-water');
+
+      // Dynamic boiling bubbles & steam plume (`boiling_fx`, visible during simmering/boiling)
+      const boilingGroup = new THREE.Group();
+      boilingGroup.name = 'boiling_fx';
+      boilingGroup.visible = false;
+      const bubbleMat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.72,
+      });
+      for (let i = 0; i < 18; i++) {
+        const angle = (i * 137.5 * Math.PI) / 180;
+        const radius = 0.006 + ((i * 7) % 10) * 0.0022;
+        const bRadius = 0.0012 + (i % 3) * 0.0007;
+        const bubble = new THREE.Mesh(
+          new THREE.SphereGeometry(bRadius, 8, 8),
+          bubbleMat,
+        );
+        bubble.name = `bubble_${i}`;
+        bubble.position.set(
+          Math.cos(angle) * radius,
+          0.004 + (i % 6) * 0.006,
+          Math.sin(angle) * radius,
+        );
+        bubble.userData = {
+          phase: i * 0.42,
+          speed: 0.7 + (i % 4) * 0.25,
+          baseX: Math.cos(angle) * radius,
+          baseZ: Math.sin(angle) * radius,
+        };
+        boilingGroup.add(bubble);
+      }
+      const steamMat = new THREE.MeshBasicMaterial({
+        color: 0xf1f5f9,
+        transparent: true,
+        opacity: 0.28,
+        depthWrite: false,
+      });
+      for (let s = 0; s < 5; s++) {
+        const puff = new THREE.Mesh(
+          new THREE.SphereGeometry(0.014 + s * 0.003, 12, 10),
+          steamMat,
+        );
+        puff.name = `steam_${s}`;
+        puff.position.set(
+          Math.sin(s * 1.4) * 0.012,
+          0.055 + s * 0.022,
+          Math.cos(s * 1.1) * 0.012,
+        );
+        puff.userData = { phase: s * 0.9 };
+        boilingGroup.add(puff);
+      }
+      liquidGroup.add(boilingGroup);
 
       liquidGroup.position.y = 0.004;
 
@@ -5718,8 +5862,7 @@ export function buildProceduralEquipmentGroup(
       break;
     }
 
-    case 'thermometer':
-    default: {
+    case 'thermometer': {
       addContactShadow(root, 0.025, 0.025);
       const bodyGroup = new THREE.Group();
       bodyGroup.name = 'body';
@@ -5738,17 +5881,23 @@ export function buildProceduralEquipmentGroup(
       bulbMesh.position.y = 0.016;
       bodyGroup.add(bulbMesh);
 
-      // Red alcohol capillary column (`plunger` scales height dynamically with temperatureC)
+      // Fixed stem linking bulb to 0°C mark at y = 0.0498m
+      const preStemGeo = new THREE.CylinderGeometry(0.0020, 0.0020, 0.032, 12);
+      const preStemMesh = new THREE.Mesh(preStemGeo, redMat);
+      preStemMesh.position.y = 0.034;
+      bodyGroup.add(preStemMesh);
+
+      // Red alcohol capillary column (`plunger` scales height dynamically with 0..100°C engraved scale)
       const colGroup = new THREE.Group();
       colGroup.name = 'plunger';
-      colGroup.position.y = 0.018;
-      const colGeo = new THREE.CylinderGeometry(0.0020, 0.0020, 0.14, 12);
-      colGeo.translate(0, 0.07, 0);
+      colGroup.position.y = 0.0498;
+      const colGeo = new THREE.CylinderGeometry(0.0020, 0.0020, 0.1250, 12);
+      colGeo.translate(0, 0.0625, 0);
       const colMesh = new THREE.Mesh(colGeo, redMat);
       colGroup.add(colMesh);
       root.add(colGroup);
 
-      // 360° Dual-sided temperature graduation scale (-10°C to 110°C)
+      // 360° Dual-sided temperature graduation scale (0°C to 100°C)
       const tempScaleTex = createGraduationCanvasTexture(0, 100, 20, '100 °C : 1 °C');
       const tempScaleMat = new THREE.MeshBasicMaterial({
         map: tempScaleTex,
@@ -5780,6 +5929,213 @@ export function buildProceduralEquipmentGroup(
       bodyGroup.add(stemMesh);
 
       root.add(bodyGroup);
+      break;
+    }
+
+    case 'alcohol-burner': {
+      addContactShadow(root, 0.042, 0.042);
+      const bodyGroup = new THREE.Group();
+      bodyGroup.name = 'body';
+      const glassMat = createGlassMaterial(isSoftwareGl);
+
+      // Faceted glass reservoir
+      const glassReservoir = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.030, 0.036, 0.046, 12),
+        glassMat,
+      );
+      glassReservoir.position.y = 0.023;
+      glassReservoir.renderOrder = 4;
+      bodyGroup.add(glassReservoir);
+
+      // Ethanol spirit liquid inside
+      const spiritLiquid = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.027, 0.033, 0.028, 12),
+        new THREE.MeshPhysicalMaterial({
+          color: 0xbae6fd,
+          transparent: true,
+          opacity: 0.55,
+          roughness: 0.12,
+        }),
+      );
+      spiritLiquid.position.y = 0.016;
+      spiritLiquid.renderOrder = 2;
+      bodyGroup.add(spiritLiquid);
+
+      // Brass wick holder ferrule
+      const collar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.009, 0.012, 0.012, 24),
+        new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 0.3, metalness: 0.85 }),
+      );
+      collar.position.y = 0.050;
+      bodyGroup.add(collar);
+
+      // Cotton wick
+      const wick = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.0032, 0.0036, 0.016, 12),
+        new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.95 }),
+      );
+      wick.position.y = 0.060;
+      bodyGroup.add(wick);
+
+      // Dynamic flame group (`flame_group`) toggled by isFlameLit / isHeating
+      const flameGroup = new THREE.Group();
+      flameGroup.name = 'flame_group';
+      flameGroup.visible = false;
+
+      const outerFlame = new THREE.Mesh(
+        new THREE.ConeGeometry(0.011, 0.038, 16),
+        new THREE.MeshBasicMaterial({
+          color: 0xf59e0b,
+          transparent: true,
+          opacity: 0.85,
+        }),
+      );
+      outerFlame.name = 'burner_flame';
+      outerFlame.position.y = 0.084;
+      flameGroup.add(outerFlame);
+
+      const innerCore = new THREE.Mesh(
+        new THREE.ConeGeometry(0.0055, 0.020, 12),
+        new THREE.MeshBasicMaterial({
+          color: 0x60a5fa,
+          transparent: true,
+          opacity: 0.92,
+        }),
+      );
+      innerCore.position.y = 0.075;
+      flameGroup.add(innerCore);
+
+      const flameLight = new THREE.PointLight(0xfbbf24, 0.85, 0.6);
+      flameLight.name = 'burner_flame_light';
+      flameLight.position.y = 0.086;
+      flameGroup.add(flameLight);
+
+      root.add(flameGroup);
+      root.add(bodyGroup);
+      break;
+    }
+
+    case 'ruler-30': {
+      addContactShadow(root, 0.16, 0.025);
+      const bodyGroup = new THREE.Group();
+      bodyGroup.name = 'body';
+
+      const rulerBody = new THREE.Mesh(
+        new THREE.BoxGeometry(0.312, 0.0022, 0.028),
+        new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.82, roughness: 0.25 }),
+      );
+      rulerBody.position.y = 0.0011;
+      bodyGroup.add(rulerBody);
+
+      const rulerFace = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.310, 0.026),
+        new THREE.MeshBasicMaterial({ map: createRulerScaleTexture() }),
+      );
+      rulerFace.rotation.x = -Math.PI / 2;
+      rulerFace.position.y = 0.0024;
+      bodyGroup.add(rulerFace);
+
+      root.add(bodyGroup);
+      break;
+    }
+
+    case 'digital-stopwatch': {
+      addContactShadow(root, 0.038, 0.038);
+      const bodyGroup = new THREE.Group();
+      bodyGroup.name = 'body';
+
+      const housing = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.032, 0.030, 0.016, 32),
+        new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.45, metalness: 0.2 }),
+      );
+      housing.position.y = 0.008;
+      bodyGroup.add(housing);
+
+      // Top Start/Stop & Reset crowns
+      [-0.014, 0, 0.014].forEach((cx, idx) => {
+        const crown = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.0038, 0.0038, 0.010, 16),
+          new THREE.MeshStandardMaterial({
+            color: idx === 2 ? 0xef4444 : idx === 0 ? 0x22c55e : 0x94a3b8,
+            metalness: 0.75,
+            roughness: 0.25,
+          }),
+        );
+        crown.position.set(cx, 0.008, -0.033);
+        crown.rotation.x = Math.PI / 2;
+        bodyGroup.add(crown);
+      });
+
+      const lcdMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.038, 0.019),
+        new THREE.MeshBasicMaterial({ map: createStopwatchDisplayTexture(0, false) }),
+      );
+      lcdMesh.name = 'scale_display';
+      lcdMesh.rotation.x = -Math.PI / 2;
+      lcdMesh.position.y = 0.0162;
+      root.add(lcdMesh);
+
+      root.add(bodyGroup);
+      break;
+    }
+
+    case 'test-tube': {
+      addContactShadow(root, 0.016, 0.016);
+      const bodyGroup = new THREE.Group();
+      bodyGroup.name = 'body';
+      const glassMat = createGlassMaterial(isSoftwareGl);
+
+      const tubeWall = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.008, 0.008, 0.135, 24, 1, true),
+        glassMat,
+      );
+      tubeWall.position.y = 0.076;
+      tubeWall.renderOrder = 4;
+      bodyGroup.add(tubeWall);
+
+      const bottomCap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.008, 24, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2),
+        glassMat,
+      );
+      bottomCap.position.y = 0.0085;
+      bottomCap.renderOrder = 4;
+      bodyGroup.add(bottomCap);
+
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(0.0082, 0.0011, 10, 24).rotateX(Math.PI / 2),
+        glassMat,
+      );
+      rim.position.y = 0.1435;
+      rim.renderOrder = 4;
+      bodyGroup.add(rim);
+
+      const liquidGroup = new THREE.Group();
+      liquidGroup.name = 'liquid_surface';
+      const liqCol = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.0072, 0.0072, 0.055, 20),
+        createWaterMaterial('clean-water'),
+      );
+      liqCol.position.y = 0.0275;
+      liqCol.renderOrder = 2;
+      liquidGroup.add(liqCol);
+      liquidGroup.position.y = 0.009;
+      root.add(liquidGroup);
+
+      root.add(bodyGroup);
+      break;
+    }
+
+    default: {
+      addContactShadow(root, 0.03, 0.03);
+      const fallbackGroup = new THREE.Group();
+      fallbackGroup.name = 'body';
+      const fallbackMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(0.045, 0.045, 0.045),
+        new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.5 }),
+      );
+      fallbackMesh.position.y = 0.0225;
+      fallbackGroup.add(fallbackMesh);
+      root.add(fallbackGroup);
       break;
     }
 
@@ -7698,7 +8054,7 @@ export function applyInstanceStateToObject3D(
     }
   }
 
-  // 10. Alcohol Thermometer dynamic capillary height based on temperatureC
+  // 10. Alcohol Thermometer dynamic capillary height based on temperatureC (0..100°C calibrated scale)
   if (arch === 'thermometer') {
     const colGroup = instanceRoot.getObjectByName('plunger');
     if (colGroup) {
@@ -7706,7 +8062,7 @@ export function applyInstanceStateToObject3D(
         instance.instanceState.thermometerTempC ??
         instance.instanceState.temperatureC ??
         25.0;
-      const ratio = THREE.MathUtils.clamp((tempC + 10) / 120, 0.08, 1.0);
+      const ratio = THREE.MathUtils.clamp(tempC / 100.0, 0.02, 1.05);
       colGroup.scale.set(1, ratio, 1);
     }
   }
@@ -7934,6 +8290,88 @@ export function applyInstanceStateToObject3D(
     const liqGrp = instanceRoot.getObjectByName('liquid_surface');
     if (liqGrp) {
       liqGrp.scale.set(1, scaleY, 1);
+    }
+  }
+
+  // 15. Alcohol Burner: dynamic flame visibility & organic flicker
+  if (arch === 'alcohol-burner') {
+    const isLit = Boolean(
+      instance.instanceState.isFlameLit ?? instance.instanceState.isHeating,
+    );
+    const flameGrp = instanceRoot.getObjectByName('flame_group');
+    if (flameGrp) {
+      flameGrp.visible = isLit;
+      if (isLit) {
+        const now = Date.now() * 0.008;
+        const flameMesh = flameGrp.getObjectByName('burner_flame');
+        if (flameMesh) {
+          flameMesh.scale.set(
+            1.0 + Math.sin(now * 1.7) * 0.08,
+            1.0 + Math.cos(now * 2.3) * 0.14,
+            1.0 + Math.sin(now * 1.9) * 0.08,
+          );
+        }
+        const light = flameGrp.getObjectByName('burner_flame_light') as THREE.PointLight | undefined;
+        if (light) {
+          light.intensity = 0.8 + Math.sin(now * 2.1) * 0.15;
+        }
+      }
+    }
+  }
+
+  // 16. Beaker 250 mL: dynamic boiling bubbles & steam plume above 75°C
+  if (arch === 'beaker-250') {
+    const tempC = instance.instanceState.temperatureC ?? 25.0;
+    const boilingFx = instanceRoot.getObjectByName('boiling_fx');
+    if (boilingFx) {
+      const isSimmeringOrBoiling = tempC >= 75.0;
+      boilingFx.visible = isSimmeringOrBoiling;
+      if (isSimmeringOrBoiling) {
+        const intensity = THREE.MathUtils.clamp((tempC - 75.0) / 25.0, 0.15, 1.0);
+        const nowS = Date.now() * 0.001;
+        for (let i = 0; i < 18; i++) {
+          const b = boilingFx.getObjectByName(`bubble_${i}`);
+          if (b) {
+            b.visible = i < Math.ceil(intensity * 18);
+            const speed = (b.userData.speed as number) || 0.8;
+            const phase = (b.userData.phase as number) || 0;
+            const cycle = ((nowS * speed * (0.6 + intensity * 0.8) + phase) % 1.0);
+            b.position.y = 0.003 + cycle * 0.036;
+            const s = 0.5 + cycle * 0.9;
+            b.scale.set(s, s, s);
+          }
+        }
+        for (let s = 0; s < 5; s++) {
+          const puff = boilingFx.getObjectByName(`steam_${s}`);
+          if (puff) {
+            puff.visible = tempC >= 92.0;
+            const phase = (puff.userData.phase as number) || 0;
+            const cycle = ((nowS * 0.5 + phase) % 1.0);
+            puff.position.y = 0.045 + cycle * 0.09;
+            const sc = 0.6 + cycle * 1.1;
+            puff.scale.set(sc, sc, sc);
+          }
+        }
+      }
+    }
+  }
+
+  // 17. Digital Stopwatch: live elapsed time texture update
+  if (arch === 'digital-stopwatch') {
+    const sec = instance.instanceState.recordedTimeS ?? 0;
+    const isRunning = Boolean(instance.instanceState.isTimerRunning);
+    const key = `${sec.toFixed(1)}:${isRunning ? 1 : 0}`;
+    const lcd = instanceRoot.getObjectByName('scale_display') as THREE.Mesh | undefined;
+    if (
+      lcd &&
+      lcd.material instanceof THREE.MeshBasicMaterial &&
+      lcd.userData.lastKey !== key
+    ) {
+      lcd.userData.lastKey = key;
+      const nextTex = createStopwatchDisplayTexture(sec, isRunning);
+      if (lcd.material.map) lcd.material.map.dispose();
+      lcd.material.map = nextTex;
+      lcd.material.needsUpdate = true;
     }
   }
 }

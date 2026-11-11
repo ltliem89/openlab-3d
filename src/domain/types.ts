@@ -127,7 +127,10 @@ export type ProceduralArchetype =
   | 'optical-power-supply'
   | 'optical-lens-box'
   | 'lever-balance-apparatus'
-  | 'communicating-vessels-3way';
+  | 'communicating-vessels-3way'
+  | 'ruler-30'
+  | 'digital-stopwatch'
+  | 'test-tube';
 
 export interface QuantityValue {
   value: number;
@@ -210,6 +213,8 @@ export interface MeasurementMetadata {
     | 'voltage-resistance'
     | 'refraction-angle'
     | 'magnification'
+    | 'time'
+    | 'angle'
     | 'none';
   rangeMin?: QuantityValue;
   rangeMax?: QuantityValue;

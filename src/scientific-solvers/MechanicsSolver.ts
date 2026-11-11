@@ -5,7 +5,7 @@
  * - Hooke's Law of Elasticity: $F_{dh} = k \cdot |\Delta l| \iff |\Delta l| = \frac{F}{k}$
  * - Lever Equilibrium: $\sum M_O = 0 \iff F_1 \cdot d_1 = F_2 \cdot d_2$
  * - Mass Weighing with Tare: $m_{net} = \max(0, m_{gross} - m_{tare})$
- * - Vernier Caliper Principle: $L = L_{main} + N_{vernier} \times 0.05\text{ mm}$
+ * - Vernier Caliper Principle: $L = L_{main} + N_{vernier} \times 0.02\text{ mm}$
  */
 
 import { SolverInput, SolverResult } from './types';
@@ -85,9 +85,10 @@ export class MechanicsSolver {
     const leverTorqueRightNm = forceRightN * armRightM;
     const isLeverBalanced = Math.abs(leverTorqueLeftNm - leverTorqueRightNm) <= 1e-4;
 
-    // 4. Thước cặp cơ khí
-    const jawOpeningMm = Number(state.jawOpeningMm ?? 15.45);
-    const caliperLengthMm = MetrologyEngine.quantizeToLeastCount(jawOpeningMm, 0.05);
+    // 4. Thước cặp cơ khí (chuẩn ĐCNN 0.02 mm, cho phép cấu hình fallback 0.05 mm)
+    const caliperLeastCountMm = Number(state.caliperLeastCountMm ?? 0.02);
+    const jawOpeningMm = Number(state.jawOpeningMm ?? 25.00);
+    const caliperLengthMm = MetrologyEngine.quantizeToLeastCount(jawOpeningMm, caliperLeastCountMm);
 
     // Màn hình hiển thị phản ánh đáp ứng động học thực của Loadcell hoặc lực kế
     const settledReadingDisplay = massNetG > 0
@@ -105,12 +106,27 @@ export class MechanicsSolver {
       reasonVi = 'Hệ cơ học ở trạng thái thăng bằng tự do';
     }
 
-    const uncertainty = MetrologyEngine.calculateUncertaintyBudget({
-      leastCount: 0.01,
-      instrumentalError: 0.02,
-      repeatabilitySigma: 0.01,
-      unit: 'g',
-    });
+    const archKey = (input.archetype ?? '').toLowerCase();
+    const uncertainty = archKey.includes('caliper')
+      ? MetrologyEngine.calculateUncertaintyBudget({
+          leastCount: caliperLeastCountMm,
+          instrumentalError: caliperLeastCountMm,
+          repeatabilitySigma: caliperLeastCountMm * 0.5,
+          unit: 'mm',
+        })
+      : archKey.includes('dynamometer') || forceNewtons > 0 && massNetG <= 0
+      ? MetrologyEngine.calculateUncertaintyBudget({
+          leastCount: 0.1,
+          instrumentalError: 0.1,
+          repeatabilitySigma: 0.05,
+          unit: 'N',
+        })
+      : MetrologyEngine.calculateUncertaintyBudget({
+          leastCount: 0.01,
+          instrumentalError: 0.02,
+          repeatabilitySigma: 0.01,
+          unit: 'g',
+        });
 
     return {
       derived: {

@@ -235,5 +235,74 @@ export const SOCRATIC_MISCONCEPTIONS_PRESET: SocraticMisconception[] = [
       }
     ],
     scientificInsightVi: 'Nhiệt động học & Vật liệu: Bức xạ nhiệt hồng ngoại từ ngọn lửa đèn cồn ($T \\approx 700^\\circ\\text{C}$) gây ứng suất nhiệt không đồng đều trên thủy tinh thấu kính DIN 58145, dẫn đến nứt vỡ giòn do dãn nở nhiệt bất đối xứng.'
+  },
+  {
+    id: 'MISCONCEPTION_VOLTMETER_SERIES',
+    hazardTitleVi: 'CẢNH BÁO: Vôn kế đang mắc nối tiếp vào mạch điện!',
+    triggerCondition: 'voltmeter_series',
+    socraticQuestionVi: 'Thầy Socrates nhận thấy em đang mắc Vôn kế nối tiếp với bóng đèn tải. Em có nhớ Vôn kế lý tưởng có điện trở trong (R_V) như thế nào không?',
+    options: [
+      {
+        id: 'v_opt1',
+        answerTextVi: 'Vôn kế có điện trở rất nhỏ (gần bằng 0 Ω) để dòng điện chạy qua dễ dàng.',
+        isCorrectUnderstanding: false,
+        socraticFeedbackVi: 'Nhầm lẫn với Ampe kế rồi em! Nếu Vôn kế có R ≈ 0 thì khi mắc song song hai cực nguồn sẽ bị đoản mạch ngay!',
+        correctiveActionVi: 'Vôn kế có điện trở cực kỳ lớn (hàng triệu Ohm) để không làm suy giảm dòng điện trong mạch.'
+      },
+      {
+        id: 'v_opt2',
+        answerTextVi: 'Vôn kế có điện trở vô cùng lớn (R_V → ∞), nên khi mắc nối tiếp sẽ chặn gần như toàn bộ dòng điện khiến đèn không sáng.',
+        isCorrectUnderstanding: true,
+        socraticFeedbackVi: 'Tuyệt vời! Do R_V vô cùng lớn nên theo định luật Ohm: I = U / (R_tai + R_V) ≈ 0 A, bóng đèn không thể phát sáng.',
+        correctiveActionVi: 'Quy tắc chuẩn: Luôn mắc Vôn kế SONG SONG với hai đầu đoạn mạch hoặc linh kiện cần đo hiệu điện thế!'
+      }
+    ],
+    scientificInsightVi: 'Bản chất mạch điện: Vôn kế lý tưởng có $R_V \\to \\infty$. Mắc nối tiếp sẽ biến mạch thành mạch hở ($I \\approx 0\\text{ A}$), toàn bộ hiệu điện thế nguồn rơi trên hai đầu vôn kế ($U_V \\approx U_{\\text{nguon}}$).'
+  },
+  {
+    id: 'MISCONCEPTION_HEATER_NO_PROTECTION',
+    hazardTitleVi: 'CẢNH BÁO NGUY HIỂM: Đun cốc thủy tinh không có lưới tản nhiệt!',
+    triggerCondition: 'heater_no_protection',
+    socraticQuestionVi: 'Cốc thủy tinh chứa nước đang được đặt trực tiếp lên ngọn lửa đèn cồn mà không có lưới amiăng tản nhiệt. Hiện tượng vật lý gì nguy hiểm có thể xảy ra?',
+    options: [
+      {
+        id: 'h_opt1',
+        answerTextVi: 'Không có vấn đề gì vì thủy tinh chịu nhiệt Borosilicate không bao giờ vỡ.',
+        isCorrectUnderstanding: false,
+        socraticFeedbackVi: 'Nguy hiểm! Dù là thủy tinh Borosilicate chịu nhiệt, việc đốt tập trung vào một điểm nhỏ vẫn gây ứng suất nhiệt cục bộ cực lớn!',
+        correctiveActionVi: 'Luôn luôn lót tấm lưới amiăng lên trên kiềng sắt trước khi đặt cốc đun.'
+      },
+      {
+        id: 'h_opt2',
+        answerTextVi: 'Nhiệt độ tập trung quá mức tại đáy gây sốc nhiệt và dãn nở không đồng đều, làm nứt vỡ cốc thủy tinh và tràn nước sôi.',
+        isCorrectUnderstanding: true,
+        socraticFeedbackVi: 'Rất chính xác! Lưới amiăng có vai trò phân tán dòng nhiệt đối lưu đều khắp đáy cốc, triệt tiêu gradient nhiệt độ cục bộ.',
+        correctiveActionVi: 'Đặt lưới kim loại / amiăng tản nhiệt lên kiềng sắt trước khi bật ngọn lửa đèn cồn.'
+      }
+    ],
+    scientificInsightVi: 'Nhiệt học & Gradient nhiệt: Thủy tinh dẫn nhiệt kém ($k \\approx 1.2\\text{ W/(m}\\cdot\\text{K)}$). Ngọn lửa điểm tạo chênh lệch nhiệt độ lớn $\\nabla T > 200\\text{ K/cm}$, sinh ứng suất kéo nhiệt $\\sigma = \\frac{E \\alpha \\Delta T}{1 - \\nu}$ vượt quá giới hạn bền uốn gây nứt giòn.'
+  },
+  {
+    id: 'MISCONCEPTION_CYLINDER_DROP_HEAVY',
+    hazardTitleVi: 'CẢNH BÁO THAO TÁC: Thả rơi tự do vật nặng vào đáy ống đong!',
+    triggerCondition: 'cylinder_drop_heavy',
+    socraticQuestionVi: 'Thả rơi tự do một khối kim loại đặc từ miệng ống đong thẳng đứng xuống đáy chứa nước có thể dẫn đến hậu quả gì?',
+    options: [
+      {
+        id: 'c_opt1',
+        answerTextVi: 'Nước sẽ giảm xóc hoàn toàn nên thả từ độ cao nào cũng an toàn tuyệt đối.',
+        isCorrectUnderstanding: false,
+        socraticFeedbackVi: 'Sai lầm! Chiều cao cột nước trong ống đong thí nghiệm chỉ vài xentimét, lực cản nhớt không đủ hãm xung lượng va chạm của khối kim loại nặng!',
+        correctiveActionVi: 'Nghiêng ống đong và trượt nhẹ nhàng mẫu vật dọc theo thành ống.'
+      },
+      {
+        id: 'c_opt2',
+        answerTextVi: 'Xung lượng va chạm cơ học giữa khối kim loại và đáy thủy tinh sẽ làm vỡ thủng đáy ống đong.',
+        isCorrectUnderstanding: true,
+        socraticFeedbackVi: 'Thao tác chuẩn phòng thí nghiệm! Luôn nghiêng ống đong khoảng 45° rồi thả nhẹ cho vật trượt từ từ dọc theo thành ống chìm vào nước.',
+        correctiveActionVi: 'Nghiêng ống đong 45 độ, cho mẫu vật trượt êm dọc theo thành ống xuống đáy.'
+      }
+    ],
+    scientificInsightVi: 'Cơ học va chạm xung lượng: Khối lượng $m$ rơi tự do độ cao $h$ tích lũy động lượng $p = m \\sqrt{2gh}$. Thời gian va chạm tiếp xúc cứng $\\Delta t \\approx 1\\text{ ms}$ tạo xung lực cực đại $F_{\\text{impact}} = \\frac{\\Delta p}{\\Delta t} \\gg 100\\text{ N}$, phá vỡ ứng suất nén của thủy tinh silicat.'
   }
 ];

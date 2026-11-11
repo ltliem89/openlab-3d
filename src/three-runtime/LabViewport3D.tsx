@@ -3151,7 +3151,13 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           instancesRef.current,
           assetsMapRef.current,
         );
-        candidates.slice(0, 5).forEach((cand) => {
+        const selAsset = assetsMapRef.current.get(selInst.assetId);
+        const isSelectedBalance =
+          selInst.assetId === 'OL3D-EQP-BAL-0001' ||
+          selAsset?.geometry.proceduralArchetype === 'electronic-balance' ||
+                    selInst.assetId.toLowerCase().includes('bal');
+
+        candidates.slice(0, 12).forEach((cand) => {
           const targetObj = instanceObjectsRef.current.get(cand.targetInstance.instanceId);
           if (!targetObj) return;
           const p1 = new THREE.Vector3(selObj.position.x, selObj.position.y + 0.08, selObj.position.z);
@@ -3166,12 +3172,28 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           const sy = Math.round((-_projVec.y * 0.5 + 0.5) * height);
           if (sx < 20 || sx > width - 20 || sy < 20 || sy > height - 20) return;
 
-          // Mã hóa ký hiệu & màu theo phân môn khoa học
+          // Mã hóa ký hiệu & màu theo phân môn khoa học & phân định luồng Nơ-ron:
           let icon = '🔗';
           let symbolText = 'Liên kết';
           let colorHex = '#34D399';
           const kind = cand.link.kind;
-          if (kind === 'electrical_terminal' || kind === 'electrical_interlock' || kind === 'electromagnetic_induction') {
+          const isIncomingToBalance = isSelectedBalance && cand.link.direction !== 'output';
+          const isIncomingMechFluid = cand.link.direction === 'input' && (
+            kind === 'mechanical_support' ||
+            kind === 'mechanical_hook' ||
+            kind === 'mechanical_clamp' ||
+            kind === 'fluid_spout' ||
+            kind === 'fluid_receptacle' ||
+            kind === 'submersion' ||
+            kind === 'buoyancy_force'
+          );
+
+          if (isIncomingToBalance || isIncomingMechFluid) {
+            // Khi chọn cây cân: các đường chạy từ vật nặng, ống đong, cốc... VÀO đĩa cân là màu tím neon (#A855F7)
+            icon = isSelectedBalance ? '⚖️' : (kind === 'submersion' || kind === 'fluid_spout' || kind === 'fluid_receptacle' ? '💧' : '⚖️');
+            symbolText = isSelectedBalance ? 'Vào đĩa cân (m)' : 'Nhận vào';
+            colorHex = '#A855F7'; // Tím neon cho luồng nhận vào (Dendrite)
+          } else if (kind === 'electrical_terminal' || kind === 'electrical_interlock' || kind === 'electromagnetic_induction') {
             icon = '⚡';
             symbolText = 'U, I';
             colorHex = '#FACC15';
@@ -3187,6 +3209,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             icon = '🔆';
             symbolText = 'Tia sáng';
             colorHex = '#E879F9';
+          } else if (cand.link.direction === 'output') {
+            icon = '🔵';
+            symbolText = (kind === 'mechanical_support' || kind === 'mechanical_hook' || kind === 'mechanical_clamp') ? 'm, P (ra)' : 'Tác động ra';
+            colorHex = '#00BCEB'; // Xanh dương neon cho dòng tác động ra (Axon)
           } else if (kind === 'mechanical_support' || kind === 'mechanical_hook' || kind === 'mechanical_clamp') {
             icon = '⚖️';
             symbolText = 'm, P';
@@ -9485,13 +9511,19 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
 
         const isGuideActive = isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled;
         if (isGuideActive && selectedInst && selectedObj && selectedInst.visible) {
+          const selectedAsset = assetsMap.get(selectedInst.assetId);
+          const isSelectedBalance =
+            selectedInst.assetId === 'OL3D-EQP-BAL-0001' ||
+            selectedAsset?.geometry.proceduralArchetype === 'electronic-balance' ||
+                        selectedInst.assetId.toLowerCase().includes('bal');
+
           const candidates = neuralConnectionEngine.getCompatibleCandidates(
             selectedInst,
             instances,
             assetsMap,
           );
 
-          candidates.slice(0, 5).forEach((cand, idx) => {
+          candidates.slice(0, 12).forEach((cand, idx) => {
             const targetObj = instanceObjectsRef.current.get(cand.targetInstance.instanceId);
             if (!targetObj) return;
 
@@ -9503,52 +9535,67 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             mid.y += Math.min(0.35, Math.max(0.12, dist * 0.35));
 
             const curve = new THREE.QuadraticBezierCurve3(p1, mid, p2);
-            const points = curve.getPoints(24);
-            const geom = new THREE.BufferGeometry().setFromPoints(points);
 
-            // Phân định chuẩn màu sắc Neon theo phân môn & đại lượng khoa học:
-            // Điện học (Vàng #facc15) | Lưu chất & Nước dâng (Xanh #38bdf8) | Nhiệt học (Cam #fb923c) | Quang học (Tím #e879f9) | Cơ học (Xanh ngọc #34d399)
+            // Phân định chuẩn màu sắc Neon theo phân môn & hướng dòng chảy Nơ-ron:
+            // ĐẶC BIỆT: Khi chọn Cây cân điện tử (electronic-balance):
+            // - Mọi luồng chạy từ các vật nặng (trụ nhôm, khối đồng, bi thép...), ống đong, cốc đong... VÀO đĩa cân
+            //   (dendrite nhận vào - direction === 'input') mang MÀU TÍM NEON (0xa855f7 / #a855f7) rực rỡ,
+            //   phân biệt hoàn toàn với đường đi ra của các thiết bị khác (direction === 'output' là 0x00bceb / #00bceb).
             let neonColor = 0x34d399; // Cơ học mặc định
             const k = cand.link.kind;
-            if (k === 'electrical_terminal' || k === 'electrical_interlock' || k === 'electromagnetic_induction') {
+            const isIncomingToBalance = isSelectedBalance && cand.link.direction !== 'output';
+            const isIncomingMechFluid = cand.link.direction === 'input' && (
+              k === 'mechanical_support' ||
+              k === 'mechanical_hook' ||
+              k === 'mechanical_clamp' ||
+              k === 'fluid_spout' ||
+              k === 'fluid_receptacle' ||
+              k === 'submersion' ||
+              k === 'buoyancy_force'
+            );
+
+            if (isIncomingToBalance || isIncomingMechFluid) {
+              neonColor = 0xa855f7; // Tím neon rực rỡ (Planetary Purple/Violet #a855f7) cho luồng chạy vào cây cân & nhận vào
+            } else if (k === 'electrical_terminal' || k === 'electrical_interlock' || k === 'electromagnetic_induction') {
               neonColor = 0xfacc15; // Điện học vàng
             } else if (k === 'fluid_spout' || k === 'fluid_receptacle' || k === 'submersion' || k === 'buoyancy_force') {
-              neonColor = 0x38bdf8; // Lưu chất xanh cyan
+              neonColor = 0x38bdf8; // Lưu chất xanh cyan (chiều tác động ra)
             } else if (k === 'thermal_exchange') {
               neonColor = 0xfb923c; // Nhiệt học cam
             } else if (k === 'optical_alignment' || k === 'optical_refraction' || k === 'optical_carrier') {
-              neonColor = 0xe879f9; // Quang học tím
+              neonColor = 0xe879f9; // Quang học tím hồng
             } else if (cand.link.direction === 'output') {
-              neonColor = 0x00bceb; // Dòng tác động ra
+              neonColor = 0x00bceb; // Xanh dương neon (#00bceb) cho dòng tác động ra (Axon)
             }
 
-            // Ống dẫn 3D phát sáng Neon mảnh mai bán trong suốt (Tránh che khuất vật 3D trên bàn)
-            const tubeGeom = new THREE.TubeGeometry(curve, 32, 0.0013, 8, false);
+            // Ống dẫn 3D phát sáng Neon mảnh mai bán trong suốt
+            const isPurpleStream = isIncomingToBalance || isIncomingMechFluid;
+            const tubeGeom = new THREE.TubeGeometry(curve, 32, isPurpleStream ? 0.0016 : 0.0013, 8, false);
             const tubeMat = new THREE.MeshBasicMaterial({
               color: neonColor,
               transparent: true,
-              opacity: 0.72,
+              opacity: isPurpleStream ? 0.88 : 0.72,
             });
             const tubeMesh = new THREE.Mesh(tubeGeom, tubeMat);
             neuralGroup.add(tubeMesh);
 
-            // Lõi phát sáng trung tâm rực rỡ
-            const coreGeom = new THREE.TubeGeometry(curve, 32, 0.0005, 8, false);
+            // Lõi phát sáng trung tâm rực rỡ (Tím nhạt 0xf5d0fe cho tia tím, trắng 0xffffff cho tia khác)
+            const coreGeom = new THREE.TubeGeometry(curve, 32, isPurpleStream ? 0.0006 : 0.0005, 8, false);
             const coreMat = new THREE.MeshBasicMaterial({
-              color: 0xffffff,
+              color: isPurpleStream ? 0xf5d0fe : 0xffffff,
               transparent: true,
-              opacity: 0.85,
+              opacity: 0.90,
             });
             const coreMesh = new THREE.Mesh(coreGeom, coreMat);
             neuralGroup.add(coreMesh);
 
-            // Thêm chuỗi hạt photon chạy thành dòng nhỏ lại còn 50% (Bán kính 0.004m)
-            const photonGeom = new THREE.SphereGeometry(0.004, 12, 12);
+            // Thêm chuỗi hạt photon chạy thành dòng liên tục
+            const photonGeom = new THREE.SphereGeometry(isPurpleStream ? 0.0046 : 0.004, 12, 12);
             const photonMat = new THREE.MeshBasicMaterial({
-              color: neonColor,
+              color: isPurpleStream ? 0xc084fc : neonColor,
             });
 
-            // 4 hạt photon phân bổ nối đuôi nhau thành dòng chảy liên tục
+            // 4 hạt photon phân bổ nối đuôi nhau thành dòng chảy liên tục (chạy từ vật nặng / ống đong vào đĩa cân)
             for (let pIdx = 0; pIdx < 4; pIdx++) {
               const photon = new THREE.Mesh(photonGeom, photonMat);
               photon.name = 'neural_photon_particle';
@@ -9561,13 +9608,13 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
               neuralGroup.add(photon);
             }
 
-            // Target Halo Ring under candidate (vòng mỏng đồng bộ)
+            // Target Halo Ring under candidate (vòng mỏng đồng bộ phát sáng màu tím / neon tương ứng)
             const haloGeom = new THREE.RingGeometry(0.045, 0.065, 32);
             haloGeom.rotateX(-Math.PI / 2);
             const haloMat = new THREE.MeshBasicMaterial({
               color: neonColor,
               transparent: true,
-              opacity: 0.82,
+              opacity: 0.85,
               side: THREE.DoubleSide,
             });
             const haloMesh = new THREE.Mesh(haloGeom, haloMat);

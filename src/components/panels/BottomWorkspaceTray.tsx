@@ -123,6 +123,7 @@ export const BottomWorkspaceTray: React.FC<BottomWorkspaceTrayProps> = ({
 
     const isOpticsExp = activeExperiment.experimentId === 'OL3D-EXP-OPTICS-LENS-0001';
     const isDisplacementExp = activeExperiment.experimentId === 'OL3D-EXP-DISPLACEMENT-0001';
+    const isThermalExp = activeExperiment.experimentId === 'OL3D-EXP-THERMAL-BOIL-0001';
 
     let metricLabel = `Khối lượng: ${formattedMass} · Thể tích: ${formattedVolume}`;
     if (isOpticsExp) {
@@ -133,6 +134,10 @@ export const BottomWorkspaceTray: React.FC<BottomWorkspaceTrayProps> = ({
       metricLabel = isConverted
         ? '$P = 650\\text{ mN} \\cdot F = 410\\text{ mN} \\cdot F_A = 240\\text{ mN}$'
         : '$P = 0.65\\text{ N} \\cdot F = 0.41\\text{ N} \\cdot F_A = 0.24\\text{ N}$';
+    } else if (isThermalExp) {
+      metricLabel = isConverted
+        ? '$T = 100.0^\\circ\\text{C} = 373.15\\text{ K} \\cdot Q = 31.38\\text{ kJ}$'
+        : '$T_1 = 25.0^\\circ\\text{C} \\cdot T_{\\text{soi}} = 100.0^\\circ\\text{C} \\cdot Q = 31380\\text{ J}$';
     }
 
     return {

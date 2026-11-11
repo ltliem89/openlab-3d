@@ -66,26 +66,30 @@ export class OpticsSolver {
 
     const isLightSourceActive = Boolean(state.isLampLit ?? state.isPoweredOn ?? false);
     const incidentAngleDeg = Number(state.incidentAngleDeg ?? state.rayAngleDeg ?? 30.0);
-    const n1 = 1.00029; // Không khí
+    const n1 = Number(state.airRefractiveIndex ?? 1.00029); // Không khí
     const n2 = Number(state.refractiveIndex ?? 1.50); // Thủy tinh Crown tiêu chuẩn
 
-    // 1. Khúc xạ Snell & Phản xạ toàn phần
-    const sinCrit = n1 / n2;
-    const criticalAngleDeg = (Math.asin(Math.min(1.0, sinCrit)) * 180) / Math.PI;
+    // 1. Khúc xạ Snell & Phản xạ toàn phần (hỗ trợ cả tia đi từ không khí -> thủy tinh và thủy tinh -> không khí)
+    const isFromDenserMedium = Boolean(state.isInsideMedium ?? state.fromMediumToAir ?? state.reverseDirection ?? false);
+    const nIncident = isFromDenserMedium ? n2 : n1;
+    const nTransmitted = isFromDenserMedium ? n1 : n2;
+
+    const sinCrit = Math.min(n1, n2) / Math.max(n1, n2);
+    const criticalAngleDeg = Number(((Math.asin(Math.min(1.0, sinCrit)) * 180) / Math.PI).toFixed(2));
 
     const radI = (incidentAngleDeg * Math.PI) / 180;
-    const sinR = (n1 / n2) * Math.sin(radI);
+    const sinR = (nIncident / nTransmitted) * Math.sin(radI);
 
     let isTotalInternalReflection = false;
     let refractionAngleDeg = 0.0;
     const reflectionAngleDeg = incidentAngleDeg;
 
-    if (Math.abs(sinR) > 1.0) {
+    if (nIncident > nTransmitted && Math.abs(sinR) >= 1.0) {
       isTotalInternalReflection = true;
       refractionAngleDeg = 0.0;
       warnings.push('TOTAL_INTERNAL_REFLECTION');
     } else {
-      refractionAngleDeg = Number(((Math.asin(sinR) * 180) / Math.PI).toFixed(2));
+      refractionAngleDeg = Number(((Math.asin(Math.max(-1.0, Math.min(1.0, sinR))) * 180) / Math.PI).toFixed(2));
     }
 
     // 2. Thấu kính mỏng Gauss
@@ -103,12 +107,21 @@ export class OpticsSolver {
       linearMagnification = 1.0;
       imageType = 'virtual';
       sharpnessRatio = 1.0;
+      isSharpFocus = true;
+    } else if (Math.abs(objectDistanceDCm) < 0.05) {
+      // Bảo vệ điểm kỳ dị d -> 0 ngay sát quang tâm
+      imageDistanceDPrimeCm = 0.0;
+      linearMagnification = 1.0;
+      imageType = 'virtual';
+      sharpnessRatio = 0.0;
+      isSharpFocus = false;
     } else if (Math.abs(objectDistanceDCm - focalLengthCm) < 0.05) {
       // Vật tại đúng tiêu diện f -> Ảnh ở vô cực
       imageDistanceDPrimeCm = null;
       linearMagnification = null;
       imageType = 'infinity';
       sharpnessRatio = 0.0;
+      isSharpFocus = false;
     } else {
       // 1/d' = 1/f - 1/d -> d' = (f * d) / (d - f)
       const dPrime = (focalLengthCm * objectDistanceDCm) / (objectDistanceDCm - focalLengthCm);
@@ -116,13 +129,19 @@ export class OpticsSolver {
       linearMagnification = Number((-(dPrime / objectDistanceDCm)).toFixed(2));
       imageType = dPrime > 0 ? 'real' : 'virtual';
 
-      // Hàm trải điểm quang học Gauss PSF (Point Spread Function) liên tục:
-      const screenDistanceCm = Number(state.screenDistanceCm ?? 20.0);
-      const deltaScreen = screenDistanceCm - dPrime;
-      const sigmaFocusCm = 0.75;
-      sharpnessRatio = Math.max(0.0, Math.exp(-(deltaScreen * deltaScreen) / (2.0 * sigmaFocusCm * sigmaFocusCm)));
-      if (Math.abs(deltaScreen) <= 0.4) {
-        isSharpFocus = true;
+      if (imageType === 'real') {
+        // Hàm trải điểm quang học Gauss PSF (Point Spread Function) liên tục cho ảnh thật trên màn hứng:
+        const screenDistanceCm = Number(state.screenDistanceCm ?? 20.0);
+        const deltaScreen = screenDistanceCm - dPrime;
+        const sigmaFocusCm = 0.75;
+        sharpnessRatio = Math.max(0.0, Math.exp(-(deltaScreen * deltaScreen) / (2.0 * sigmaFocusCm * sigmaFocusCm)));
+        if (Math.abs(deltaScreen) <= 0.4) {
+          isSharpFocus = true;
+        }
+      } else {
+        // Ảnh ảo (d' < 0) không thể hứng trên màn ảnh thật
+        sharpnessRatio = 0.0;
+        isSharpFocus = false;
       }
     }
 

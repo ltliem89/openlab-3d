@@ -44,6 +44,16 @@ interface StudentBottomPanelsRowProps {
   onToggleDetailedGuides?: () => void;
   activeExperiment?: ExperimentDefinition;
   onAssembleOpticalBench?: () => void;
+  waterTemperatureC?: number;
+  isFlameLit?: boolean;
+  onQuickIgniteBurner?: () => void;
+  onQuickCoolWater?: () => void;
+  measuredForceAirN?: number | null;
+  measuredForceSubN?: number | null;
+  displacedVolumeMl?: number | null;
+  opticalDCm?: number | null;
+  opticalDPrimeCm?: number | null;
+  opticalFCm?: number | null;
 }
 
 const MOBILE_PRACTICE_STEPS: Array<{
@@ -93,6 +103,16 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
   onToggleDetailedGuides,
   activeExperiment,
   onAssembleOpticalBench,
+  waterTemperatureC,
+  isFlameLit = false,
+  onQuickIgniteBurner,
+  onQuickCoolWater,
+  measuredForceAirN,
+  measuredForceSubN,
+  displacedVolumeMl,
+  opticalDCm,
+  opticalDPrimeCm,
+  opticalFCm,
 }) => {
   const [activeTab, setActiveTab] = useState<StudentBottomTabId>('results');
   const [unitSystem, setUnitSystem] = useState<MeasurementUnitSystem>('CGS');
@@ -100,9 +120,10 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [localDetailedGuides, setLocalDetailedGuides] = useState<boolean>(false);
 
+  const isThermal = activeExperiment?.experimentId === 'OL3D-EXP-THERMAL-BOIL-0001';
   const isOptics = activeExperiment?.experimentId === 'OL3D-EXP-OPTICS-LENS-0001';
   const isDisplacement = activeExperiment?.experimentId === 'OL3D-EXP-DISPLACEMENT-0001';
-  const isDensity = !isOptics && !isDisplacement;
+  const isDensity = !isOptics && !isDisplacement && !isThermal;
 
   const currentPracticeSteps = useMemo(() => {
     if (activeExperiment?.steps && activeExperiment.steps.length > 0) {
@@ -164,14 +185,86 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
   })();
 
   const rows = useMemo(() => {
+    if (isThermal) {
+      const currentT = waterTemperatureC ?? 25.0;
+      const t0 = 25.0;
+      const deltaT = Math.max(0, currentT - t0);
+      const massKg = 0.10; // 100 mL water
+      const cWater = 4184; // J/(kg·K)
+      const qJoules = massKg * cWater * deltaT;
+      const isBoiling = currentT >= 99.5;
+
+      return [
+        {
+          id: 'thm-t',
+          label: 'Nhiệt độ hiện tại của nước',
+          symbol: 'T',
+          mathSymbol: 'T',
+          value: currentT.toFixed(1),
+          unit: '°C',
+          leastCountNote: 'Nhiệt kế rượu (ĐCNN: 1,0 °C · ±0,5 °C)',
+          isReady: true,
+          highlight: isBoiling,
+          onClick: onQuickIgniteBurner,
+          actionLabel: isFlameLit ? 'Dập tắt đèn cồn' : 'Châm lửa đèn cồn đun sôi',
+        },
+        {
+          id: 'thm-t0',
+          label: 'Nhiệt độ phòng ban đầu',
+          symbol: 'T₀',
+          mathSymbol: 'T_0',
+          value: '25.0',
+          unit: '°C',
+          leastCountNote: 'Nhiệt độ chuẩn phòng thí nghiệm',
+          isReady: true,
+          onClick: onQuickCoolWater,
+          actionLabel: 'Làm nguội nước về 25°C',
+        },
+        {
+          id: 'thm-dt',
+          label: 'Độ biến thiên nhiệt độ (T − T₀)',
+          symbol: 'ΔT',
+          mathSymbol: '\\Delta T = T - T_0',
+          value: deltaT.toFixed(1),
+          unit: 'K (°C)',
+          leastCountNote: isBoiling ? 'Đạt nhiệt độ sôi chuẩn 100°C' : 'Tăng tuyến tính khi đun',
+          isReady: deltaT > 0,
+        },
+        {
+          id: 'thm-q',
+          label: 'Nhiệt lượng thu vào (m·c·ΔT)',
+          symbol: 'Q',
+          mathSymbol: 'Q = m \\cdot c \\cdot \\Delta T',
+          value: qJoules.toFixed(0),
+          unit: 'J',
+          leastCountNote: 'm = 0,10 kg · c = 4184 J/(kg·K)',
+          isReady: qJoules > 0,
+          highlight: true,
+        },
+        {
+          id: 'thm-state',
+          label: 'Trạng thái nhiệt động học',
+          symbol: 'TT',
+          mathSymbol: '\\text{State}',
+          value: isBoiling ? 'Đang sôi (100°C)' : isFlameLit ? 'Đang đun nóng...' : 'Cân bằng nhiệt',
+          unit: '',
+          leastCountNote: isBoiling ? 'Bình nguyên nhiệt độ không đổi' : isFlameLit ? 'Ngọn lửa cồn đang cháy ~700°C' : 'Đèn cồn đang tắt',
+          isReady: true,
+        },
+      ];
+    }
     if (isOptics) {
+      const d = opticalDCm ?? 20.0;
+      const f = opticalFCm ?? 10.0;
+      const dPrime = opticalDPrimeCm ?? (Math.abs(d - f) > 0.05 ? (f * d) / (d - f) : 999.9);
+      const mag = Math.abs(dPrime / Math.max(0.1, d));
       return [
         {
           id: 'opt-d',
           label: 'Khoảng cách vật sáng chữ F tới thấu kính',
           symbol: 'd',
           mathSymbol: 'd',
-          value: '20.0',
+          value: d.toFixed(1),
           unit: 'cm',
           leastCountNote: 'ĐCNN: 1 mm (thước ray 90 cm)',
           isReady: true,
@@ -183,44 +276,48 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
           label: 'Khoảng cách màn hứng ảnh tới thấu kính',
           symbol: "d'",
           mathSymbol: "d'",
-          value: '20.0',
+          value: Math.abs(dPrime) > 300 ? '∞' : dPrime.toFixed(1),
           unit: 'cm',
-          leastCountNote: 'Vị trí cho ảnh sắc nét nhất',
+          leastCountNote: dPrime > 0 ? 'Vị trí ảnh thật rõ nét' : 'Ảnh ảo không hứng được trên màn',
           isReady: true,
           onClick: onAssembleOpticalBench,
           actionLabel: 'Dịch chuyển màn chắn tìm ảnh nét',
         },
         {
           id: 'opt-f',
-          label: 'Tiêu cự thấu kính đo được (đối xứng d = d\')',
+          label: 'Tiêu cự thấu kính đo được (Gaussian)',
           symbol: 'f',
-          mathSymbol: 'f = \\frac{d + d\'}{4}',
-          value: '10.0',
+          mathSymbol: 'f = \\frac{d \\cdot d\'}{d + d\'}',
+          value: f.toFixed(1),
           unit: 'cm',
-          leastCountNote: 'Khớp tiêu cự danh định +10 cm',
+          leastCountNote: f > 0 ? 'Thấu kính hội tụ f > 0' : 'Thấu kính phân kỳ f < 0',
           isReady: true,
           highlight: true,
         },
         {
           id: 'opt-mag',
-          label: 'Số phóng đại ảnh thật (|k| = d\' / d)',
+          label: 'Độ phóng đại ảnh (|k| = |d\'| / d)',
           symbol: '|k|',
-          mathSymbol: '|k| = \\frac{d\'}{d}',
-          value: '1.00',
+          mathSymbol: '|k| = \\frac{|d\'|}{d}',
+          value: Math.abs(dPrime) > 300 ? '∞' : mag.toFixed(2),
           unit: 'lần',
-          leastCountNote: 'Ảnh ngược chiều, cao bằng vật',
+          leastCountNote: dPrime > 0 ? 'Ảnh thật ngược chiều' : 'Ảnh ảo cùng chiều',
           isReady: true,
         },
       ];
     }
     if (isDisplacement) {
+      const pAir = measuredForceAirN ?? 0.65;
+      const fSub = measuredForceSubN ?? 0.41;
+      const fa = Math.max(0, pAir - fSub);
+      const dispV = displacedVolumeMl ?? 24.5;
       return [
         {
           id: 'arch-p',
           label: 'Trọng lượng vật ngoài không khí',
           symbol: 'P',
           mathSymbol: 'P',
-          value: '0.65',
+          value: pAir.toFixed(2),
           unit: 'N',
           leastCountNote: 'Đọc trên lực kế 5 N (ĐCNN: 0.1 N)',
           isReady: true,
@@ -230,7 +327,7 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
           label: 'Số chỉ lực kế khi vật ngập nước',
           symbol: 'F',
           mathSymbol: 'F',
-          value: '0.41',
+          value: fSub.toFixed(2),
           unit: 'N',
           leastCountNote: 'Lực căng giảm do lực đẩy chất lỏng',
           isReady: true,
@@ -240,9 +337,9 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
           label: 'Độ lớn lực đẩy Archimedes (P − F)',
           symbol: 'F_A',
           mathSymbol: 'F_A = P - F',
-          value: '0.24',
+          value: fa.toFixed(2),
           unit: 'N',
-          leastCountNote: '0.65 N - 0.41 N = 0.24 N',
+          leastCountNote: `${pAir.toFixed(2)} N - ${fSub.toFixed(2)} N = ${fa.toFixed(2)} N`,
           isReady: true,
           highlight: true,
         },
@@ -251,9 +348,9 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
           label: 'Thể tích nước dời chỗ hứng được',
           symbol: 'V',
           mathSymbol: 'V',
-          value: '24.5',
+          value: dispV.toFixed(1),
           unit: 'mL',
-          leastCountNote: 'Tương ứng lực đẩy F_A = d × V',
+          leastCountNote: 'Kiểm chứng F_A = d × V',
           isReady: true,
         },
       ];
@@ -319,8 +416,19 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
       },
     ];
   }, [
+    isThermal,
     isOptics,
     isDisplacement,
+    waterTemperatureC,
+    isFlameLit,
+    onQuickIgniteBurner,
+    onQuickCoolWater,
+    opticalDCm,
+    opticalDPrimeCm,
+    opticalFCm,
+    measuredForceAirN,
+    measuredForceSubN,
+    displacedVolumeMl,
     measuredMassG,
     initialVolumeCm3,
     finalVolumeCm3,
@@ -400,7 +508,9 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
           >
             <Table2 className="w-4 h-4 shrink-0 text-[#38BDF8]" />
             <span className="font-mono font-extrabold">
-              {isOptics
+              {isThermal
+                ? (isDetailedMode ? 'Kết quả Nhiệt học (T · ΔT · Q)' : 'T(°C) · ΔT · Q(J)')
+                : isOptics
                 ? (isDetailedMode ? 'Kết quả đo Quang học (d · d\' · f)' : 'd · d\' · f (cm)')
                 : isDisplacement
                 ? (isDetailedMode ? 'Kết quả đo Lực & Thể tích (P · F · F_A)' : 'P · F · F_A (N)')
@@ -411,6 +521,11 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
             {isDensity && densityGCm3 !== null && (
               <span className="ml-0.5 font-mono text-[11.5px] sm:text-[12.5px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 tabular-nums">
                 ρ={formatDensity(densityGCm3)} {densityUnit}
+              </span>
+            )}
+            {isThermal && (
+              <span className="ml-0.5 font-mono text-[11.5px] sm:text-[12.5px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-400/40 tabular-nums">
+                T={(waterTemperatureC ?? 25.0).toFixed(1)}°C
               </span>
             )}
           </button>
@@ -434,7 +549,9 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
             <Calculator className="w-3.5 h-3.5 shrink-0 text-[#F59E0B]" />
             <span className="font-extrabold tracking-tight flex items-center gap-1">
               {isDetailedMode && <span>Công thức:</span>}
-              {isOptics ? (
+              {isThermal ? (
+                <MathFormula math="Q = m \cdot c \cdot \Delta T" />
+              ) : isOptics ? (
                 <MathFormula math="\frac{1}{f} = \frac{1}{d} + \frac{1}{d'}" />
               ) : isDisplacement ? (
                 <MathFormula math={isDetailedMode ? 'F_A = P - F = d\\cdot V' : 'F_A = P - F'} />
@@ -462,7 +579,9 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
           >
             <Eye className="w-4 h-4 shrink-0 text-[#FF647C]" />
             <span className="font-mono font-extrabold">
-              {isOptics
+              {isThermal
+                ? (isDetailedMode ? 'Nhiệt kế: ĐCNN 1,0 °C (±0,5 °C)' : 'ĐCNN ±0,5 °C')
+                : isOptics
                 ? (isDetailedMode ? 'Thước ray Giá quang: ĐCNN ±1 mm' : 'ĐCNN ±1 mm')
                 : isDisplacement
                 ? (isDetailedMode ? 'Lực kế: ±0,1 N · Ống đong: ±1 mL' : '±0,1 N · ±1 mL')
@@ -559,7 +678,7 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
               }`}
               title="Đơn vị chuẩn của bài thí nghiệm"
             >
-              {isOptics ? 'Đơn vị: cm · mm' : 'Đơn vị: N · mL'}
+              {isThermal ? 'Đơn vị: °C · J · kg · s' : isOptics ? 'Đơn vị: cm · mm' : 'Đơn vị: N · mL'}
             </div>
           )}
 
@@ -701,6 +820,27 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                           ? `V = ${formatVolume(objectVolumeCm3)} ${volUnit}`
                           : '2. Đo thể tích (V)'}
                       </span>
+                    </button>
+                  </div>
+                ) : isThermal ? (
+                  <div className="flex xl:hidden items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onQuickIgniteBurner}
+                      className={`flex-1 py-1.5 px-2.5 rounded-[7px] text-[12.5px] font-bold flex items-center justify-center gap-1.5 cursor-pointer ${
+                        isFlameLit
+                          ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                          : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                      }`}
+                    >
+                      <span>{isFlameLit ? '🛑 Tắt đèn cồn' : '🔥 Châm lửa đèn cồn'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={onQuickCoolWater}
+                      className="flex-1 py-1.5 px-2.5 rounded-[7px] text-[12.5px] font-bold flex items-center justify-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer"
+                    >
+                      <span>❄️ Làm nguội (25°C)</span>
                     </button>
                   </div>
                 ) : isOptics ? (
@@ -897,6 +1037,27 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                         </span>
                       </button>
                     </>
+                  ) : isThermal ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={onQuickIgniteBurner}
+                        className={`w-full py-2 px-2.5 rounded-[7px] text-[13px] font-extrabold flex items-center justify-center gap-1.5 cursor-pointer shadow-xs ${
+                          isFlameLit
+                            ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                            : 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                        }`}
+                      >
+                        <span>{isFlameLit ? '🛑 Tắt đèn cồn' : '🔥 Châm lửa đèn cồn'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={onQuickCoolWater}
+                        className="w-full py-1.5 px-2.5 rounded-[7px] text-[13px] font-bold flex items-center justify-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer"
+                      >
+                        <span>❄️ Làm nguội (25°C)</span>
+                      </button>
+                    </>
                   ) : isOptics ? (
                     <>
                       <button
@@ -940,7 +1101,7 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
           {/* TAB 2: CÔNG THỨC */}
           {activeTab === 'formula' && (
             <div className="flex flex-col sm:flex-row items-center gap-4 h-full py-1">
-              {isOptics ? (
+              {isThermal ? (
                 <>
                   <div
                     className={`px-5 py-3 rounded-[10px] border flex flex-col items-center justify-center shrink-0 ${
@@ -950,7 +1111,57 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                     }`}
                   >
                     <div className="text-xl font-bold font-mono tracking-wide">
-                      <MathFormula displayMode math="f = \frac{d \cdot d'}{d + d'} \quad \text{hoặc} \quad f = \frac{d + d'}{4}" />
+                      <MathFormula displayMode math="Q = m \cdot c \cdot \Delta T \quad | \quad P_{\text{toa}} = \frac{Q}{\Delta t}" />
+                    </div>
+                    <span
+                      className={`text-[12px] mt-1 font-semibold ${
+                        isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
+                      }`}
+                    >
+                      Định luật bảo toàn năng lượng & Truyền nhiệt
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 flex-1 w-full text-[13.5px]">
+                    <div className={`p-2.5 rounded-[9px] border ${isDarkMode ? 'bg-[#162234] border-[#263854]' : 'bg-white border-[#C4D5E8]'}`}>
+                      <div className="font-extrabold text-[14.5px] flex items-center gap-1.5">
+                        <MathFormula math="m = 0{,}10\text{ kg}" className="text-[#3B82F6]" /> — Khối lượng nước
+                      </div>
+                      <p className={`text-[12.5px] mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'}`}>
+                        Khối lượng nước trong cốc thủy tinh chịu nhiệt (<MathFormula math="100\text{ mL} = 0{,}10\text{ kg}" />).
+                      </p>
+                    </div>
+
+                    <div className={`p-2.5 rounded-[9px] border ${isDarkMode ? 'bg-[#162234] border-[#263854]' : 'bg-white border-[#C4D5E8]'}`}>
+                      <div className="font-extrabold text-[14.5px] flex items-center gap-1.5">
+                        <MathFormula math="c = 4184\text{ J/(kg}\cdot\text{K)}" className="text-[#00BCEB]" /> — Nhiệt dung riêng
+                      </div>
+                      <p className={`text-[12.5px] mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'}`}>
+                        Nhiệt lượng cần cung cấp để 1 kg nước tăng thêm 1 °C.
+                      </p>
+                    </div>
+
+                    <div className={`p-2.5 rounded-[9px] border ${isDarkMode ? 'bg-[#162234] border-[#263854]' : 'bg-white border-[#C4D5E8]'}`}>
+                      <div className="font-extrabold text-[14.5px] flex items-center gap-1.5">
+                        <MathFormula math="\Delta T = T_2 - T_1" className="text-emerald-400" /> — Độ tăng nhiệt độ
+                      </div>
+                      <p className={`text-[12.5px] mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'}`}>
+                        Hiệu số nhiệt độ đọc trên nhiệt kế (<MathFormula math="T_{\text{soi}} = 100{,}0^\circ\text{C}" /> ở 1 atm).
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : isOptics ? (
+                <>
+                  <div
+                    className={`px-5 py-3 rounded-[10px] border flex flex-col items-center justify-center shrink-0 ${
+                      isDarkMode
+                        ? 'bg-[#1A273D] border-[#00BCEB]/50'
+                        : 'bg-[#FAF3DD] border-[#E8B84B]'
+                    }`}
+                  >
+                    <div className="text-xl font-bold font-mono tracking-wide">
+                      <MathFormula displayMode math="f = \frac{d \cdot d'}{d + d'} \quad \text{hoac} \quad f = \frac{d + d'}{4}" />
                     </div>
                     <span
                       className={`text-[12px] mt-1 font-semibold ${
@@ -1000,7 +1211,7 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                     }`}
                   >
                     <div className="text-xl font-bold font-mono tracking-wide">
-                      <MathFormula displayMode math="F_A = P - F = d_{\text{lỏng}} \cdot V" />
+                      <MathFormula displayMode math="F_A = P - F = d_{\text{long}} \cdot V" />
                     </div>
                     <span
                       className={`text-[12px] mt-1 font-semibold ${
@@ -1127,13 +1338,25 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
           {/* TAB 3: CÁCH ĐỌC & ĐCNN */}
           {activeTab === 'reading-guide' && (
             <div className="flex items-center gap-4 h-full py-1">
-              {isOptics ? (
+              {isThermal ? (
+                <div className="space-y-2 text-[14.5px] flex-1">
+                  <div className="font-extrabold text-[16px] text-amber-300">
+                    Quy tắc sử dụng & đọc số chỉ Nhiệt kế thủy tinh KHTN 8
+                  </div>
+                  <p className={isDarkMode ? 'text-slate-200 leading-relaxed' : 'text-[#4B6280] leading-relaxed'}>
+                    • <strong>Độ sâu nhúng nhiệt kế:</strong> Bầu cảm nhiệt phải chìm hoàn toàn trong lòng khối nước, <em>tuyệt đối không chạm đáy hoặc thành cốc</em> để tránh đo sai nhiệt độ của ngọn lửa đèn cồn.
+                  </p>
+                  <p className={isDarkMode ? 'text-slate-200 leading-relaxed' : 'text-[#4B6280] leading-relaxed'}>
+                    • <strong>Quy tắc đọc vạch:</strong> Đặt mắt ngang bằng đỉnh cột chất lỏng chỉ nhiệt, đọc theo vạch gần nhất (ĐCNN: 1,0 °C, Sai số dụng cụ: ±0,5 °C).
+                  </p>
+                </div>
+              ) : isOptics ? (
                 <div className="space-y-2 text-[14.5px] flex-1">
                   <div className="font-extrabold text-[16px] text-cyan-300">
                     Quy tắc ngắm chừng & đo khoảng cách trên Giá quang học
                   </div>
                   <p className={isDarkMode ? 'text-slate-200 leading-relaxed' : 'text-[#4B6280] leading-relaxed'}>
-                    • <strong>Đọc tọa độ vạch:</strong> Đọc kim chỉ vạch của đế trượt chữ U trên thước ray 90 cm (ĐCNN: 1 mm). Khoảng cách <MathFormula math="d = |x_{\text{thấu kính}} - x_{\text{vật}}|" />.
+                    • <strong>Đọc tọa độ vạch:</strong> Đọc kim chỉ vạch của đế trượt chữ U trên thước ray 90 cm (ĐCNN: 1 mm). Khoảng cách <MathFormula math="d = |x_{\text{kinh}} - x_{\text{vat}}|" />.
                   </p>
                   <p className={isDarkMode ? 'text-slate-200 leading-relaxed' : 'text-[#4B6280] leading-relaxed'}>
                     • <strong>Tiêu chuẩn ảnh thật rõ nét:</strong> Khi dịch chuyển màn chắn, dừng lại đúng vị trí viền chữ F tương phản sắc nét nhất, không có quầng sáng nhòe.

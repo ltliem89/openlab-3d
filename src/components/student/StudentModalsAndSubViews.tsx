@@ -276,7 +276,7 @@ export const StudentVideoGuideModal: React.FC<StudentVideoGuideModalProps> = ({
                 <MathFormula math="\rho = \frac{m}{V}" />
               </div>
               <div className="text-[14px] font-mono font-extrabold text-[#15803D]">
-                <MathFormula math="\rho = 2.70\text{ g/cm}^3\text{ (Nhôm)}" />
+                <MathFormula math="\rho = 2.70\text{ g/cm}^3\text{ (Nhom)}" />
               </div>
             </div>
           </div>

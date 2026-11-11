@@ -16,12 +16,26 @@ export interface MetrologySpec {
 
 export class MetrologyEngine {
   /**
-   * Làm tròn số đo theo bội số của Độ chia nhỏ nhất (Least Count)
+   * Đếm số chữ số thập phân từ ĐCNN (hỗ trợ cả dạng thập phân như 0.02, 0.05, 0.001)
+   */
+  public static getDecimalsFromLeastCount(leastCount: number): number {
+    if (leastCount >= 1 || leastCount <= 0 || !Number.isFinite(leastCount)) return 0;
+    const str = leastCount.toString();
+    if (str.includes('e-')) {
+      return Number(str.split('e-')[1]) || 0;
+    }
+    const dotIdx = str.indexOf('.');
+    return dotIdx >= 0 ? str.length - dotIdx - 1 : 0;
+  }
+
+  /**
+   * Làm tròn số đo theo bội số của Độ chia nhỏ nhất (Least Count), tránh trôi số IEEE 754
    */
   public static quantizeToLeastCount(value: number, leastCount: number): number {
-    if (leastCount <= 0) return value;
-    const factor = 1 / leastCount;
-    return Math.round(value * factor) / factor;
+    if (leastCount <= 0 || !Number.isFinite(leastCount)) return value;
+    const quantized = Math.round((value + Number.EPSILON) / leastCount) * leastCount;
+    const decimals = MetrologyEngine.getDecimalsFromLeastCount(leastCount);
+    return Number(quantized.toFixed(decimals));
   }
 
   /**
@@ -80,7 +94,7 @@ export class MetrologyEngine {
    */
   public static formatReading(value: number, leastCount: number): string {
     if (leastCount >= 1) return Math.round(value).toString();
-    const decimals = Math.max(0, Math.ceil(-Math.log10(leastCount)));
-    return value.toFixed(decimals);
+    const decimals = MetrologyEngine.getDecimalsFromLeastCount(leastCount);
+    return MetrologyEngine.quantizeToLeastCount(value, leastCount).toFixed(decimals);
   }
 }

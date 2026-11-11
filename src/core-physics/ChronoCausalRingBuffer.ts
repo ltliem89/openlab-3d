@@ -10,7 +10,7 @@
  * 2. Thay vào đó, bộ đệm lưu vết trạng thái vật lý chuẩn xác ở chiều xuôi thời gian.
  * 3. Khi người dùng tua ngược (Time Rewind), hệ thống tái hiện (replay) và nội suy mượt mà (Hermite/Linear)
  *    từ kho lưu trữ 3600 frames.
- * 4. Khi người dùng can thiệp đối thực ($do(X = x)$) tại thời điểm quá khứ $t_{\text{can thiệp}}$, bộ đệm
+ * 4. Khi người dùng can thiệp đối thực ($do(X = x)$) tại thời điểm quá khứ $t_{\text{can thiep}}$, bộ đệm
  *    thực hiện phân nhánh nhân quả (Counterfactual Branching): giữ nguyên quá khứ trước $t$,
  *    hủy bỏ tương lai cũ đã bị vô hiệu hóa, và khởi phát một nhánh thực tại vật lý mới.
  */
