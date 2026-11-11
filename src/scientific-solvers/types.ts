@@ -10,7 +10,8 @@ export type ScientificSolverKind =
   | 'fluid-thermal'
   | 'induction'
   | 'mechanics'
-  | 'metrology';
+  | 'metrology'
+  | 'solution';
 
 export interface UncertaintyBudget {
   instrumentalError: number;

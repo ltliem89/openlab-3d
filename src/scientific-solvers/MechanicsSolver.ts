@@ -10,11 +10,15 @@
 
 import { SolverInput, SolverResult } from './types';
 import { MetrologyEngine } from './MetrologyEngine';
+import { IsoGUMMetrologyEngine } from '../core-physics/IsoGUMMetrologyEngine';
 
 export interface MechanicsDerivedOutputs {
   massNetG: number;
   massGrossG: number;
   tareOffsetG: number;
+  loadcellSettledMassG: number;
+  isLoadcellSettled: boolean;
+  loadcellSettlingRatio: number;
   forceNewtons: number;
   springExtensionMm: number;
   leverTorqueLeftNm: number;
@@ -40,6 +44,14 @@ export class MechanicsSolver {
     const massGrossG = Number(state.measuredMassG ?? state.rawMassG ?? 0.0);
     const tareOffsetG = Number(state.tareOffsetG ?? 0.0);
     const massNetG = Math.max(0.0, massGrossG - tareOffsetG);
+
+    // Đáp ứng động học cảm biến Loadcell cân điện tử bậc 2 (tau = 0.8s, zeta = 0.68) qua IsoGUMMetrologyEngine
+    // Mặc định 4.0s (> 4*tau = 3.2s) khi ở trạng thái tĩnh nghỉ để không gây sai số hụt -3.5%
+    const elapsedSec = Math.max(0, Math.min(Number(state.elapsedSincePlacementSec ?? 4.0), 300.0));
+    const loadcellResp = IsoGUMMetrologyEngine.calculateLoadcellResponse(massGrossG, elapsedSec, tareOffsetG, 0.01);
+    const settlingRatio = loadcellResp.settlingRatio;
+    const isLoadcellSettled = loadcellResp.isSettled;
+    const loadcellSettledMassG = loadcellResp.indicatedMassG;
 
     // 2. Lực kế lò xo & Định luật Hooke
     // Độ cứng lò xo chuẩn lực kế 5N: k = 50 N/m (5 N dãn 100 mm = 0.1 m)
@@ -77,9 +89,9 @@ export class MechanicsSolver {
     const jawOpeningMm = Number(state.jawOpeningMm ?? 15.45);
     const caliperLengthMm = MetrologyEngine.quantizeToLeastCount(jawOpeningMm, 0.05);
 
-    // Màn hình hiển thị
+    // Màn hình hiển thị phản ánh đáp ứng động học thực của Loadcell hoặc lực kế
     const settledReadingDisplay = massNetG > 0
-      ? `${MetrologyEngine.formatReading(massNetG, 0.01)} g`
+      ? loadcellResp.displayString
       : `${MetrologyEngine.formatReading(forceNewtons, 0.1)} N`;
 
     let reasonVi = '';
@@ -105,6 +117,9 @@ export class MechanicsSolver {
         massNetG,
         massGrossG,
         tareOffsetG,
+        loadcellSettledMassG,
+        isLoadcellSettled,
+        loadcellSettlingRatio: settlingRatio,
         forceNewtons,
         springExtensionMm,
         leverTorqueLeftNm,

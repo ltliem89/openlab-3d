@@ -3,6 +3,8 @@ import {
   NEURAL_DEVICE_NODES,
   NEURAL_SYNAPSE_EDGES,
   EXPERIMENT_MACRO_CLUSTERS,
+  CATEGORY_META,
+  SYNAPSE_META,
   NeuralDeviceNode,
   NeuralSynapseEdge,
   DeviceCategory,
@@ -10,8 +12,10 @@ import {
   ExperimentMacroCluster,
   ThcsGrade
 } from '../../domain/neuralNetworkTopology';
+import { PHYSICAL_LAW_MAPPINGS } from '../../domain/neuralConnectionEngine';
 import { EquipmentThumbnailSvg } from '../common/EquipmentThumbnailSvg';
 import { ProceduralArchetype } from '../../domain/types';
+import { MathFormula, RichMathText } from '../common/MathFormula';
 
 export interface NeuralDeviceNetworkModalProps {
   isOpen: boolean;
@@ -43,54 +47,26 @@ interface SynapseParticle {
   flowDirection: 'outflow' | 'inflow' | 'bidirectional';
 }
 
-const CATEGORY_META: Record<DeviceCategory, { name: string; studentName: string; color: string; icon: string }> = {
-  G01_DIMENSION:    { name: 'G01 · Kích thước & Góc', studentName: 'Dụng cụ Đo chiều dài', color: '#f97316', icon: '📏' },
-  G02_MASS_FORCE:   { name: 'G02 · Khối lượng & Lực', studentName: 'Cân & Đo lực', color: '#ef4444', icon: '⚖️' },
-  G03_TIME_TEMP:    { name: 'G03 · Thời gian & Nhiệt', studentName: 'Nhiệt kế & Bấm giờ', color: '#eab308', icon: '🌡️' },
-  G04_VOLUMETRIC:   { name: 'G04 · Đo Thể tích', studentName: 'Ống đong & Bình chứa', color: '#06b6d4', icon: '🧪' },
-  G05_CHEM_HEATING: { name: 'G05 · Hóa học & Gia nhiệt', studentName: 'Đèn cồn & Đun nóng', color: '#ec4899', icon: '🔥' },
-  G06_OPTICS:       { name: 'G06 · Quang học', studentName: 'Đèn chiếu & Thấu kính', color: '#8b5cf6', icon: '🔦' },
-  G07_ELECTRICITY:  { name: 'G07 · Điện & Cảm ứng', studentName: 'Nguồn điện & Nam châm', color: '#10b981', icon: '⚡' },
-  G08_MECHANICS:    { name: 'G08 · Cơ học & Cân bằng', studentName: 'Đòn bẩy & Bình nước', color: '#f59e0b', icon: '⚙️' },
-  G09_BIOLOGY:      { name: 'G09 · Sinh học & Vi mô', studentName: 'Kính hiển vi & Tế bào', color: '#22c55e', icon: '🔬' },
-  G10_FLUID_SUPPLY: { name: 'G10 · Nguồn Lưu chất', studentName: 'Bình cấp nước sạch', color: '#3b82f6', icon: '🚰' },
-};
-
-const SYNAPSE_META: Record<SynapseKind, { name: string; studentName: string; color: string; dash?: number[] }> = {
-  mechanical_support:        { name: 'Đỡ tải cơ học', studentName: 'Đặt lên đĩa cân', color: '#ef4444' },
-  mechanical_clamp:          { name: 'Kẹp ôm khít', studentName: 'Kẹp đo kích thước', color: '#f97316' },
-  mechanical_hook:           { name: 'Móc treo đàn hồi', studentName: 'Móc treo lực kế', color: '#fb923c', dash: [6, 4] },
-  mechanical_rail:           { name: 'Ray trượt 1D', studentName: 'Gắn trượt trên ray', color: '#eab308' },
-  optical_carrier:           { name: 'Đế mang quang', studentName: 'Đế trượt quang học', color: '#a78bfa' },
-  optical_alignment:         { name: 'Đồng trục truyền quang', studentName: 'Chiếu tia sáng qua', color: '#c084fc', dash: [5, 5] },
-  optical_refraction:        { name: 'Khúc xạ & Tán sắc', studentName: 'Bẻ cong tia sáng / Cầu vồng', color: '#e879f9', dash: [4, 4] },
-  electrical_terminal:       { name: 'Cọc cắm điện 4mm', studentName: 'Dây cắm nguồn điện', color: '#10b981' },
-  electrical_interlock:      { name: 'Liên động nguồn điện', studentName: 'Cắm điện mới sáng đèn', color: '#06b6d4', dash: [8, 3] },
-  fluid_spout:               { name: 'Rót / Xả chất lỏng', studentName: 'Nước chảy từ vòi', color: '#3b82f6' },
-  fluid_receptacle:          { name: 'Miệng hứng chất lỏng', studentName: 'Hứng nước chảy vào', color: '#60a5fa', dash: [4, 4] },
-  submersion:                { name: 'Thả chìm chiếm chỗ', studentName: 'Thả chìm làm dâng nước', color: '#14b8a6', dash: [8, 4] },
-  buoyancy_force:            { name: 'Lực đẩy Archimedes', studentName: 'Lực đẩy nước nâng lên', color: '#2dd4bf', dash: [3, 5] },
-  electromagnetic_induction: { name: 'Cảm ứng điện từ', studentName: 'Nam châm tạo ra điện', color: '#facc15', dash: [6, 4] },
-  thermal_exchange:          { name: 'Truyền nhiệt đối lưu', studentName: 'Đun nóng truyền nhiệt', color: '#f43f5e', dash: [5, 5] },
-  microscopy_dock:           { name: 'Gá vi thể hiển vi', studentName: 'Soi mẫu vật tế bào', color: '#4ade80' }
-};
-
 // Hàm chắt lọc diễn giải nhân quả ngắn gọn, súc tích, tránh từ ngữ thừa thãi
+// Hàm chắt lọc diễn giải nhân quả ngắn gọn, súc tích, giữ nguyên động từ chỉ dẫn
 const distillCausal = (text: string): string => {
   if (!text) return '';
   return text
-    .replace(/^Thả\s+/i, '')
-    .replace(/^Nhẹ nhàng\s+/i, '')
-    .replace(/^Vặn\s+/i, '')
     .replace(/nhé các em!?/gi, '')
     .replace(/\s*->\s*/g, ' → ')
     .trim();
 };
 
-// ĐỘNG CƠ ÂM THANH WEB AUDIO NỘI TẠI (ZERO ASSETS)
+// ĐỘNG CƠ ÂM THANH WEB AUDIO & GIỌNG ĐỌC TỰ NHIÊN (ZERO ASSETS)
 class ProceduralAudio {
   private ctx: AudioContext | null = null;
   private isMuted: boolean = false;
+  private isVoiceMuted: boolean = false;
+  private cachedViVoice: SpeechSynthesisVoice | null = null;
+
+  constructor() {
+    this.initVoiceListener();
+  }
 
   private init() {
     if (!this.ctx && typeof window !== 'undefined') {
@@ -99,8 +75,81 @@ class ProceduralAudio {
     }
   }
 
+  private initVoiceListener() {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    const findVoice = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices || voices.length === 0) return;
+      // 1. Ưu tiên giọng đọc Natural / Online tiếng Việt chất lượng cao (Microsoft HoaiMy, NamMinh, Google Tiếng Việt)
+      const naturalVi = voices.find(
+        (v) =>
+          (v.lang.startsWith('vi') || v.lang.toLowerCase().includes('vi_vn')) &&
+          (v.name.includes('Natural') || v.name.includes('Online') || v.name.includes('HoaiMy') || v.name.includes('NamMinh'))
+      );
+      // 2. Giọng tiếng Việt tiêu chuẩn bất kỳ
+      const anyVi = voices.find(
+        (v) =>
+          v.lang.startsWith('vi') ||
+          v.lang.toLowerCase().includes('vi_vn') ||
+          v.name.toLowerCase().includes('vietnam') ||
+          v.name.toLowerCase().includes('tiếng việt')
+      );
+      this.cachedViVoice = naturalVi || anyVi || null;
+    };
+
+    findVoice();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = findVoice;
+    }
+  }
+
   setMute(mute: boolean) {
     this.isMuted = mute;
+    if (mute) this.stopSpeech();
+  }
+
+  setVoiceMute(mute: boolean) {
+    this.isVoiceMuted = mute;
+    if (mute) this.stopSpeech();
+  }
+
+  getVoiceMute(): boolean {
+    return this.isVoiceMuted;
+  }
+
+  // Làm sạch văn bản để giọng đọc phát âm tự nhiên, không đọc ký hiệu lạ hay mã LaTeX
+  cleanTextForSpeech(text: string): string {
+    if (!text) return '';
+    return text
+      // Thay thế công thức hay gặp bằng từ ngữ phát âm chuẩn tiếng Việt
+      .replace(/D\s*=\s*m\s*\/\s*V/gi, 'khối lượng riêng bằng m chia V')
+      .replace(/P\s*=\s*m\s*[\*·]\s*g/gi, 'trọng lượng P')
+      .replace(/d\s*[\*·]\s*V/gi, 'trọng lượng riêng nhân thể tích')
+      .replace(/F_A/gi, 'lực đẩy Ác-si-mét')
+      // Khử toàn bộ công thức toán LaTeX $...$ hoặc $$...$$
+      .replace(/\$\$[\s\S]+?\$\$/g, '')
+      .replace(/\$[^\$]+?\$/g, '')
+      .replace(/\\[a-zA-Z]+/g, ' ')
+      .replace(/[{}\[\]\(\)]/g, ' ')
+      // Chuyển đổi ký hiệu mũi tên thành từ liên kết tự nhiên
+      .replace(/\s*(?:→|➔|->|-->)\s*/g, ', giúp ')
+      // Khử biểu tượng emoji, ký hiệu lạ
+      .replace(/[⚡🔗🚰🧪⚙️🔬📐🎯➕➖✕✖️✓✔•*#]/g, '')
+      // Đọc các đơn vị đo lường thông dụng bằng tiếng Việt chuẩn
+      .replace(/(\d+(?:\.\d+)?)\s*ml\b/gi, '$1 mi-li-lít')
+      .replace(/(\d+(?:\.\d+)?)\s*mm\b/gi, '$1 mi-li-mét')
+      .replace(/(\d+(?:\.\d+)?)\s*cm\b/gi, '$1 xen-ti-mét')
+      .replace(/(\d+(?:\.\d+)?)\s*kg\b/gi, '$1 ki-lô-gam')
+      .replace(/(\d+(?:\.\d+)?)\s*g\b/gi, '$1 gam')
+      .replace(/(\d+(?:\.\d+)?)\s*V\b/g, '$1 Vôn')
+      .replace(/(\d+(?:\.\d+)?)\s*N\b/g, '$1 Niu-tơn')
+      .replace(/(\d+(?:\.\d+)?)\s*W\b/gi, '$1 Oát')
+      .replace(/(\d+(?:\.\d+)?)\s*°C/gi, '$1 độ C')
+      .replace(/(\d+)\.00(?=\s|$)/g, '$1')
+      // Dọn dẹp khoảng trắng, dấu phẩy thừa
+      .replace(/,\s*,/g, ',')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   playNodeClick() {
@@ -161,15 +210,212 @@ class ProceduralAudio {
       osc.stop(this.ctx.currentTime + 0.2);
     } catch {}
   }
+
+  playSynapseGuide(synapseKind: SynapseKind, speechText?: string) {
+    if (this.isMuted) return;
+    this.init();
+    if (this.ctx) {
+      try {
+        const now = this.ctx.currentTime;
+        // Âm thanh đặc trưng cho từng loại liên kết nơ-ron
+        if (
+          synapseKind === 'fluid_spout' ||
+          synapseKind === 'fluid_receptacle' ||
+          synapseKind === 'submersion' ||
+          synapseKind === 'buoyancy_force'
+        ) {
+          // Tiếng giọt nước long lanh (Bubble Pulse)
+          [380, 620, 880].forEach((freq, i) => {
+            const osc = this.ctx!.createOscillator();
+            const gain = this.ctx!.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + i * 0.045);
+            osc.frequency.exponentialRampToValueAtTime(freq * 1.45, now + i * 0.045 + 0.11);
+            gain.gain.setValueAtTime(0.13, now + i * 0.045);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.045 + 0.13);
+            osc.connect(gain);
+            gain.connect(this.ctx!.destination);
+            osc.start(now + i * 0.045);
+            osc.stop(now + i * 0.045 + 0.14);
+          });
+        } else if (
+          synapseKind === 'electrical_terminal' ||
+          synapseKind === 'electrical_interlock' ||
+          synapseKind === 'electromagnetic_induction'
+        ) {
+          // Tiếng xung kích điện từ ngân vang (Electric Resonance)
+          [440, 880].forEach((freq, i) => {
+            const osc = this.ctx!.createOscillator();
+            const gain = this.ctx!.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + i * 0.03);
+            gain.gain.setValueAtTime(0.14, now + i * 0.03);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            osc.connect(gain);
+            gain.connect(this.ctx!.destination);
+            osc.start(now + i * 0.03);
+            osc.stop(now + 0.24);
+          });
+        } else {
+          // Tiếng xung dẫn truyền chuẩn Synapse (Cosmic Harmonic)
+          [520, 780].forEach((freq, i) => {
+            const osc = this.ctx!.createOscillator();
+            const gain = this.ctx!.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + i * 0.05);
+            gain.gain.setValueAtTime(0.13, now + i * 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.18);
+            osc.connect(gain);
+            gain.connect(this.ctx!.destination);
+            osc.start(now + i * 0.05);
+            osc.stop(now + i * 0.05 + 0.19);
+          });
+        }
+      } catch {}
+    }
+
+    // Giọng đọc hướng dẫn tiếng Việt tự nhiên qua Web Speech API
+    if (!this.isVoiceMuted && speechText && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        const cleaned = this.cleanTextForSpeech(speechText);
+        if (!cleaned) return;
+
+        // Cập nhật lại voice nếu chưa có
+        if (!this.cachedViVoice) {
+          const voices = window.speechSynthesis.getVoices();
+          const naturalVi = voices.find(
+            (v) =>
+              (v.lang.startsWith('vi') || v.lang.toLowerCase().includes('vi_vn')) &&
+              (v.name.includes('Natural') || v.name.includes('Online') || v.name.includes('HoaiMy') || v.name.includes('NamMinh'))
+          );
+          const anyVi = voices.find(
+            (v) =>
+              v.lang.startsWith('vi') ||
+              v.lang.toLowerCase().includes('vi_vn') ||
+              v.name.toLowerCase().includes('vietnam') ||
+              v.name.toLowerCase().includes('tiếng việt')
+          );
+          this.cachedViVoice = naturalVi || anyVi || null;
+        }
+
+        const voices = window.speechSynthesis.getVoices();
+        const hasAnyViVoice = this.cachedViVoice || voices.some((v) => v.lang.startsWith('vi') || v.name.toLowerCase().includes('vietnam') || v.name.toLowerCase().includes('tiếng việt'));
+
+        // Chỉ kích hoạt đọc nếu có giọng tiếng Việt thực sự, tránh dùng giọng tiếng Anh (David/Zira) đọc méo mó từ ngữ tiếng Việt
+        if (hasAnyViVoice) {
+          const utter = new SpeechSynthesisUtterance(cleaned);
+          if (this.cachedViVoice) {
+            utter.voice = this.cachedViVoice;
+            utter.lang = this.cachedViVoice.lang || 'vi-VN';
+          } else {
+            utter.lang = 'vi-VN';
+          }
+          // Tốc độ 0.95: Nhịp điệu điềm tĩnh, tự nhiên, rõ ràng cho học sinh THCS
+          utter.rate = 0.95;
+          utter.pitch = 1.0;
+          utter.volume = 0.95;
+          window.speechSynthesis.speak(utter);
+        }
+      } catch {}
+    }
+  }
+
+  stopSpeech() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
+  }
 }
 
 const audioFX = new ProceduralAudio();
+
+// TÍNH TOÁN DÂY DẪN HƯỚNG NEO CHÚ THÍCH (DYNAMIC ANCHORED LEADER LINE)
+const computeLeaderLineFromRect = (
+  rectLeft: number,
+  rectTop: number,
+  popupW: number,
+  popupH: number,
+  anchorX: number,
+  anchorY: number,
+) => {
+  const rectRight = rectLeft + popupW;
+  const rectBottom = rectTop + popupH;
+  const cxBox = rectLeft + popupW / 2;
+  const cyBox = rectTop + popupH / 2;
+
+  // Nếu điểm neo nằm gọn bên trong hộp popup, ẩn dây nối để không vẽ đè lên chữ
+  const isInside =
+    anchorX >= rectLeft - 6 &&
+    anchorX <= rectRight + 6 &&
+    anchorY >= rectTop - 6 &&
+    anchorY <= rectBottom + 6;
+
+  const dx = anchorX - cxBox;
+  const dy = anchorY - cyBox;
+  const nx = dx / Math.max(1, popupW / 2);
+  const ny = dy / Math.max(1, popupH / 2);
+
+  let sx = cxBox;
+  let sy = rectBottom;
+  let c1x = sx;
+  let c1y = sy;
+  let c2x = anchorX;
+  let c2y = anchorY;
+
+  if (Math.abs(nx) > Math.abs(ny)) {
+    // Điểm neo nằm chủ yếu bên TRÁI hoặc PHẢI hộp
+    const marginY = Math.min(28, popupH * 0.25);
+    sy = Math.max(rectTop + marginY, Math.min(rectBottom - marginY, anchorY));
+    if (dx < 0) {
+      sx = rectLeft;
+    } else {
+      sx = rectRight;
+    }
+    const midX = (sx + anchorX) / 2;
+    c1x = midX;
+    c1y = sy;
+    c2x = midX;
+    c2y = anchorY;
+  } else {
+    // Điểm neo nằm chủ yếu bên TRÊN hoặc DƯỚI hộp
+    const marginX = Math.min(32, popupW * 0.25);
+    sx = Math.max(rectLeft + marginX, Math.min(rectRight - marginX, anchorX));
+    if (dy < 0) {
+      sy = rectTop;
+    } else {
+      sy = rectBottom;
+    }
+    const midY = (sy + anchorY) / 2;
+    c1x = sx;
+    c1y = midY;
+    c2x = anchorX;
+    c2y = midY;
+  }
+
+  // Điểm kết thúc lùi lại 8px so với tâm điểm neo để đầu mũi tên chỉ đúng vào viền vòng tròn neo
+  const dist = Math.hypot(anchorX - sx, anchorY - sy);
+  let ex = anchorX;
+  let ey = anchorY;
+  if (dist > 18) {
+    const vX = anchorX - c2x || anchorX - sx;
+    const vY = anchorY - c2y || anchorY - sy;
+    const len = Math.hypot(vX, vY) || 1;
+    ex = anchorX - (vX / len) * 8;
+    ey = anchorY - (vY / len) * 8;
+  }
+
+  return { sx, sy, c1x, c1y, c2x, c2y, ex, ey, isInside };
+};
 
 export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> = ({
   isOpen,
   initialDeviceId,
   onClose,
   onSelectDevice,
+  onTriggerMacroCluster,
   activeSceneDeviceIds = []
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -178,6 +424,8 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   const [userMode, setUserMode] = useState<'student' | 'expert'>('student');
   const [selectedGrade, setSelectedGrade] = useState<'ALL' | ThcsGrade>('ALL');
   const [selectedNode, setSelectedNode] = useState<NeuralDeviceNode | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<NeuralSynapseEdge | null>(null);
+  const [hoveredEdge, setHoveredEdge] = useState<NeuralSynapseEdge | null>(null);
   const [showDetailDrawer, setShowDetailDrawer] = useState<boolean>(false);
 
   useEffect(() => {
@@ -187,7 +435,11 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       );
       if (match) {
         setSelectedNode(match);
-        setShowDetailDrawer(false); // Chưa mở bảng chi tiết, ưu tiên hiển thị mạng liên kết rộng rãi
+        setSelectedEdge(null);
+        selectedEdgeRef.current = null;
+        setEdgePopupPos(null);
+        edgePopupPosRef.current = null;
+        setShowDetailDrawer(false); // Mặc định không bật bảng to che bản đồ
         const targetSim = nodesRef.current.find(n => n.device.id === match.id);
         if (targetSim) {
           cameraRef.current = { x: targetSim.tx * 0.45, y: targetSim.ty * 0.45, zoom: 1.15 };
@@ -195,8 +447,39 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       }
     } else if (isOpen) {
       setShowDetailDrawer(false);
+      setSelectedEdge(null);
+      selectedEdgeRef.current = null;
+      setEdgePopupPos(null);
+      edgePopupPosRef.current = null;
     }
   }, [isOpen, initialDeviceId]);
+
+  const selectedEdgeRef = useRef<NeuralSynapseEdge | null>(null);
+  useEffect(() => {
+    selectedEdgeRef.current = selectedEdge;
+  }, [selectedEdge]);
+
+  const edgeClickCandidateRef = useRef<{ edge: NeuralSynapseEdge; startX: number; startY: number } | null>(null);
+  const [edgePopupPos, setEdgePopupPos] = useState<{ x: number; y: number } | null>(null);
+  const edgePopupPosRef = useRef<{ x: number; y: number } | null>(null);
+  const popupContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // SVG Leader Line DOM Refs cho hiệu năng 60-120 FPS
+  const leaderSvgGroupRef = useRef<SVGGElement | null>(null);
+  const leaderGlowPathRef = useRef<SVGPathElement | null>(null);
+  const leaderCorePathRef = useRef<SVGPathElement | null>(null);
+  const leaderStudRef = useRef<SVGCircleElement | null>(null);
+  const leaderAnchorRingRef = useRef<SVGCircleElement | null>(null);
+  const leaderAnchorHaloRef = useRef<SVGCircleElement | null>(null);
+  const leaderAnchorDotRef = useRef<SVGCircleElement | null>(null);
+
+  const isDraggingPopupRef = useRef<boolean>(false);
+  const popupDragStartRef = useRef<{ mouseX: number; mouseY: number; startPopupX: number; startPopupY: number }>({
+    mouseX: 0,
+    mouseY: 0,
+    startPopupX: 0,
+    startPopupY: 0,
+  });
 
   const [hoveredNode, setHoveredNode] = useState<NeuralDeviceNode | null>(null);
   const [selectedExperiment, setSelectedExperiment] = useState<ExperimentMacroCluster | null>(null);
@@ -236,10 +519,229 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   // Toggle sound
   const handleToggleSound = () => {
     setIsSoundMuted(prev => {
-      audioFX.setMute(!prev);
-      return !prev;
+      const next = !prev;
+      audioFX.setMute(next);
+      if (next) audioFX.stopSpeech();
+      return next;
     });
   };
+
+  // Đồng bộ dây dẫn hướng neo chú thích (Leader Line) thời gian thực theo tọa độ màn hình 60-120 FPS
+  const syncLeaderLine = useCallback(() => {
+    const edge = selectedEdgeRef.current;
+    const canvas = canvasRef.current;
+    if (!edge || !canvas) {
+      if (leaderSvgGroupRef.current) leaderSvgGroupRef.current.style.display = 'none';
+      return;
+    }
+
+    const src = nodesRef.current.find((n) => n.device.id === edge.source);
+    const tgt = nodesRef.current.find((n) => n.device.id === edge.target);
+    if (!src || !tgt) {
+      if (leaderSvgGroupRef.current) leaderSvgGroupRef.current.style.display = 'none';
+      return;
+    }
+
+    const cam = cameraRef.current;
+    const sPos = {
+      x: (src.x - cam.x) * cam.zoom + canvas.width / 2,
+      y: (src.y - cam.y) * cam.zoom + canvas.height / 2,
+    };
+    const tPos = {
+      x: (tgt.x - cam.x) * cam.zoom + canvas.width / 2,
+      y: (tgt.y - cam.y) * cam.zoom + canvas.height / 2,
+    };
+
+    const midX = (sPos.x + tPos.x) / 2;
+    const midY = (sPos.y + tPos.y) / 2;
+    const dx = tPos.x - sPos.x;
+    const dy = tPos.y - sPos.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const curvature = Math.min(dist * 0.12, 32);
+    const cx = midX - (dy / dist) * curvature;
+    const cy = midY + (dx / dist) * curvature;
+    const mt = 0.5;
+    const aX = (1 - mt) * (1 - mt) * sPos.x + 2 * (1 - mt) * mt * cx + mt * mt * tPos.x;
+    const aY = (1 - mt) * (1 - mt) * sPos.y + 2 * (1 - mt) * mt * cy + mt * mt * tPos.y;
+
+    const popupPos = edgePopupPosRef.current;
+    if (!popupPos) {
+      if (leaderSvgGroupRef.current) leaderSvgGroupRef.current.style.display = 'none';
+      return;
+    }
+
+    const popupW = popupContainerRef.current?.offsetWidth || 370;
+    const popupH = popupContainerRef.current?.offsetHeight || 270;
+
+    const line = computeLeaderLineFromRect(popupPos.x, popupPos.y, popupW, popupH, aX, aY);
+
+    if (leaderSvgGroupRef.current) leaderSvgGroupRef.current.style.display = 'block';
+
+    // Cập nhật vị trí điểm neo trên sợi dây nơ-ron
+    if (leaderAnchorRingRef.current) {
+      leaderAnchorRingRef.current.setAttribute('cx', String(aX));
+      leaderAnchorRingRef.current.setAttribute('cy', String(aY));
+    }
+    if (leaderAnchorHaloRef.current) {
+      leaderAnchorHaloRef.current.setAttribute('cx', String(aX));
+      leaderAnchorHaloRef.current.setAttribute('cy', String(aY));
+    }
+    if (leaderAnchorDotRef.current) {
+      leaderAnchorDotRef.current.setAttribute('cx', String(aX));
+      leaderAnchorDotRef.current.setAttribute('cy', String(aY));
+    }
+
+    // Nếu hộp popup bị kéo đè trực tiếp lên điểm neo, ẩn dây nối để tránh chướng mắt
+    const linePathD = `M ${line.sx} ${line.sy} C ${line.c1x} ${line.c1y}, ${line.c2x} ${line.c2y}, ${line.ex} ${line.ey}`;
+    const lineOpacity = line.isInside ? '0' : '1';
+
+    if (leaderGlowPathRef.current) {
+      leaderGlowPathRef.current.setAttribute('d', linePathD);
+      leaderGlowPathRef.current.style.opacity = lineOpacity;
+    }
+    if (leaderCorePathRef.current) {
+      leaderCorePathRef.current.setAttribute('d', linePathD);
+      leaderCorePathRef.current.style.opacity = lineOpacity;
+    }
+    if (leaderStudRef.current) {
+      leaderStudRef.current.setAttribute('cx', String(line.sx));
+      leaderStudRef.current.setAttribute('cy', String(line.sy));
+      leaderStudRef.current.style.opacity = lineOpacity;
+    }
+  }, []);
+
+  // Kích hoạt chọn khớp nối nơ-ron: phát giọng đọc tự nhiên, đặt vị trí tối ưu trên màn hình và neo dây dẫn hướng
+  const selectSynapseEdge = useCallback((edge: NeuralSynapseEdge) => {
+    const srcNode = NEURAL_DEVICE_NODES.find((n) => n.id === edge.source) || null;
+    const tgtNode = NEURAL_DEVICE_NODES.find((n) => n.id === edge.target) || null;
+    const sMeta = SYNAPSE_META[edge.type];
+    const lawMeta = PHYSICAL_LAW_MAPPINGS[edge.type];
+
+    // Phát âm thanh đặc trưng và đọc hướng dẫn tiếng Việt tự nhiên (Web Speech API)
+    const speechSummary = edge.studentCausal
+      ? edge.studentCausal
+      : lawMeta?.actionVerb
+      ? `${srcNode?.nameStudent || 'Thiết bị nguồn'} kết hợp với ${tgtNode?.nameStudent || 'thiết bị nhận'}: ${lawMeta.actionVerb}.`
+      : `${srcNode?.nameStudent || 'Thiết bị nguồn'} kết nối với ${tgtNode?.nameStudent || 'thiết bị đích'} qua ${sMeta?.studentName || 'liên kết'}.`;
+    audioFX.playSynapseGuide(edge.type, speechSummary);
+
+    selectedEdgeRef.current = edge;
+    setSelectedEdge(edge);
+    setShowDetailDrawer(false);
+    setSelectedNode(null);
+
+    // Tính toán tọa độ ban đầu tối ưu của hộp popup sao cho không che khuất khớp nối
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const src = nodesRef.current.find((n) => n.device.id === edge.source);
+      const tgt = nodesRef.current.find((n) => n.device.id === edge.target);
+      if (src && tgt) {
+        const cam = cameraRef.current;
+        const sPos = {
+          x: (src.x - cam.x) * cam.zoom + canvas.width / 2,
+          y: (src.y - cam.y) * cam.zoom + canvas.height / 2,
+        };
+        const tPos = {
+          x: (tgt.x - cam.x) * cam.zoom + canvas.width / 2,
+          y: (tgt.y - cam.y) * cam.zoom + canvas.height / 2,
+        };
+        const midX = (sPos.x + tPos.x) / 2;
+        const midY = (sPos.y + tPos.y) / 2;
+        const dx = tPos.x - sPos.x;
+        const dy = tPos.y - sPos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const curvature = Math.min(dist * 0.12, 32);
+        const cx = midX - (dy / dist) * curvature;
+        const cy = midY + (dx / dist) * curvature;
+        const mt = 0.5;
+        const aX = (1 - mt) * (1 - mt) * sPos.x + 2 * (1 - mt) * mt * cx + mt * mt * tPos.x;
+        const aY = (1 - mt) * (1 - mt) * sPos.y + 2 * (1 - mt) * mt * cy + mt * mt * tPos.y;
+
+        const popupW = 370;
+        const popupH = 270;
+        const canvasW = canvas.width;
+        const canvasH = canvas.height;
+
+        // Căn ngang: Tâm hộp trùng với aX (clamped)
+        const initX = Math.max(12, Math.min(Math.max(12, canvasW - popupW - 12), aX - popupW / 2));
+
+        // Căn dọc: Nếu phía trên có đủ chỗ (>= popupH + 36px) thì đặt trên, ngược lại đặt dưới
+        let initY: number;
+        if (aY - 32 - popupH >= 12) {
+          initY = aY - 32 - popupH;
+        } else {
+          initY = Math.min(Math.max(12, canvasH - popupH - 12), aY + 32);
+        }
+
+        edgePopupPosRef.current = { x: initX, y: initY };
+        setEdgePopupPos({ x: initX, y: initY });
+
+        requestAnimationFrame(() => {
+          syncLeaderLine();
+        });
+      }
+    }
+  }, [syncLeaderLine]);
+
+  // Kéo thả di chuyển hộp Popup chú thích tự do mà vẫn giữ nguyên điểm neo chỉ hướng
+  const handlePopupPointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    // Không bắt kéo nếu bấm vào nút bấm thao tác
+    if (target.closest('button') || target.closest('input')) return;
+
+    e.stopPropagation();
+    isDraggingPopupRef.current = true;
+    const curPos = edgePopupPosRef.current || { x: 100, y: 100 };
+    popupDragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      startPopupX: curPos.x,
+      startPopupY: curPos.y,
+    };
+  };
+
+  useEffect(() => {
+    const handleWindowPopupPointerMove = (e: PointerEvent) => {
+      if (!isDraggingPopupRef.current) return;
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const dx = e.clientX - popupDragStartRef.current.mouseX;
+      const dy = e.clientY - popupDragStartRef.current.mouseY;
+
+      const popupW = popupContainerRef.current?.offsetWidth || 370;
+      const popupH = popupContainerRef.current?.offsetHeight || 270;
+      const canvasW = canvas.width || 1200;
+      const canvasH = canvas.height || 800;
+
+      const nextX = Math.max(12, Math.min(Math.max(12, canvasW - popupW - 12), popupDragStartRef.current.startPopupX + dx));
+      const nextY = Math.max(12, Math.min(Math.max(12, canvasH - popupH - 12), popupDragStartRef.current.startPopupY + dy));
+
+      edgePopupPosRef.current = { x: nextX, y: nextY };
+      if (popupContainerRef.current) {
+        popupContainerRef.current.style.left = `${nextX}px`;
+        popupContainerRef.current.style.top = `${nextY}px`;
+      }
+      syncLeaderLine();
+    };
+
+    const handleWindowPopupPointerUp = () => {
+      if (isDraggingPopupRef.current) {
+        isDraggingPopupRef.current = false;
+        if (edgePopupPosRef.current) {
+          setEdgePopupPos({ ...edgePopupPosRef.current });
+        }
+      }
+    };
+
+    window.addEventListener('pointermove', handleWindowPopupPointerMove);
+    window.addEventListener('pointerup', handleWindowPopupPointerUp);
+    return () => {
+      window.removeEventListener('pointermove', handleWindowPopupPointerMove);
+      window.removeEventListener('pointerup', handleWindowPopupPointerUp);
+    };
+  }, [syncLeaderLine]);
 
   // Lọc Node
   const filteredNodes = useMemo(() => {
@@ -287,6 +789,52 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       return true;
     });
   }, [filteredNodeIds, selectedExperiment]);
+
+  // Tìm khớp nối nơ-ron tại tọa độ màn hình (Hit-testing đường cong Bezier)
+  const findEdgeAtScreenPoint = useCallback(
+    (mx: number, my: number, canvasWidth: number, canvasHeight: number): NeuralSynapseEdge | null => {
+      const cam = cameraRef.current;
+      const toScreen = (wx: number, wy: number) => ({
+        x: (wx - cam.x) * cam.zoom + canvasWidth / 2,
+        y: (wy - cam.y) * cam.zoom + canvasHeight / 2,
+      });
+
+      let bestEdge: NeuralSynapseEdge | null = null;
+      let bestDistSq = 14 * 14; // Bán kính nhận diện 14px
+
+      for (const edge of filteredEdges) {
+        const src = nodesRef.current.find((n) => n.device.id === edge.source);
+        const tgt = nodesRef.current.find((n) => n.device.id === edge.target);
+        if (!src || !tgt) continue;
+
+        const sPos = toScreen(src.x, src.y);
+        const tPos = toScreen(tgt.x, tgt.y);
+
+        const midX = (sPos.x + tPos.x) / 2;
+        const midY = (sPos.y + tPos.y) / 2;
+        const dx = tPos.x - sPos.x;
+        const dy = tPos.y - sPos.y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const curvature = Math.min(dist * 0.12, 32);
+        const cx = midX - (dy / dist) * curvature;
+        const cy = midY + (dx / dist) * curvature;
+
+        // Lấy mẫu 9 điểm trên đường cong Bezier bậc 2
+        for (let step = 1; step <= 9; step++) {
+          const t = step / 10;
+          const bx = (1 - t) * (1 - t) * sPos.x + 2 * (1 - t) * t * cx + t * t * tPos.x;
+          const by = (1 - t) * (1 - t) * sPos.y + 2 * (1 - t) * t * cy + t * t * tPos.y;
+          const d2 = (mx - bx) * (mx - bx) + (my - by) * (my - by);
+          if (d2 < bestDistSq) {
+            bestDistSq = d2;
+            bestEdge = edge;
+          }
+        }
+      }
+      return bestEdge;
+    },
+    [filteredEdges],
+  );
 
   // Vị trí Target: Gốc (0, 0) là tâm World Space - Cố định hình học tròn chuẩn 1:1, không bị méo khi mở/đóng bảng
   const computeTargetPositions = useCallback((_width: number, height: number, mode: typeof layoutMode) => {
@@ -625,8 +1173,15 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         const sPos = toScreen(src.x, src.y);
         const tPos = toScreen(tgt.x, tgt.y);
 
+        const isEdgeSelected = selectedEdge?.id === edge.id;
+        const isEdgeHovered = hoveredEdge?.id === edge.id;
+
         let strokeColor = '#41D9F5'; // Planetary Cyan
-        if (selectedNode) {
+        if (isEdgeSelected) {
+          strokeColor = '#FACC15'; // Gold-Yellow cho Khớp nối đang soi
+        } else if (isEdgeHovered) {
+          strokeColor = '#38BDF8';
+        } else if (selectedNode) {
           if (edge.source === selectedNode.id) {
             strokeColor = '#4D8DFF'; // Planetary Blue (Outgoing Axon)
           } else if (edge.target === selectedNode.id) {
@@ -637,6 +1192,8 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         const meta = SYNAPSE_META[edge.type] || { color: strokeColor };
 
         const isHighlighted =
+          isEdgeSelected ||
+          isEdgeHovered ||
           (selectedNode && (selectedNode.id === edge.source || selectedNode.id === edge.target)) ||
           (hoveredNode && (hoveredNode.id === edge.source || hoveredNode.id === edge.target)) ||
           (selectedExperiment && selectedExperiment.deviceIds.includes(edge.source) && selectedExperiment.deviceIds.includes(edge.target));
@@ -656,11 +1213,19 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         ctx.moveTo(sPos.x, sPos.y);
         ctx.quadraticCurveTo(cx, cy, tPos.x, tPos.y);
 
-        if (meta.dash) ctx.setLineDash(meta.dash);
+        if (meta.dash && !isEdgeSelected) ctx.setLineDash(meta.dash);
 
-        if (isHighlighted) {
+        if (isEdgeSelected) {
           ctx.strokeStyle = strokeColor;
-          ctx.lineWidth = 2.4 * cam.zoom;
+          ctx.lineWidth = 3.8 * cam.zoom;
+          if (qualityMode !== 'performance') {
+            ctx.shadowColor = '#FACC15';
+            ctx.shadowBlur = 16;
+          }
+          ctx.globalAlpha = 1.0;
+        } else if (isHighlighted) {
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = (isEdgeHovered ? 3.1 : 2.4) * cam.zoom;
           if (qualityMode !== 'performance') {
             ctx.shadowColor = strokeColor;
             ctx.shadowBlur = qualityMode === 'cinematic' ? 14 : 9;
@@ -673,7 +1238,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
             ctx.shadowColor = strokeColor;
             ctx.shadowBlur = 4;
           }
-          ctx.globalAlpha = selectedNode || selectedExperiment ? 0.12 : 0.36;
+          ctx.globalAlpha = selectedNode || selectedExperiment || selectedEdge ? 0.12 : 0.36;
         }
         ctx.stroke();
 
@@ -687,7 +1252,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         const adx = nax - ax;
         const ady = nay - ay;
         const adist = Math.sqrt(adx * adx + ady * ady) || 1;
-        const arrowL = 5.8 * cam.zoom;
+        const arrowL = (isEdgeSelected ? 7.2 : 5.8) * cam.zoom;
 
         ctx.setLineDash([]);
         ctx.beginPath();
@@ -701,6 +1266,34 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
           ctx.shadowBlur = 6;
         }
         ctx.fill();
+
+        // Nhãn tóm tắt Mối liên kết tại trung điểm đường cong khi chọn hoặc rê chuột
+        if ((isEdgeSelected || isEdgeHovered) && cam.zoom > 0.4) {
+          const mt = 0.5;
+          const mxCurve = (1 - mt) * (1 - mt) * sPos.x + 2 * (1 - mt) * mt * cx + mt * mt * tPos.x;
+          const myCurve = (1 - mt) * (1 - mt) * sPos.y + 2 * (1 - mt) * mt * cy + mt * mt * tPos.y;
+          const lawInfo = PHYSICAL_LAW_MAPPINGS[edge.type];
+          const pillLabel = lawInfo ? `${meta.studentName}` : edge.id;
+          ctx.font = `700 ${Math.max(10, 10.5 * cam.zoom)}px system-ui, -apple-system, sans-serif`;
+          const tw = ctx.measureText(pillLabel).width;
+          const pw = tw + 14 * cam.zoom;
+          const ph = 18 * cam.zoom;
+          ctx.fillStyle = isEdgeSelected ? 'rgba(15, 23, 42, 0.96)' : 'rgba(7, 19, 38, 0.9)';
+          ctx.strokeStyle = isEdgeSelected ? '#FACC15' : '#38BDF8';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          if (ctx.roundRect) {
+            ctx.roundRect(mxCurve - pw / 2, myCurve - ph / 2, pw, ph, 6);
+          } else {
+            ctx.rect(mxCurve - pw / 2, myCurve - ph / 2, pw, ph);
+          }
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = isEdgeSelected ? '#FDE047' : '#7DD3FC';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(pillLabel, mxCurve, myCurve);
+        }
 
         ctx.restore();
       });
@@ -901,6 +1494,11 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         ctx.restore();
       });
 
+      // Luôn cập nhật vị trí dây dẫn hướng neo động theo thời gian thực (60 FPS)
+      if (selectedEdgeRef.current) {
+        syncLeaderLine();
+      }
+
       animFrameIdRef.current = requestAnimationFrame(render);
     };
 
@@ -909,14 +1507,20 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
     return () => {
       if (animFrameIdRef.current) cancelAnimationFrame(animFrameIdRef.current);
     };
-  }, [isOpen, viewPresentation, qualityMode, layoutMode, filteredEdges, filteredNodeIds, selectedNode, hoveredNode, selectedExperiment, activeSceneDeviceIds, isFiringSignal, userMode, mapTheme]);
+  }, [isOpen, viewPresentation, qualityMode, layoutMode, filteredEdges, filteredNodeIds, selectedNode, hoveredNode, selectedEdge, hoveredEdge, selectedExperiment, activeSceneDeviceIds, isFiringSignal, userMode, mapTheme, syncLeaderLine]);
 
   // Căn giữa camera mượt mà
   const handleResetCamera = () => {
     cameraRef.current = { x: 0, y: 0, zoom: 1 };
     setSelectedNode(null);
+    setSelectedEdge(null);
+    selectedEdgeRef.current = null;
+    setEdgePopupPos(null);
+    edgePopupPosRef.current = null;
     setSelectedExperiment(null);
     setChallengeFeedback(null);
+    setShowDetailDrawer(false);
+    audioFX.stopSpeech();
     if (canvasRef.current) {
       computeTargetPositions(canvasRef.current.width, canvasRef.current.height, layoutMode);
     }
@@ -955,8 +1559,13 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         startX: e.clientX,
         startY: e.clientY,
       };
+      edgeClickCandidateRef.current = null;
       isNodeDragActiveRef.current = false;
     } else {
+      const clickedEdge = findEdgeAtScreenPoint(mx, my, canvas.width, canvas.height);
+      edgeClickCandidateRef.current = clickedEdge
+        ? { edge: clickedEdge, startX: e.clientX, startY: e.clientY }
+        : null;
       dragCandidateRef.current = null;
       isNodeDragActiveRef.current = false;
       isDraggingRef.current = true;
@@ -974,6 +1583,10 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       const dy = e.clientY - dragStartRef.current.y;
       cameraRef.current.x = cameraStartRef.current.x - dx / cameraRef.current.zoom;
       cameraRef.current.y = cameraStartRef.current.y - dy / cameraRef.current.zoom;
+      // Cập nhật lại dây dẫn hướng theo camera khi đang pan
+      if (selectedEdgeRef.current) {
+        syncLeaderLine();
+      }
       return;
     }
 
@@ -995,7 +1608,14 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
     });
 
     setHoveredNode(hov ? hov.device : null);
-    canvas.style.cursor = hov ? 'pointer' : isDraggingRef.current ? 'grabbing' : 'grab';
+    if (!hov) {
+      const hovEdge = findEdgeAtScreenPoint(mx, my, canvas.width, canvas.height);
+      setHoveredEdge(hovEdge);
+      canvas.style.cursor = hovEdge ? 'pointer' : isDraggingRef.current ? 'grabbing' : 'grab';
+    } else {
+      setHoveredEdge(null);
+      canvas.style.cursor = 'pointer';
+    }
   };
 
   const handlePointerUp = () => {
@@ -1107,7 +1727,25 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
             audioFX.playErrorBuzz();
           }
         }
-        setSelectedNode((prev) => (prev?.id === candidate.id ? null : candidate));
+        setSelectedNode((prev) => {
+          const next = prev?.id === candidate.id ? null : candidate;
+          setSelectedEdge(null);
+          selectedEdgeRef.current = null;
+          setEdgePopupPos(null);
+          edgePopupPosRef.current = null;
+          // Không tự động mở Sidebar to; chỉ khi học sinh bấm nút [📋 Chi tiết] trên huy hiệu nổi thì mới mở
+          return next;
+        });
+      } else if (edgeClickCandidateRef.current) {
+        const edgeCand = edgeClickCandidateRef.current;
+        edgeClickCandidateRef.current = null;
+        const moveDist = Math.hypot(
+          e.clientX - edgeCand.startX,
+          e.clientY - edgeCand.startY,
+        );
+        if (moveDist <= 6) {
+          selectSynapseEdge(edgeCand.edge);
+        }
       }
 
       isDraggingRef.current = false;
@@ -1119,9 +1757,9 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
       window.removeEventListener('pointermove', handleWindowPointerMove);
       window.removeEventListener('pointerup', handleWindowPointerUp);
     };
-  }, [isOpen, challengeMode, selectedNode, onClose]);
+  }, [isOpen, challengeMode, selectedNode, onClose, selectSynapseEdge]);
 
-  // Nhấn phím Escape để hủy kéo thả hoặc thoát modal
+  // Nhấn phím Escape để hủy kéo thả, đóng hộp chú thích hoặc thoát modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -1135,6 +1773,12 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
           setDraggedNode(null);
           isNodeDragActiveRef.current = false;
           dragCandidateRef.current = null;
+        } else if (selectedEdgeRef.current) {
+          selectedEdgeRef.current = null;
+          setSelectedEdge(null);
+          setEdgePopupPos(null);
+          edgePopupPosRef.current = null;
+          audioFX.stopSpeech();
         } else if (isOpen) {
           onClose();
         }
@@ -1148,16 +1792,25 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
     e.preventDefault();
     const factor = e.deltaY > 0 ? 0.9 : 1.1;
     cameraRef.current.zoom = Math.max(0.2, Math.min(3.5, cameraRef.current.zoom * factor));
+    if (selectedEdgeRef.current) {
+      syncLeaderLine();
+    }
   };
 
   const handleZoomIn = () => {
     cameraRef.current.zoom = Math.min(3.5, cameraRef.current.zoom * 1.2);
     audioFX.playNodeClick();
+    if (selectedEdgeRef.current) {
+      syncLeaderLine();
+    }
   };
 
   const handleZoomOut = () => {
     cameraRef.current.zoom = Math.max(0.2, cameraRef.current.zoom / 1.2);
     audioFX.playNodeClick();
+    if (selectedEdgeRef.current) {
+      syncLeaderLine();
+    }
   };
 
   const handleToggleFullScreen = () => {
@@ -1208,23 +1861,31 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   return (
     <div
       className={`fixed inset-0 z-50 flex items-center justify-center transition-all duration-300 ${
-        isDraggingToScene
-          ? 'bg-transparent backdrop-blur-none pointer-events-none'
+        isDraggingToScene || mapTheme === 'transparent'
+          ? 'bg-transparent backdrop-blur-none'
           : isFullScreen
             ? 'bg-[#050B18] p-0'
-            : 'bg-[#050B18]/75 backdrop-blur-sm p-3 md:p-6'
+            : 'bg-[#050B18]/75 backdrop-blur-sm'
+      } ${
+        isDraggingToScene
+          ? 'pointer-events-none'
+          : isFullScreen
+            ? 'p-0'
+            : 'p-3 md:p-6'
       } animate-in fade-in duration-200`}
     >
       <div
         ref={modalContainerRef}
-        className={`relative flex flex-col shadow-[0_24px_70px_rgba(2,8,23,0.75)] overflow-hidden text-[#E8F2FF] transition-all duration-300 ${
+        className={`relative flex flex-col overflow-hidden text-[#E8F2FF] transition-all duration-300 ${
           isFullScreen
             ? 'w-screen h-screen max-w-none rounded-none border-0'
             : 'w-[95vw] h-[88vh] max-w-6xl rounded-2xl border border-[#41D9F5]/35'
         } ${
           isDraggingToScene
             ? 'opacity-0 scale-[0.98] pointer-events-none'
-            : 'bg-[#071326]/92 backdrop-blur-2xl'
+            : mapTheme === 'transparent'
+              ? 'bg-transparent backdrop-blur-none shadow-none'
+              : 'bg-[#071326]/92 backdrop-blur-2xl shadow-[0_24px_70px_rgba(2,8,23,0.75)]'
         }`}
       >
         {/* HEADER BAR — PLANETARY COSMOS COMMAND DECK */}
@@ -1236,18 +1897,14 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-xs md:text-sm font-bold text-[#E8F2FF] tracking-wide truncate">
-                  {userMode === 'student'
-                    ? 'HỆ HÀNH TINH THIẾT BỊ KHTN THCS'
-                    : 'MẠNG NƠ-RON & QUỸ ĐẠO THIẾT BỊ OPENLAB 3D'}
+                  OPENLAB 3D: MẠNG NƠ-RON NHÂN QUẢ KẾT NỐI THIẾT BỊ KHTN THCS
                 </h2>
                 <span className="hidden sm:inline-block text-[9.5px] px-1.5 py-0.5 rounded-full bg-[#48D6A0]/15 border border-[#48D6A0]/40 text-[#48D6A0] font-semibold shrink-0">
-                  {userMode === 'student' ? 'Lớp 6 - 9' : 'RWSS v1.1.1'}
+                  GDPT 2018
                 </span>
               </div>
               <p className="text-[10.5px] text-[#A8BCD5] truncate hidden md:block">
-                {userMode === 'student'
-                  ? 'Khám phá quỹ đạo liên kết nhân quả 36 dụng cụ — Kéo thả trực tiếp xuống bàn 3D'
-                  : 'Kiến trúc tương tác nhân quả 36 thiết bị & 15 cổng connector Thông tư 38/2021/TT-BGDĐT'}
+                Nhấp trực tiếp vào sợi dây liên kết để nghe âm thanh chỉ dẫn & xem tóm tắt quy luật nhân quả
               </p>
             </div>
           </div>
@@ -1511,6 +2168,20 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                           {cluster.deviceIds.length} dụng cụ
                         </span>
                       </div>
+                      {isActive && onTriggerMacroCluster && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            audioFX.playSuccessChime();
+                            onTriggerMacroCluster(cluster);
+                          }}
+                          className="mt-2.5 w-full py-1.5 px-2.5 rounded-lg bg-gradient-to-r from-[#059669] to-[#10B981] hover:brightness-110 text-white font-extrabold text-[10.5px] shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <span>⚡</span>
+                          <span>Đưa trọn cụm ra Bàn 3D ({cluster.deviceIds.length} thiết bị)</span>
+                        </button>
+                      )}
                     </div>
                   );
                 })}
@@ -1672,6 +2343,41 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               </div>
             )}
 
+            {/* HUY HIỆU CỤM BÀI THỰC HÀNH ĐANG CHỌN & NÚT 1-CLICK DEPLOY RA BÀN 3D */}
+            {selectedExperiment && !challengeMode && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex flex-wrap items-center gap-3 px-3.5 py-2 rounded-2xl bg-[#050B18]/92 border border-[#41D9F5]/60 backdrop-blur-xl text-xs shadow-2xl max-w-[92%] animate-in fade-in">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#41D9F5]">
+                    Cụm mạng liên kết · {selectedExperiment.grade}
+                  </span>
+                  <span className="font-bold text-white truncate max-w-[260px]">
+                    {selectedExperiment.title}
+                  </span>
+                </div>
+                {onTriggerMacroCluster && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      audioFX.playSuccessChime();
+                      onTriggerMacroCluster(selectedExperiment);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#059669] to-[#10B981] hover:brightness-110 text-white font-extrabold text-[11px] shadow-[0_0_16px_rgba(16,185,129,0.4)] transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                  >
+                    <span>🚀</span>
+                    <span>Đưa {selectedExperiment.deviceIds.length} thiết bị ra Bàn 3D</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedExperiment(null)}
+                  className="w-6 h-6 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white flex items-center justify-center text-xs cursor-pointer"
+                  title="Bỏ lọc cụm thí nghiệm"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
             {/* HUY HIỆU NỔI THIẾT BỊ ĐANG CHỌN */}
             {selectedNode && selectedNodeDetails && !showDetailDrawer && (
               <div className="absolute top-4 right-4 z-20 flex items-center gap-2.5 p-1.5 pl-3 rounded-2xl bg-[#0B1930]/92 border border-[#41D9F5]/50 backdrop-blur-xl shadow-2xl animate-in fade-in slide-in-from-top-2 pointer-events-auto">
@@ -1710,6 +2416,215 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               </div>
             )}
 
+            {/* ĐƯỜNG DẪN HƯỚNG NEO ĐỘNG (LEADER LINE) GIỮ CHÍNH XÁC HƯỚNG CHÚ THÍCH VÀO SỢI DÂY */}
+            <svg className="absolute inset-0 pointer-events-none z-30 w-full h-full overflow-visible">
+              <defs>
+                <filter id="glow-leader" x="-30%" y="-30%" width="160%" height="160%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+                {/* Đầu mũi tên chỉ hướng chính xác vào điểm neo trên sợi dây nơ-ron */}
+                <marker
+                  id="arrow-leader"
+                  viewBox="0 0 10 10"
+                  refX="6"
+                  refY="5"
+                  markerWidth="6"
+                  markerHeight="6"
+                  orient="auto-start-reverse"
+                >
+                  <path d="M 1 2 L 7 5 L 1 8 z" fill="#FACC15" />
+                </marker>
+              </defs>
+
+              <g ref={leaderSvgGroupRef} style={{ display: selectedEdge ? 'block' : 'none' }}>
+                {/* Điểm neo ghim cố định tại sợi dây nơ-ron */}
+                <circle
+                  ref={leaderAnchorRingRef}
+                  cx={0}
+                  cy={0}
+                  r="12"
+                  fill="none"
+                  stroke="#FACC15"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 3"
+                  opacity="0.85"
+                />
+                <circle
+                  ref={leaderAnchorHaloRef}
+                  cx={0}
+                  cy={0}
+                  r="5.5"
+                  fill="#FACC15"
+                  filter="url(#glow-leader)"
+                  opacity="0.95"
+                />
+                <circle
+                  ref={leaderAnchorDotRef}
+                  cx={0}
+                  cy={0}
+                  r="2"
+                  fill="#FFFFFF"
+                />
+
+                {/* Dây dẫn hướng viền phát sáng nối từ hộp chú thích về đúng điểm neo */}
+                <path
+                  ref={leaderGlowPathRef}
+                  d=""
+                  fill="none"
+                  stroke="#FACC15"
+                  strokeWidth="2.5"
+                  strokeDasharray="6 4"
+                  filter="url(#glow-leader)"
+                  opacity="0.92"
+                  markerEnd="url(#arrow-leader)"
+                />
+
+                {/* Lõi dây dẫn sáng trung tâm */}
+                <path
+                  ref={leaderCorePathRef}
+                  d=""
+                  fill="none"
+                  stroke="#FFFBEB"
+                  strokeWidth="1.2"
+                  opacity="0.75"
+                />
+
+                {/* Chốt neo gắn chặt trên mép hộp chú thích */}
+                <circle
+                  ref={leaderStudRef}
+                  cx={0}
+                  cy={0}
+                  r="4"
+                  fill="#FACC15"
+                  stroke="#060F1E"
+                  strokeWidth="1.5"
+                />
+              </g>
+            </svg>
+
+            {/* POPUP CALLOUT KHUNG MỜ DI CHUYỂN TỰ DO, CHỮ TRONG HỘP SẮC NÉT */}
+            {selectedEdge && edgePopupPos && (() => {
+              const src = NEURAL_DEVICE_NODES.find((n) => n.id === selectedEdge.source);
+              const tgt = NEURAL_DEVICE_NODES.find((n) => n.id === selectedEdge.target);
+              const sMeta = SYNAPSE_META[selectedEdge.type];
+              const lawMeta = PHYSICAL_LAW_MAPPINGS[selectedEdge.type];
+
+              return (
+                <div
+                  ref={popupContainerRef}
+                  style={{
+                    left: `${edgePopupPos.x}px`,
+                    top: `${edgePopupPos.y}px`,
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  onPointerDown={handlePopupPointerDown}
+                  className="absolute z-40 w-[350px] sm:w-[380px] max-w-[calc(100vw-24px)] rounded-2xl bg-[#071326]/38 border border-[#FACC15]/65 backdrop-blur-xl p-2.5 shadow-[0_20px_50px_rgba(0,0,0,0.65)] space-y-2 pointer-events-auto animate-in fade-in zoom-in-95 duration-150 select-none cursor-grab active:cursor-grabbing"
+                >
+                  {/* Hộp 1: Tiêu đề Popup (Thanh nắm kéo di chuyển) & Nút nghe lại / tắt */}
+                  <div
+                    className="flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-[#071326]/95 border border-[#FACC15]/80 backdrop-blur-xl shadow-md cursor-grab active:cursor-grabbing"
+                    title="Giữ chuột tại đây hoặc trên khung để kéo di chuyển hộp thông tin"
+                  >
+                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#FDE047] flex items-center gap-1.5 min-w-0">
+                      <span className="text-amber-400/80 text-xs shrink-0 font-mono">⠿</span>
+                      <span className="shrink-0">🔗</span>
+                      <span className="truncate">{userMode === 'student' ? sMeta?.studentName : sMeta?.name}</span>
+                    </span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => {
+                          const textToSpeak =
+                            selectedEdge.studentCausal ||
+                            lawMeta?.actionVerb ||
+                            selectedEdge.causalRule;
+                          audioFX.playSynapseGuide(selectedEdge.type, textToSpeak);
+                        }}
+                        className="w-6 h-6 rounded-md hover:bg-white/15 text-cyan-300 hover:text-white flex items-center justify-center text-xs cursor-pointer transition-colors"
+                        title="Nghe lại hướng dẫn (Giọng đọc tự nhiên)"
+                      >
+                        🔊
+                      </button>
+                      <button
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => {
+                          selectedEdgeRef.current = null;
+                          setSelectedEdge(null);
+                          setEdgePopupPos(null);
+                          edgePopupPosRef.current = null;
+                          audioFX.stopSpeech();
+                        }}
+                        className="w-6 h-6 rounded-md hover:bg-white/20 text-slate-300 hover:text-white flex items-center justify-center text-xs cursor-pointer transition-colors"
+                        title="Đóng chỉ dẫn"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Hộp 2: Thiết bị Nguồn -> Đích */}
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 py-2 rounded-xl bg-[#040B18]/95 border border-cyan-500/45 backdrop-blur-xl shadow-md text-[11.5px] font-bold text-white">
+                    <div className="flex items-center gap-1.5 min-w-0" title={src?.nameStudent || src?.nameVi}>
+                      <span className="shrink-0 text-sm">{src?.glyphIcon}</span>
+                      <span className="leading-tight break-words line-clamp-2">{src?.nameStudent || src?.nameVi}</span>
+                    </div>
+                    <span className="text-amber-300 px-1 shrink-0 font-bold">➔</span>
+                    <div className="flex items-center gap-1.5 min-w-0 justify-end text-right" title={tgt?.nameStudent || tgt?.nameVi}>
+                      <span className="leading-tight break-words line-clamp-2">{tgt?.nameStudent || tgt?.nameVi}</span>
+                      <span className="shrink-0 text-sm">{tgt?.glyphIcon}</span>
+                    </div>
+                  </div>
+
+                  {/* Hộp 3: Hành động nhân quả ngắn gọn */}
+                  <div className="px-3 py-2 rounded-xl bg-[#040B18]/95 border border-emerald-500/45 backdrop-blur-xl shadow-md text-[11.5px] text-emerald-300 font-semibold flex items-start gap-1.5">
+                    <span className="shrink-0 text-amber-400">⚡</span>
+                    <span className="leading-snug">
+                      <RichMathText
+                        text={distillCausal(
+                          userMode === 'student'
+                            ? (selectedEdge.studentCausal || lawMeta?.actionVerb || selectedEdge.causalRule)
+                            : (lawMeta?.actionVerb || selectedEdge.causalRule)
+                        )}
+                      />
+                    </span>
+                  </div>
+
+                  {/* Hộp 4: Công thức KaTeX chuẩn MathType */}
+                  {lawMeta?.formula && (
+                    <div className="p-2.5 rounded-xl bg-[#040B18]/95 border border-cyan-400/45 backdrop-blur-xl shadow-md text-[11px] text-cyan-200 space-y-1">
+                      <div className="text-[10.5px] text-slate-300 font-medium leading-tight">
+                        {lawMeta.lawName}:
+                      </div>
+                      <div className="text-white font-semibold py-0.5 overflow-x-auto no-scrollbar flex items-center justify-center">
+                        <MathFormula math={lawMeta.formula} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hộp 5: Nút thao tác đưa trọn cặp ra bàn 3D */}
+                  {onSelectDevice && src && tgt && (
+                    <button
+                      type="button"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => {
+                        audioFX.playSuccessChime();
+                        audioFX.stopSpeech();
+                        onSelectDevice(src.id, [-0.14, 0, 0.05]);
+                        onSelectDevice(tgt.id, [0.14, 0, 0.05]);
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110 active:scale-[0.98] text-slate-950 font-black text-[11.5px] shadow-[0_8px_24px_rgba(245,158,11,0.4)] transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>⚡</span>
+                      <span>Đặt Cả Cặp Này Lên Bàn 3D</span>
+                    </button>
+                  )}
+                </div>
+              );
+            })()}
+
             {/* THANH ĐIỀU KHIỂN DƯỚI ĐÁY */}
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 p-1 rounded-2xl bg-[#050B18]/90 border border-[rgba(130,180,230,0.22)] backdrop-blur-xl shadow-2xl text-xs pointer-events-auto">
               <button
@@ -1738,7 +2653,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
               <button
                 type="button"
                 onClick={handleToggleFullScreen}
-                className={`h-8 px-2.5 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold transition-all hover:scale-105 active:scale-95 cursor-pointer ${
+                className={`h-8 px-2.5 rounded-xl border flex items-center justify-center gap-1 text-xs font-semibold whitespace-nowrap transition-all hover:scale-105 active:scale-95 cursor-pointer ${
                   isFullScreen
                     ? 'bg-[#41D9F5]/25 border-[#41D9F5] text-[#41D9F5] shadow-[0_0_10px_rgba(65,217,245,0.3)]'
                     : 'bg-[#0B1930] hover:bg-[#10223D] text-[#E8F2FF] border-[rgba(130,180,230,0.2)]'
@@ -1746,7 +2661,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                 title={isFullScreen ? 'Thu nhỏ bản đồ về khung cửa sổ' : 'Phóng to bản đồ toàn màn hình'}
               >
                 <span>{isFullScreen ? '🗗' : '⛶'}</span>
-                <span className="hidden sm:inline">{isFullScreen ? 'Thu lại' : 'Toàn màn hình'}</span>
+                <span className="hidden sm:inline whitespace-nowrap">{isFullScreen ? 'Thu lại' : 'Toàn màn hình'}</span>
               </button>
               <button
                 onClick={() => {
@@ -1854,9 +2769,9 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
             </div>
           </div>
 
-          {/* SIDEBAR PHẢI: CHI TIẾT THIẾT BỊ NƠ-RON */}
-          {selectedNode && selectedNodeDetails && showDetailDrawer && (
-            <div className="w-[315px] flex-shrink-0 border-l border-[rgba(130,180,230,0.18)] bg-[#050B18]/92 backdrop-blur-2xl flex flex-col p-4 overflow-y-auto animate-in slide-in-from-right duration-200">
+          {/* SIDEBAR PHẢI: CHỈ HIỂN THỊ KHI CHỌN NÚT THIẾT BỊ VÀ KHÔNG CHỌN SỢI DÂY (ĐÃ TÁCH KHỎI CLICK DÂY) */}
+          {selectedNode && selectedNodeDetails && showDetailDrawer && !selectedEdge && (
+            <div className="w-[320px] flex-shrink-0 border-l border-[rgba(130,180,230,0.22)] bg-[#050B18]/94 backdrop-blur-2xl flex flex-col p-4 overflow-y-auto animate-in slide-in-from-right duration-200">
               {/* Header thiết bị */}
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2.5">
@@ -1917,7 +2832,9 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                 {(selectedNode.mathFormula || selectedNode.sgkFormula) && (
                   <div className="p-1.5 rounded-lg bg-[#10223D] border border-[#4D8DFF]/30 font-mono text-[10px] text-[#E8F2FF]">
                     <span className="text-[#41D9F5] font-sans font-bold text-[9.5px] block mb-0.5">📐 Định luật / Công thức:</span>
-                    <span>${selectedNode.mathFormula || selectedNode.sgkFormula}$</span>
+                    <div className="py-0.5 overflow-x-auto">
+                      <MathFormula math={selectedNode.mathFormula || selectedNode.sgkFormula} displayMode className="text-[#E8F2FF] text-[11px]" />
+                    </div>
                   </div>
                 )}
               </div>
@@ -1957,22 +2874,59 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                     selectedNodeDetails.outgoing.map(edge => {
                       const tgt = NEURAL_DEVICE_NODES.find(n => n.id === edge.target);
                       const meta = SYNAPSE_META[edge.type];
+                      const lawMeta = PHYSICAL_LAW_MAPPINGS[edge.type];
+                      const isEdgeActive = false; // Sidebar chỉ mở khi !selectedEdge
                       return (
                         <div
                           key={edge.id}
-                          onClick={() => tgt && setSelectedNode(tgt)}
-                          className="p-2 rounded-xl bg-[#10223D]/70 hover:bg-[#10223D] border border-[#4D8DFF]/35 hover:border-[#4D8DFF] text-xs cursor-pointer transition-all"
-                          title="Nhấp để xem thiết bị này"
+                          onClick={() => selectSynapseEdge(edge)}
+                          className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all space-y-1.5 ${
+                            isEdgeActive
+                              ? 'bg-[#10223D] border-[#FACC15] shadow-[0_0_12px_rgba(250,204,21,0.22)]'
+                              : 'bg-[#10223D]/70 hover:bg-[#10223D] border-[#4D8DFF]/35 hover:border-[#4D8DFF]'
+                          }`}
+                          title="Nhấp để soi chi tiết khớp nối nơ-ron này trên bản đồ"
                         >
                           <div className="flex items-center justify-between font-bold text-[#E8F2FF] text-[11px]">
-                            <span>{userMode === 'student' ? tgt?.nameStudent : tgt?.nameVi}</span>
-                            <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-[#4D8DFF]/20 border border-[#4D8DFF]/40 text-[#41D9F5]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm shrink-0">{tgt?.glyphIcon}</span>
+                              <span className="truncate">{userMode === 'student' ? tgt?.nameStudent : tgt?.nameVi}</span>
+                            </div>
+                            <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-[#4D8DFF]/20 border border-[#4D8DFF]/40 text-[#41D9F5] shrink-0">
                               {userMode === 'student' ? meta.studentName : meta.name}
                             </span>
                           </div>
-                          <p className="text-[10px] text-[#A8BCD5] mt-0.5 leading-tight">
-                            {distillCausal(userMode === 'student' ? edge.studentCausal : edge.causalRule)}
-                          </p>
+
+                          {lawMeta && (
+                            <div className="flex items-center justify-between text-[9.5px] bg-[#071326] px-2 py-0.5 rounded border border-cyan-500/20 font-mono">
+                              <span className="text-[#41D9F5] font-sans font-semibold truncate">{lawMeta.lawName}:</span>
+                              <span className="text-white shrink-0 font-bold">
+                                <MathFormula math={lawMeta.formula} className="text-white" />
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="text-[10px] text-[#A8BCD5] leading-tight">
+                            <RichMathText text={distillCausal(userMode === 'student' ? edge.studentCausal : edge.causalRule)} />
+                          </div>
+
+                          <div className="pt-0.5 flex items-center justify-between gap-1 text-[9px]">
+                            <span className="text-[#41D9F5]/70 truncate">📚 {edge.experimentContext}</span>
+                            {tgt && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedNode(tgt);
+                                  selectSynapseEdge(edge);
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-[#4D8DFF]/20 hover:bg-[#4D8DFF]/40 text-cyan-200 border border-[#4D8DFF]/30 shrink-0 cursor-pointer font-semibold transition-colors"
+                                title="Chuyển tiêu điểm khám phá sang thiết bị đích"
+                              >
+                                ➔ Tới nút
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })
@@ -1996,22 +2950,59 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                     selectedNodeDetails.incoming.map(edge => {
                       const src = NEURAL_DEVICE_NODES.find(n => n.id === edge.source);
                       const meta = SYNAPSE_META[edge.type];
+                      const lawMeta = PHYSICAL_LAW_MAPPINGS[edge.type];
+                      const isEdgeActive = false; // Sidebar chỉ mở khi !selectedEdge
                       return (
                         <div
                           key={edge.id}
-                          onClick={() => src && setSelectedNode(src)}
-                          className="p-2 rounded-xl bg-[#10223D]/55 hover:bg-[#10223D] border border-[#9B83FF]/35 hover:border-[#9B83FF] text-xs cursor-pointer transition-all"
-                          title="Nhấp để xem thiết bị này"
+                          onClick={() => selectSynapseEdge(edge)}
+                          className={`p-2.5 rounded-xl border text-xs cursor-pointer transition-all space-y-1.5 ${
+                            isEdgeActive
+                              ? 'bg-[#10223D] border-[#FACC15] shadow-[0_0_12px_rgba(250,204,21,0.22)]'
+                              : 'bg-[#10223D]/55 hover:bg-[#10223D] border border-[#9B83FF]/35 hover:border-[#9B83FF]'
+                          }`}
+                          title="Nhấp để soi chi tiết khớp nối nơ-ron này trên bản đồ"
                         >
                           <div className="flex items-center justify-between font-bold text-[#E8F2FF] text-[11px]">
-                            <span>{userMode === 'student' ? src?.nameStudent : src?.nameVi}</span>
-                            <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-[#9B83FF]/20 border border-[#9B83FF]/40 text-[#9B83FF]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-sm shrink-0">{src?.glyphIcon}</span>
+                              <span className="truncate">{userMode === 'student' ? src?.nameStudent : src?.nameVi}</span>
+                            </div>
+                            <span className="text-[8.5px] px-1.5 py-0.5 rounded bg-[#9B83FF]/20 border border-[#9B83FF]/40 text-[#9B83FF] shrink-0">
                               {userMode === 'student' ? meta.studentName : meta.name}
                             </span>
                           </div>
-                          <p className="text-[10px] text-[#A8BCD5] mt-0.5 leading-tight">
-                            {distillCausal(userMode === 'student' ? edge.studentCausal : edge.causalRule)}
-                          </p>
+
+                          {lawMeta && (
+                            <div className="flex items-center justify-between text-[9.5px] bg-[#071326] px-2 py-0.5 rounded border border-indigo-500/20 font-mono">
+                              <span className="text-[#9B83FF] font-sans font-semibold truncate">{lawMeta.lawName}:</span>
+                              <span className="text-white shrink-0 font-bold">
+                                <MathFormula math={lawMeta.formula} className="text-white" />
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="text-[10px] text-[#A8BCD5] leading-tight">
+                            <RichMathText text={distillCausal(userMode === 'student' ? edge.studentCausal : edge.causalRule)} />
+                          </div>
+
+                          <div className="pt-0.5 flex items-center justify-between gap-1 text-[9px]">
+                            <span className="text-[#9B83FF]/70 truncate">📚 {edge.experimentContext}</span>
+                            {src && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedNode(src);
+                                  selectSynapseEdge(edge);
+                                }}
+                                className="px-1.5 py-0.5 rounded bg-[#9B83FF]/20 hover:bg-[#9B83FF]/40 text-purple-200 border border-[#9B83FF]/30 shrink-0 cursor-pointer font-semibold transition-colors"
+                                title="Chuyển tiêu điểm khám phá sang thiết bị nguồn"
+                              >
+                                ➔ Tới nút
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })

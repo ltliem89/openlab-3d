@@ -11,6 +11,14 @@
 import { SolverInput, SolverResult } from './types';
 import { MetrologyEngine } from './MetrologyEngine';
 
+export interface SpectralComponent {
+  wavelengthNm: number;
+  colorHex: string;
+  refractiveIndex: number;
+  refractionAngleDeg: number;
+  deviationAngleDeg: number;
+}
+
 export interface OpticsDerivedOutputs {
   incidentAngleDeg: number;
   refractionAngleDeg: number;
@@ -24,6 +32,8 @@ export interface OpticsDerivedOutputs {
   linearMagnification: number | null;
   imageType: 'real' | 'virtual' | 'infinity';
   isSharpFocus: boolean;
+  sharpnessRatio: number;
+  spectralComponents?: SpectralComponent[];
   isRayPathVisible: boolean;
   rayCount: number;
   reasonVi: string;
@@ -32,6 +42,22 @@ export interface OpticsDerivedOutputs {
 export class OpticsSolver {
   public static readonly SOLVER_ID = 'OPTICS-SOLVER-V1';
   public static readonly VERSION = '1.0.0';
+
+  /**
+   * Tính chiết suất theo phương trình tán sắc thực nghiệm Cauchy cho thủy tinh Crown:
+   * $$n(\lambda) = A + \frac{B}{\lambda^2} + \frac{C}{\lambda^4}$$
+   * @param wavelengthNm Bước sóng photon ánh sáng (nm, ví dụ đỏ: 656.3 nm, lam: 486.1 nm)
+   */
+  public static calculateCauchyRefractionIndex(
+    wavelengthNm: number,
+    A: number = 1.5046,
+    B: number = 4.2e3,
+    C: number = 0.0
+  ): number {
+    const lambda = Math.max(300.0, Math.min(1000.0, wavelengthNm));
+    const invL2 = 1.0 / (lambda * lambda);
+    return A + B * invL2 + C * invL2 * invL2;
+  }
 
   public static solve(input: SolverInput): SolverResult<OpticsDerivedOutputs> {
     const { state, topology } = input;
@@ -69,17 +95,20 @@ export class OpticsSolver {
     let linearMagnification: number | null = null;
     let imageType: 'real' | 'virtual' | 'infinity' = 'real';
     let isSharpFocus = false;
+    let sharpnessRatio = 0.0;
 
     if (Math.abs(focalLengthCm) > 9999) {
       // Bản thủy tinh phẳng / Không hội tụ
       imageDistanceDPrimeCm = objectDistanceDCm;
       linearMagnification = 1.0;
       imageType = 'virtual';
+      sharpnessRatio = 1.0;
     } else if (Math.abs(objectDistanceDCm - focalLengthCm) < 0.05) {
       // Vật tại đúng tiêu diện f -> Ảnh ở vô cực
       imageDistanceDPrimeCm = null;
       linearMagnification = null;
       imageType = 'infinity';
+      sharpnessRatio = 0.0;
     } else {
       // 1/d' = 1/f - 1/d -> d' = (f * d) / (d - f)
       const dPrime = (focalLengthCm * objectDistanceDCm) / (objectDistanceDCm - focalLengthCm);
@@ -87,10 +116,43 @@ export class OpticsSolver {
       linearMagnification = Number((-(dPrime / objectDistanceDCm)).toFixed(2));
       imageType = dPrime > 0 ? 'real' : 'virtual';
 
-      // Kiểm tra độ sắc nét trên màn hứng (nếu có vị trí màn chắn)
+      // Hàm trải điểm quang học Gauss PSF (Point Spread Function) liên tục:
       const screenDistanceCm = Number(state.screenDistanceCm ?? 20.0);
-      if (Math.abs(screenDistanceCm - dPrime) <= 0.4) {
+      const deltaScreen = screenDistanceCm - dPrime;
+      const sigmaFocusCm = 0.75;
+      sharpnessRatio = Math.max(0.0, Math.exp(-(deltaScreen * deltaScreen) / (2.0 * sigmaFocusCm * sigmaFocusCm)));
+      if (Math.abs(deltaScreen) <= 0.4) {
         isSharpFocus = true;
+      }
+    }
+
+    // Tán sắc ánh sáng trắng qua lăng kính / bản bán nguyệt theo phương trình Cauchy
+    const isWhiteLight = Boolean(state.isWhiteLight || state.beamMode === 'white' || state.enableDispersion);
+    const spectralComponents: SpectralComponent[] = [];
+
+    if (isLightSourceActive && (isWhiteLight || state.beamMode === 'dispersion')) {
+      const primaryBands = [
+        { name: 'Red', lambda: 656.3, hex: '#ef4444' },
+        { name: 'Yellow', lambda: 589.3, hex: '#eab308' },
+        { name: 'Green', lambda: 532.0, hex: '#22c55e' },
+        { name: 'Cyan', lambda: 486.1, hex: '#06b6d4' },
+        { name: 'Violet', lambda: 404.7, hex: '#8b5cf6' },
+      ];
+
+      for (const band of primaryBands) {
+        const nLambda = OpticsSolver.calculateCauchyRefractionIndex(band.lambda);
+        const sinRLambda = (n1 / nLambda) * Math.sin(radI);
+        const rDeg = Math.abs(sinRLambda) <= 1.0
+          ? (Math.asin(sinRLambda) * 180.0) / Math.PI
+          : 0.0;
+        const devDeg = Math.abs(incidentAngleDeg - rDeg);
+        spectralComponents.push({
+          wavelengthNm: band.lambda,
+          colorHex: band.hex,
+          refractiveIndex: Number(nLambda.toFixed(4)),
+          refractionAngleDeg: Number(rDeg.toFixed(2)),
+          deviationAngleDeg: Number(devDeg.toFixed(2)),
+        });
       }
     }
 
@@ -128,6 +190,8 @@ export class OpticsSolver {
         linearMagnification,
         imageType,
         isSharpFocus,
+        sharpnessRatio,
+        spectralComponents,
         isRayPathVisible,
         rayCount,
         reasonVi,

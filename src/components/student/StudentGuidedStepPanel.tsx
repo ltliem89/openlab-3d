@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { RichMathText } from '../common/MathFormula';
 
 export type StudentGuidedStepNumber = 1 | 2 | 3 | 4 | 5;
 
@@ -55,23 +56,23 @@ const FIVE_PRACTICE_STEPS: Array<{
   },
   {
     step: 2,
-    title: 'Cân vật (m)',
-    shortDesc: 'Đặt vật lên đĩa cân để đọc khối lượng m.',
+    title: 'Cân vật ($m$)',
+    shortDesc: 'Đặt vật lên đĩa cân để đọc khối lượng $m$.',
   },
   {
     step: 3,
-    title: 'Đo thể tích (V)',
-    shortDesc: 'Thả ngập vật vào ống đong để đọc V.',
+    title: 'Đo thể tích ($V$)',
+    shortDesc: 'Thả ngập vật vào ống đong để đọc $V = V_2 - V_1$.',
   },
   {
     step: 4,
-    title: 'Tính KLR (ρ)',
-    shortDesc: 'Tính theo công thức ρ = m / V.',
+    title: 'Tính KLR ($\\rho$)',
+    shortDesc: 'Tính theo công thức $\\rho = \\frac{m}{V}$.',
   },
   {
     step: 5,
     title: 'Kết quả',
-    shortDesc: 'Kiểm tra bảng số liệu bên dưới.',
+    shortDesc: 'Kiểm tra bảng số liệu thực nghiệm bên dưới.',
   },
 ];
 
@@ -119,6 +120,7 @@ export const StudentGuidedStepPanel: React.FC<
   const isOpticsLensExp =
     activeExperiment.experimentId === 'OL3D-EXP-OPTICS-LENS-0001';
   const isDensityExp =
+    activeExperiment.experimentId === 'OL3D-EXP-DENSITY-SOLID-0001' ||
     activeExperiment.experimentId === 'OL3D-EXP-DENSITY-0001';
 
   const displaySteps: Array<{
@@ -153,7 +155,7 @@ export const StudentGuidedStepPanel: React.FC<
               <BookOpen className="w-5 h-5 stroke-[2.4]" />
             </div>
             <h2
-              className={`text-[18px] font-extrabold leading-tight truncate ${
+              className={`text-[15px] font-extrabold leading-tight whitespace-nowrap ${
                 isDarkMode ? 'text-[#E8F2FF]' : 'text-[#051630]'
               }`}
             >
@@ -276,14 +278,14 @@ export const StudentGuidedStepPanel: React.FC<
                       isDarkMode ? 'text-[#E8F2FF]' : 'text-[#051630]'
                     }`}
                   >
-                    {item.step}. {item.title}
+                    {item.step}. <RichMathText text={item.title} />
                   </div>
                   <p
                     className={`text-[13px] font-bold leading-snug mt-0.5 ${
                       isDarkMode ? 'text-[#A8BCD5]' : 'text-[#152E4D]'
                     }`}
                   >
-                    {item.shortDesc}
+                    <RichMathText text={item.shortDesc} />
                   </p>
                 </div>
               </button>

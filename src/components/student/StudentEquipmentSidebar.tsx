@@ -57,8 +57,6 @@ interface StudentEquipmentSidebarProps {
   onSelectAsset: (assetId: string) => void;
   onAddAssetToTable: (assetId: string) => void;
   onInspectAssetDetail?: (asset: AssetDefinition, initialEditMode?: boolean) => void;
-  onOpenHtmlModuleImporter?: () => void;
-  onOpenHtmlUpdaterForAsset?: (asset: AssetDefinition) => void;
   onOpenPhotoUpdaterForAsset?: (asset: AssetDefinition) => void;
   onSelectCategoryTopic?: (
     categoryId: ReferenceLibraryCategoryId,
@@ -140,8 +138,6 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
   onSelectAsset,
   onAddAssetToTable,
   onInspectAssetDetail,
-  onOpenHtmlModuleImporter,
-  onOpenHtmlUpdaterForAsset,
   onOpenPhotoUpdaterForAsset,
   onSelectCategoryTopic,
   activeExperimentId,
@@ -413,18 +409,6 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               <FolderOpen className="w-3.5 h-3.5" />
             </button>
           )}
-
-          {onOpenHtmlModuleImporter && (
-            <button
-              type="button"
-              onClick={onOpenHtmlModuleImporter}
-              className="w-8 h-8 rounded-[7px] bg-[#0B1930] hover:bg-[#1E6BFF] border border-[#41D9F5]/40 text-[#41D9F5] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-              title="Nạp Module .HTML"
-              aria-label="Nạp Module .HTML"
-            >
-              <FileCode className="w-3.5 h-3.5" />
-            </button>
-          )}
         </div>
       </aside>
     );
@@ -478,18 +462,6 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
             >
               <FolderOpen className="w-3.5 h-3.5 shrink-0" />
               <span>Thư viện</span>
-            </button>
-          )}
-
-          {onOpenHtmlModuleImporter && (
-            <button
-              type="button"
-              onClick={onOpenHtmlModuleImporter}
-              className="h-7 px-2.5 rounded-[6px] bg-[#047857] hover:bg-[#065F46] border border-[#48D6A0]/65 text-white text-[12px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
-              title="Nạp thiết bị mới (.HTML)"
-            >
-              <FileCode className="w-3.5 h-3.5" />
-              <span>Nạp .HTML</span>
             </button>
           )}
         </div>
@@ -780,9 +752,10 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               type="button"
               onClick={() => {
                 setActiveCategory('all');
-                onSelectExperiment('OL3D-EXP-DENSITY-0001');
+                onSelectExperiment('OL3D-EXP-DENSITY-SOLID-0001');
               }}
               className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
+                activeExperimentId === 'OL3D-EXP-DENSITY-SOLID-0001' ||
                 activeExperimentId === 'OL3D-EXP-DENSITY-0001'
                   ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
                   : isDarkMode
@@ -792,6 +765,23 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               title="Chọn bài Đo khối lượng riêng của vật rắn"
             >
               ⚖️ Bài 14: Đo Khối lượng riêng
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveCategory('all');
+                onSelectExperiment('OL3D-EXP-DISPLACEMENT-0001');
+              }}
+              className={`col-span-2 px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
+                activeExperimentId === 'OL3D-EXP-DISPLACEMENT-0001'
+                  ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
+                  : isDarkMode
+                    ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
+                    : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
+              }`}
+              title="Chọn bài Đo thể tích vật rắn bằng Bình tràn & Lực đẩy Archimedes"
+            >
+              ⚓ Bài 15: Bình tràn Eureka & Lực đẩy Ác-si-mét
             </button>
           </div>
         </div>
@@ -1108,21 +1098,6 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
             >
               <Wrench className="w-4 h-4 text-amber-300 shrink-0" />
               <span>Sửa thông số & Cài đặt</span>
-            </button>
-          )}
-
-          {onOpenHtmlUpdaterForAsset && (
-            <button
-              type="button"
-              onClick={() => {
-                const target = contextMenu.asset;
-                setContextMenu(null);
-                onOpenHtmlUpdaterForAsset(target);
-              }}
-              className="w-full px-2.5 py-2 rounded-[8px] bg-emerald-950/65 hover:bg-emerald-900/75 border border-emerald-400/80 text-left text-[13px] font-extrabold text-[#6EE7B7] flex items-center gap-2 cursor-pointer transition-colors"
-            >
-              <FileCode className="w-4 h-4 text-[#34D399] shrink-0" />
-              <span>Cập nhật .HTML</span>
             </button>
           )}
 

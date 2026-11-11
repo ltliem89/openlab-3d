@@ -19,12 +19,34 @@ import {
   NeuralSynapseEdge,
   SynapseKind,
   ExperimentMacroCluster,
+  PhysicalSignalType,
 } from './neuralNetworkTopology';
 import { SceneInstance, AssetDefinition } from './types';
 import {
   MAX_ELECTRICAL_CABLE_LENGTH_M,
   LAMP_IGNITION_THRESHOLD_VOLTAGE_V,
 } from '../three-runtime/AssemblySystem';
+
+export interface IntercomSignalPacket {
+  id: string;
+  sourceInstanceId: string;
+  sourceAssetId: string;
+  sourceNameVi: string;
+  signalType: PhysicalSignalType;
+  value: number;
+  unit: string;
+  labelVi: string;
+  timestampMs: number;
+}
+
+export interface ComputedCausalInference {
+  id: string;
+  titleVi: string;
+  formulaLatex: string;
+  computedValueText: string;
+  participatingAssetIds: string[];
+  explanationVi: string;
+}
 
 export interface ContextualSynapseLink {
   synapseId: string;
@@ -76,7 +98,7 @@ export interface SafetyReflexResult {
 /**
  * Bản đồ ánh xạ hành vi nhân quả thực tế theo chuẩn vật lí học
  */
-const PHYSICAL_LAW_MAPPINGS: Record<SynapseKind, {
+export const PHYSICAL_LAW_MAPPINGS: Record<SynapseKind, {
   actionVerb: string;
   lawName: string;
   formula: string;
@@ -121,7 +143,7 @@ const PHYSICAL_LAW_MAPPINGS: Record<SynapseKind, {
   optical_refraction: {
     actionVerb: 'Chiếu qua môi trường trong suốt khúc xạ',
     lawName: 'Định luật khúc xạ Snell & Công thức thấu kính mỏng',
-    formula: '$\\frac{1}{f} = \\frac{1}{d} + \\frac{1}{d\'}$ \\quad \\text{và} \\quad $n_1 \\sin(i) = n_2 \\sin(r)$',
+    formula: '$\\frac{1}{f} = \\frac{1}{d} + \\frac{1}{d\'} \\quad \\text{và} \\quad n_1 \\sin(i) = n_2 \\sin(r)$',
     defaultSafety: 'Chỉ cầm vào vành kim loại bảo vệ của thấu kính, tuyệt đối không chạm ngón tay vào bề mặt kính.',
   },
   electrical_terminal: {
@@ -137,13 +159,13 @@ const PHYSICAL_LAW_MAPPINGS: Record<SynapseKind, {
     defaultSafety: 'Đảm bảo phích cắm bắp chuối cắm ngập sâu vào lỗ cọc nguồn để tiếp xúc điện tốt nhất.',
   },
   fluid_spout: {
-    actionVerb: 'Rót xả lưu chất qua miệng vòi dẫn',
-    lawName: 'Nguyên lý bảo toàn thể tích chất lỏng không nén được',
+    actionVerb: 'Rót chất lỏng qua miệng vòi dẫn',
+    lawName: 'Bảo toàn thể tích chất lỏng',
     formula: '$V_{\\text{tràn}} = V_{\\text{chiếm chỗ}} = V_{\\text{chìm}}$',
     defaultSafety: 'Chờ nước chảy hết từng giọt cuối cùng trước khi đọc thể tích trên ống đong / cốc hứng.',
   },
   fluid_receptacle: {
-    actionVerb: 'Hứng nhận lưu chất vào khoang chứa',
+    actionVerb: 'Hứng nhận chất lỏng vào bình chứa',
     lawName: 'Định luật bình thông nhau & Đo thể tích',
     formula: '$V_{\\text{tổng}} = V_0 + \\Delta V$',
     defaultSafety: 'Đặt cốc trên mặt phẳng nằm ngang, đọc vạch thể tích theo đáy mặt khum (meniscus).',
@@ -188,10 +210,243 @@ export class NeuralConnectionEngine {
   private _nodeByAssetId: Map<string, NeuralDeviceNode> = new Map();
   private _nodeBySlugId: Map<string, NeuralDeviceNode> = new Map();
   private _synapsesByAssetId: Map<string, { incoming: NeuralSynapseEdge[]; outgoing: NeuralSynapseEdge[] }> = new Map();
+  private _activeSignals: Map<string, IntercomSignalPacket> = new Map();
+  private _signalListeners: Set<(signals: IntercomSignalPacket[], inferences: ComputedCausalInference[]) => void> = new Set();
 
   constructor() {
     this._loadGuidePreference();
     this._buildIndexes();
+  }
+
+  /**
+   * Đăng ký lắng nghe Bus truyền tin giữa các thiết bị (Device Inter-Communication)
+   */
+  public subscribeToBus(
+    listener: (signals: IntercomSignalPacket[], inferences: ComputedCausalInference[]) => void,
+  ): () => void {
+    this._signalListeners.add(listener);
+    listener(this.getActiveSignals(), this.computeCausalInferences());
+    return () => {
+      this._signalListeners.delete(listener);
+    };
+  }
+
+  private _emitBusUpdate(): void {
+    const signals = this.getActiveSignals();
+    const inferences = this.computeCausalInferences();
+    this._signalListeners.forEach((cb) => cb(signals, inferences));
+  }
+
+  /**
+   * Đồng bộ hóa trạng thái thực tế của toàn bộ thiết bị trên bàn 3D vào Mạng truyền tin Nơ-ron
+   * Khi học sinh thao tác bất kỳ thiết bị nào -> Bus phát tín hiệu cho thiết bị phụ thuộc biết
+   */
+  public syncSceneSignals(
+    allInstances: SceneInstance[],
+    assetsMap: Map<string, AssetDefinition>,
+  ): { signals: IntercomSignalPacket[]; inferences: ComputedCausalInference[] } {
+    this._activeSignals.clear();
+    const now = Date.now();
+
+    for (const inst of allInstances) {
+      if (!inst.visible) continue;
+      const asset = assetsMap.get(inst.assetId);
+      const node = this.getNode(inst.assetId);
+      const nameVi = node?.nameStudent || asset?.name.vi || inst.assetId;
+      const st = inst.instanceState as Record<string, any>;
+
+      // 1. Cân điện tử phát tín hiệu MASS_VALUE
+      if (inst.assetId === 'OL3D-EQP-BAL-0001') {
+        const mass = Number(st.measuredMassG ?? st.displayedMassG ?? 0);
+        if (mass > 0.01) {
+          this._activeSignals.set(`${inst.instanceId}:MASS_VALUE`, {
+            id: `${inst.instanceId}:MASS_VALUE`,
+            sourceInstanceId: inst.instanceId,
+            sourceAssetId: inst.assetId,
+            sourceNameVi: nameVi,
+            signalType: 'MASS_VALUE',
+            value: mass,
+            unit: 'g',
+            labelVi: `Khối lượng đo được m = ${mass.toFixed(1)} g`,
+            timestampMs: now,
+          });
+        }
+      }
+
+      // 2. Ống đong phát tín hiệu VOLUME_DISPLACEMENT khi có vật chiếm chỗ hoặc mức nước thay đổi
+      if (inst.assetId === 'OL3D-EQP-CYL-0001') {
+        const curVol = Number(st.liquidLevelMl ?? 0);
+        const baseVol = Number(st.baseLiquidLevelMl ?? 50);
+        const deltaV = Math.max(0, curVol - baseVol);
+        if (deltaV > 0.1) {
+          this._activeSignals.set(`${inst.instanceId}:VOLUME_DISPLACEMENT`, {
+            id: `${inst.instanceId}:VOLUME_DISPLACEMENT`,
+            sourceInstanceId: inst.instanceId,
+            sourceAssetId: inst.assetId,
+            sourceNameVi: nameVi,
+            signalType: 'VOLUME_DISPLACEMENT',
+            value: deltaV,
+            unit: 'cm³',
+            labelVi: `Thể tích chiếm chỗ ΔV = ${deltaV.toFixed(1)} cm³`,
+            timestampMs: now,
+          });
+        }
+      }
+
+      // 3. Lực kế lò xo phát tín hiệu FORCE_NEWTON
+      if (inst.assetId === 'OL3D-EQP-DYN-0001') {
+        const forceN = Number(st.measuredForceN ?? st.forceN ?? 0);
+        if (forceN > 0.01) {
+          this._activeSignals.set(`${inst.instanceId}:FORCE_NEWTON`, {
+            id: `${inst.instanceId}:FORCE_NEWTON`,
+            sourceInstanceId: inst.instanceId,
+            sourceAssetId: inst.assetId,
+            sourceNameVi: nameVi,
+            signalType: 'FORCE_NEWTON',
+            value: forceN,
+            unit: 'N',
+            labelVi: `Lực kéo đo được F = ${forceN.toFixed(2)} N`,
+            timestampMs: now,
+          });
+        }
+      }
+
+      // 4. Hộp nguồn điện phát tín hiệu VOLTAGE_VOLT
+      if (inst.assetId === 'OL3D-EQP-PSU-0001') {
+        const isOn = Boolean(st.isPoweredOn ?? st.powerOn ?? true);
+        const volts = isOn ? Number(st.voltageV ?? st.outputVoltageV ?? 6) : 0;
+        if (volts > 0) {
+          this._activeSignals.set(`${inst.instanceId}:VOLTAGE_VOLT`, {
+            id: `${inst.instanceId}:VOLTAGE_VOLT`,
+            sourceInstanceId: inst.instanceId,
+            sourceAssetId: inst.assetId,
+            sourceNameVi: nameVi,
+            signalType: 'VOLTAGE_VOLT',
+            value: volts,
+            unit: 'V',
+            labelVi: `Nguồn điện cấp U = ${volts.toFixed(1)} V`,
+            timestampMs: now,
+          });
+        }
+      }
+
+      // 5. Đèn Laser / Nguồn sáng quang học phát tín hiệu LIGHT_RAY
+      if (inst.assetId === 'OL3D-EQP-LAS-0001' || inst.assetId === 'OL3D-EQP-LBX-0001') {
+        const isLit = Boolean(st.isLaserOn ?? st.isLightOn ?? st.isPoweredOn ?? true);
+        if (isLit) {
+          this._activeSignals.set(`${inst.instanceId}:LIGHT_RAY`, {
+            id: `${inst.instanceId}:LIGHT_RAY`,
+            sourceInstanceId: inst.instanceId,
+            sourceAssetId: inst.assetId,
+            sourceNameVi: nameVi,
+            signalType: 'LIGHT_RAY',
+            value: 1,
+            unit: 'beam',
+            labelVi: `Đang phát tia sáng chuẩn trực`,
+            timestampMs: now,
+          });
+        }
+      }
+
+      // 6. Nhiệt kế / Đèn cồn phát tín hiệu TEMPERATURE_C
+      if (inst.assetId === 'OL3D-EQP-THM-0001' || inst.assetId === 'OL3D-EQP-ALC-0001') {
+        const tempC = Number(st.temperatureC ?? (inst.assetId === 'OL3D-EQP-ALC-0001' && st.isLit ? 650 : 25));
+        if (tempC > 26) {
+          this._activeSignals.set(`${inst.instanceId}:TEMPERATURE_C`, {
+            id: `${inst.instanceId}:TEMPERATURE_C`,
+            sourceInstanceId: inst.instanceId,
+            sourceAssetId: inst.assetId,
+            sourceNameVi: nameVi,
+            signalType: 'TEMPERATURE_C',
+            value: tempC,
+            unit: '°C',
+            labelVi: `Nhiệt độ truyền tải T = ${tempC.toFixed(1)} °C`,
+            timestampMs: now,
+          });
+        }
+      }
+    }
+
+    const signals = this.getActiveSignals();
+    const inferences = this.computeCausalInferences();
+    this._signalListeners.forEach((cb) => cb(signals, inferences));
+    return { signals, inferences };
+  }
+
+  public getActiveSignals(): IntercomSignalPacket[] {
+    return Array.from(this._activeSignals.values());
+  }
+
+  /**
+   * Suy luận các định luật vật lý tổng hợp từ các tín hiệu mà các thiết bị "nói chuyện" với nhau
+   */
+  public computeCausalInferences(): ComputedCausalInference[] {
+    const inferences: ComputedCausalInference[] = [];
+    const signals = this.getActiveSignals();
+
+    const massSig = signals.find((s) => s.signalType === 'MASS_VALUE');
+    const volSig = signals.find((s) => s.signalType === 'VOLUME_DISPLACEMENT');
+    const forceSig = signals.find((s) => s.signalType === 'FORCE_NEWTON');
+    const voltSig = signals.find((s) => s.signalType === 'VOLTAGE_VOLT');
+    const lightSig = signals.find((s) => s.signalType === 'LIGHT_RAY');
+
+    // Suy luận 1: Khối lượng riêng (Cân điện tử <-> Ống đong)
+    if (massSig && volSig && volSig.value > 0) {
+      const density = massSig.value / volSig.value;
+      let materialHint = 'Vật rắn thử nghiệm';
+      if (Math.abs(density - 2.7) < 0.35) materialHint = 'Nhôm (Al)';
+      else if (Math.abs(density - 7.8) < 0.6) materialHint = 'Sắt / Thép (Fe)';
+      else if (Math.abs(density - 8.9) < 0.6) materialHint = 'Đồng (Cu)';
+
+      inferences.push({
+        id: 'causal-density-eureka',
+        titleVi: 'Liên kết Cân ↔ Ống đong: Khối lượng riêng',
+        formulaLatex: 'D = m / V',
+        computedValueText: `D = ${massSig.value.toFixed(1)} / ${volSig.value.toFixed(1)} = ${density.toFixed(2)} g/cm³ (${materialHint})`,
+        participatingAssetIds: [massSig.sourceAssetId, volSig.sourceAssetId],
+        explanationVi: `${massSig.sourceNameVi} gửi khối lượng m kết hợp với ${volSig.sourceNameVi} gửi độ dâng thể tích ΔV để tính ngay khối lượng riêng vật chất.`,
+      });
+    }
+
+    // Suy luận 2: Trọng lượng & Lực đẩy Archimedes (Cân / Lực kế)
+    if (massSig && forceSig) {
+      const weightN = (massSig.value / 1000) * 9.81;
+      const diffN = Math.max(0, weightN - forceSig.value);
+      inferences.push({
+        id: 'causal-archimedes-eureka',
+        titleVi: 'Liên kết Trọng lực ↔ Lực kế: Lực đẩy Ác-si-mét',
+        formulaLatex: 'F_A = P - F_kế',
+        computedValueText: `P = ${weightN.toFixed(2)} N | F_kế = ${forceSig.value.toFixed(2)} N ⇒ F_A ≈ ${diffN.toFixed(2)} N`,
+        participatingAssetIds: [massSig.sourceAssetId, forceSig.sourceAssetId],
+        explanationVi: 'So sánh trọng lượng thực P từ khối lượng với số chỉ lực kế khi vật chìm trong chất lỏng.',
+      });
+    }
+
+    // Suy luận 3: Mạch điện tương tác (Hộp nguồn -> Phụ tải)
+    if (voltSig) {
+      inferences.push({
+        id: 'causal-ohm-circuit',
+        titleVi: 'Mạch điện liên kết: Định luật Ohm',
+        formulaLatex: 'I = U / R',
+        computedValueText: `Hiệu điện thế cấp U = ${voltSig.value.toFixed(1)} V (Đủ ngưỡng nuôi phụ tải)`,
+        participatingAssetIds: [voltSig.sourceAssetId],
+        explanationVi: `${voltSig.sourceNameVi} đang phát tín hiệu điện áp U sang các thiết bị tiêu thụ và đồng hồ đo nối liền.`,
+      });
+    }
+
+    // Suy luận 4: Đường truyền quang học (Đèn phát -> Thấu kính / Lăng kính)
+    if (lightSig) {
+      inferences.push({
+        id: 'causal-optics-ray',
+        titleVi: 'Truyền quang đồng trục: Khúc xạ & Hội tụ',
+        formulaLatex: '1/f = 1/d + 1/d\'',
+        computedValueText: 'Chùm tia chuẩn trực sẵn sàng tương tác với thấu kính và màn hứng',
+        participatingAssetIds: [lightSig.sourceAssetId],
+        explanationVi: `${lightSig.sourceNameVi} truyền vector chùm tia tới các linh kiện quang học đặt cùng trục quang chính.`,
+      });
+    }
+
+    return inferences;
   }
 
   private _loadGuidePreference() {

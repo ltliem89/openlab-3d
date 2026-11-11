@@ -6,3 +6,5 @@ coverage/
 *.log
 .env*
 !.env.example
+pipeline_output/
+prompt_*.txt

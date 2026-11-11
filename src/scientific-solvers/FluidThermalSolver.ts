@@ -17,6 +17,7 @@ export interface FluidThermalDerivedOutputs {
   buoyantForceN: number;
   overflowVolumeMl: number;
   temperatureC: number;
+  thermometerTempC?: number; // Quán tính truyền nhiệt nhiệt kế tau = 4.5s (lỏng), 45s (khí)
   isBoiling: boolean;
   isHeatingActive: boolean;
   heatExchangeRateW: number;
@@ -151,11 +152,21 @@ export class FluidThermalSolver {
     let currentLiquidMl = Number(state.liquidLevelMl ?? state.baseLiquidLevelMl ?? 100.0);
     const fluidDensityKgM3 = Number(state.fluidDensityKgM3 ?? 1000.0);
 
-    // Lưu lượng cân bằng bình thông nhau nếu có kết nối nhánh thông đáy
+    // Lưu lượng cân bằng bình thông nhau theo định luật Torricelli & Bernoulli vi phân (Hermes Patch P1)
     if (topology?.communicatingConnected && typeof topology?.peerLiquidLevelMl === 'number') {
-      const deltaH = (currentLiquidMl - topology.peerLiquidLevelMl) * 0.001; // chênh lệch cột nước
-      const flowRateMlPerSec = 45.0 * Math.sign(deltaH) * Math.sqrt(Math.abs(deltaH * g));
-      currentLiquidMl = Math.max(0, currentLiquidMl - flowRateMlPerSec * dt);
+      const deltaH = (currentLiquidMl - topology.peerLiquidLevelMl) * 0.001; // chênh lệch cột nước (m)
+      if (Math.abs(deltaH) > 1e-5) {
+        const Cd = 0.62; // Hệ số xả nhớt vòi thủy tinh
+        const dOrificeM = 0.006; // Đường kính ống thông 6 mm
+        const aOrificeM2 = Math.PI * Math.pow(dOrificeM * 0.5, 2);
+        const vTorricelli = Math.sqrt(2.0 * g * Math.abs(deltaH));
+        // Lưu lượng m^3/s -> mL/s
+        const flowRateMlPerSec = Cd * aOrificeM2 * vTorricelli * 1.0e6 * Math.sign(deltaH);
+        // Tránh quá đà dao động (Overshoot Limiter)
+        const maxDeltaMl = Math.abs(currentLiquidMl - topology.peerLiquidLevelMl) * 0.5;
+        const actualTransferMl = Math.min(maxDeltaMl, Math.abs(flowRateMlPerSec * dt)) * Math.sign(flowRateMlPerSec);
+        currentLiquidMl = Math.max(0, currentLiquidMl - actualTransferMl);
+      }
     }
 
     const crossSectionAreaM2 = 1.0e-3;
@@ -222,6 +233,15 @@ export class FluidThermalSolver {
       newTempC = Math.max(tAir, currentTempC + dTdt * dt);
     }
 
+    // 4. Quán tính truyền nhiệt của nhiệt kế (Hermes Patch P3)
+    // T_therm(t + dt) = T_env + (T_therm(t) - T_env) * exp(-dt / tau)
+    const prevThermometerTempC = Number(state.thermometerTempC ?? tAir);
+    const isThermometerInLiquid = Boolean(state.isThermometerInLiquid ?? true);
+    const tauThermometer = isThermometerInLiquid ? 4.5 : 45.0; // 4.5s trong nước, 45s trong không khí
+    const alphaTherm = 1.0 - Math.exp(-dt / tauThermometer);
+    const targetFluidTemp = isThermometerInLiquid ? newTempC : tAir;
+    const thermometerTempC = Number((prevThermometerTempC + (targetFluidTemp - prevThermometerTempC) * alphaTherm).toFixed(2));
+
     let reasonVi = '';
     if (isHeatingActive) {
       reasonVi = isBoiling
@@ -247,6 +267,7 @@ export class FluidThermalSolver {
         buoyantForceN,
         overflowVolumeMl,
         temperatureC: Number(newTempC.toFixed(2)),
+        thermometerTempC,
         isBoiling,
         isHeatingActive,
         heatExchangeRateW: Number(heatExchangeRateW.toFixed(1)),

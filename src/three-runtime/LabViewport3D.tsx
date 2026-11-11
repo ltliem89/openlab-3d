@@ -24,6 +24,11 @@ import {
 import { htmlEquipmentModuleRegistry } from './HtmlEquipmentModuleRegistry';
 import { equipmentImagePreviewController } from './EquipmentImagePreviewController';
 import { neuralConnectionEngine } from '../domain/neuralConnectionEngine';
+import { cognitiveNeuralEngine } from '../domain/CognitiveNeuralEngine';
+import { epistemicHologramRenderer } from './EpistemicHologramRenderer';
+import { inSituMicroscopicLens } from './InSituMicroscopicLens';
+import { chronoCausalSandbox } from '../domain/ChronoCausalSandbox';
+import { scientificSolverRegistry } from '../scientific-solvers/ScientificSolverRegistry';
 import { EquipmentThumbnailSvg } from '../components/common/EquipmentThumbnailSvg';
 import { DeviceControlInspector } from '../components/panels/DeviceControlInspector';
 import { labSoundEngine } from './LabSoundEngine';
@@ -48,6 +53,7 @@ import {
 } from './LabEnvironmentEngine';
 import { LabEnvironmentSpecModal } from '../components/modals/LabEnvironmentSpecModal';
 import { LabVideoRecorderModal } from '../components/modals/LabVideoRecorderModal';
+import { NeuralSynapseIntroPanel } from '../components/panels/NeuralSynapseIntroPanel';
 import {
   LabRecordingSession,
   RecordedStepMilestone,
@@ -2030,7 +2036,39 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    
+    // Phím tắt 'M' bật/tắt Thấu kính Khảo sát Đa thang đo Trực vị 3D
+    const handleLensKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea') return;
+      if (e.key === 'm' || e.key === 'M') {
+        const active = inSituMicroscopicLens.toggle();
+        if (active) {
+          const selId = selectedInstanceIdRef.current;
+          if (selId) {
+            const obj = instanceObjectsRef.current.get(selId);
+            if (obj) {
+              inSituMicroscopicLens.setTargetPosition(obj.position.x, obj.position.y, obj.position.z);
+            }
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleLensKey);
+
+    const handleToggleLensEvent = (e?: any) => {
+      const active = inSituMicroscopicLens.toggle();
+      if (active && e?.detail?.targetPos) {
+        inSituMicroscopicLens.setTargetPosition(e.detail.targetPos[0], e.detail.targetPos[1], e.detail.targetPos[2]);
+      }
+    };
+    window.addEventListener('openlab:toggle-in-situ-lens', handleToggleLensEvent);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keydown', handleLensKey);
+      window.removeEventListener('openlab:toggle-in-situ-lens', handleToggleLensEvent);
+    };
   }, []);
 
   const [projectedLabels, setProjectedLabels] = useState<ProjectedLabel[]>([]);
@@ -2094,6 +2132,35 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
   // Danh sách thiết bị tạm lưu trong Kho chứa (Cổng chuyển) & trạng thái mở Modal danh sách
   const [warehouseItems, setWarehouseItems] = useState<WarehouseStoredItem[]>([]);
   const [isWarehouseModalOpen, setIsWarehouseModalOpen] = useState<boolean>(false);
+
+  // Bảng Giới thiệu Mối liên kết Nơ-ron Tri thức: Mặc định ĐÓNG (Chỉ mở khi người dùng chuột phải hoặc bấm nút)
+  const [isNeuralSynapseIntroOpen, setIsNeuralSynapseIntroOpen] = useState<boolean>(false);
+  const [neuralBusSignals, setNeuralBusSignals] = useState(() =>
+    neuralConnectionEngine.getActiveSignals(),
+  );
+  const [neuralCausalInferences, setNeuralCausalInferences] = useState(() =>
+    neuralConnectionEngine.computeCausalInferences(),
+  );
+  const [projectedArcBadges, setProjectedArcBadges] = useState<
+    Array<{
+      id: string;
+      x: number;
+      y: number;
+      icon: string;
+      symbolText: string;
+      detailText: string;
+      colorHex: string;
+      targetInstanceId: string;
+    }>
+  >([]);
+  const [hoveredArcId, setHoveredArcId] = useState<string | null>(null);
+
+  useEffect(() => {
+    return neuralConnectionEngine.subscribeToBus((sigs, infs) => {
+      setNeuralBusSignals(sigs);
+      setNeuralCausalInferences(infs);
+    });
+  }, []);
 
   // Cỡ chữ hiển thị thông số đo trên các dụng cụ (Mặc định 1.25 = 125% lớn rõ, cho phép tăng/giảm từ 0.80 đến 2.20)
   const [readoutFontScale, setReadoutFontScale] = useState<number>(() => {
@@ -3060,6 +3127,100 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       }
       return prev;
     });
+
+    // Chiếu tọa độ đỉnh vòm các dây Nơ-ron đang kết nối sang không gian 2D (Micro-Arc Badges không che khuất)
+    const nextArcBadges: Array<{
+      id: string;
+      x: number;
+      y: number;
+      icon: string;
+      symbolText: string;
+      detailText: string;
+      colorHex: string;
+      targetInstanceId: string;
+    }> = [];
+
+    const activeSelId = selectedInstanceIdRef.current;
+    const isGuideActive = Boolean(neuralConnectionEngine.isGuideEnabled);
+    if (activeSelId && isGuideActive) {
+      const selInst = instancesRef.current.find((i) => i.instanceId === activeSelId);
+      const selObj = instanceObjectsRef.current.get(activeSelId);
+      if (selInst && selObj && selInst.visible) {
+        const candidates = neuralConnectionEngine.getCompatibleCandidates(
+          selInst,
+          instancesRef.current,
+          assetsMapRef.current,
+        );
+        candidates.slice(0, 5).forEach((cand) => {
+          const targetObj = instanceObjectsRef.current.get(cand.targetInstance.instanceId);
+          if (!targetObj) return;
+          const p1 = new THREE.Vector3(selObj.position.x, selObj.position.y + 0.08, selObj.position.z);
+          const p2 = new THREE.Vector3(targetObj.position.x, targetObj.position.y + 0.08, targetObj.position.z);
+          const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+          const dist = p1.distanceTo(p2);
+          mid.y += Math.min(0.35, Math.max(0.12, dist * 0.35));
+
+          _projVec.copy(mid).project(camera);
+          if (_projVec.z < -1 || _projVec.z > 1) return;
+          const sx = Math.round((_projVec.x * 0.5 + 0.5) * width);
+          const sy = Math.round((-_projVec.y * 0.5 + 0.5) * height);
+          if (sx < 20 || sx > width - 20 || sy < 20 || sy > height - 20) return;
+
+          // Mã hóa ký hiệu & màu theo phân môn khoa học
+          let icon = '🔗';
+          let symbolText = 'Liên kết';
+          let colorHex = '#34D399';
+          const kind = cand.link.kind;
+          if (kind === 'electrical_terminal' || kind === 'electrical_interlock' || kind === 'electromagnetic_induction') {
+            icon = '⚡';
+            symbolText = 'U, I';
+            colorHex = '#FACC15';
+          } else if (kind === 'fluid_spout' || kind === 'fluid_receptacle' || kind === 'submersion' || kind === 'buoyancy_force') {
+            icon = '💧';
+            symbolText = 'ΔV, Fₐ';
+            colorHex = '#38BDF8';
+          } else if (kind === 'thermal_exchange') {
+            icon = '🔥';
+            symbolText = 'T °C';
+            colorHex = '#FB923C';
+          } else if (kind === 'optical_alignment' || kind === 'optical_refraction' || kind === 'optical_carrier') {
+            icon = '🔆';
+            symbolText = 'Tia sáng';
+            colorHex = '#E879F9';
+          } else if (kind === 'mechanical_support' || kind === 'mechanical_hook' || kind === 'mechanical_clamp') {
+            icon = '⚖️';
+            symbolText = 'm, P';
+            colorHex = '#34D399';
+          }
+
+          nextArcBadges.push({
+            id: `${activeSelId}-${cand.targetInstance.instanceId}`,
+            x: sx,
+            y: sy,
+            icon,
+            symbolText,
+            detailText: `${cand.link.actionVerbVi} · ${cand.link.physicalLawVi}`,
+            colorHex,
+            targetInstanceId: cand.targetInstance.instanceId,
+          });
+        });
+      }
+    }
+
+    setProjectedArcBadges((prev) => {
+      if (prev.length !== nextArcBadges.length) return nextArcBadges;
+      for (let i = 0; i < prev.length; i++) {
+        if (
+          prev[i].id !== nextArcBadges[i].id ||
+          prev[i].symbolText !== nextArcBadges[i].symbolText ||
+          Math.abs(prev[i].x - nextArcBadges[i].x) >= 2 ||
+          Math.abs(prev[i].y - nextArcBadges[i].y) >= 2
+        ) {
+          return nextArcBadges;
+        }
+      }
+      return prev;
+    });
   }, []);
 
   // 1. Initialize Three.js WebGLRenderer, Daylight Lab Scene, OrbitControls & Direct Physical Manipulation
@@ -3556,6 +3717,11 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     neuralSynapseBeamGroup.name = 'neural_synapse_beam_group';
     scene.add(neuralSynapseBeamGroup);
     neuralSynapseBeamGroupRef.current = neuralSynapseBeamGroup;
+
+    // 1H. Live 3D Epistemic Knowledge Network Group (3-Tier Hologram Tags & Eureka Laws)
+    epistemicHologramRenderer.group.position.set(0, BENCH_SURFACE_Y, 0);
+    scene.add(epistemicHologramRenderer.group);
+    scene.add(inSituMicroscopicLens.group);
 
     // OrbitControls: Bật chế độ Phóng to / Thu nhỏ lấy con trỏ chuột làm tâm (zoomToCursor = true)
     const orbit = new OrbitControls(camera, renderer.domElement);
@@ -4937,6 +5103,13 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           }
         }
 
+        // Animate Epistemic Holograms and Eureka Particles
+        epistemicHologramRenderer.animate(0.016);
+        inSituMicroscopicLens.animate(0.016);
+
+        // Continuous Multi-Physics Coupling Bus RK4 Step (120 Hz Continuous Physics & Chrono-Causal Recording)
+        scientificSolverRegistry.stepContinuousMultiPhysics(dt);
+
         // Animate 3D Live Contextual Neural Synapse Photon Particles at 60fps
         const neuralGrp = neuralSynapseBeamGroupRef.current;
         if (neuralGrp && neuralGrp.children.length > 0) {
@@ -5931,6 +6104,11 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       mouseNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
       raycaster.setFromCamera(mouseNdc, camera);
+
+      // 0. PRIORITY CHECK: Epistemic Variable Tags Click / Fusion
+      if (epistemicHologramRenderer.handlePointerRaycast(raycaster)) {
+        return;
+      }
 
       // 1. PRIORITY CHECK: Raycast against Tinkercad 3D Gizmo handles
       // ('elevate-y' top arrow, 'tilt-pour' vertical ring arrow handles, 'rotate-y' horizontal table ring arrow handles)
@@ -8187,6 +8365,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       orbit.dispose();
       instanceObjectsRef.current.clear();
       OpenLabAssetLoader.disposeObject3D(scene);
+      epistemicHologramRenderer.dispose();
+      inSituMicroscopicLens.dispose();
       renderer.dispose();
     };
   }, []);
@@ -9326,39 +9506,44 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             const points = curve.getPoints(24);
             const geom = new THREE.BufferGeometry().setFromPoints(points);
 
-            // Phân định chuẩn màu sắc Neon nhân quả:
-            // 1. Dòng chảy ra: Xanh dương neon (0x0080ff) - Đổi từ Xanh sáng sang Xanh dương
-            // 2. Dòng chảy vào: Tím neon (0xb026ff)
-            // 3. Cùng cấp / Gợi ý hai chiều: Lam tím neon (0x6366f1)
-            let neonColor = 0x6366f1; // Lam tím neon
-            if (cand.link.direction === 'output') {
-              neonColor = 0x0080ff; // Xanh dương neon
-            } else if (cand.link.direction === 'input') {
-              neonColor = 0xb026ff; // Tím neon
+            // Phân định chuẩn màu sắc Neon theo phân môn & đại lượng khoa học:
+            // Điện học (Vàng #facc15) | Lưu chất & Nước dâng (Xanh #38bdf8) | Nhiệt học (Cam #fb923c) | Quang học (Tím #e879f9) | Cơ học (Xanh ngọc #34d399)
+            let neonColor = 0x34d399; // Cơ học mặc định
+            const k = cand.link.kind;
+            if (k === 'electrical_terminal' || k === 'electrical_interlock' || k === 'electromagnetic_induction') {
+              neonColor = 0xfacc15; // Điện học vàng
+            } else if (k === 'fluid_spout' || k === 'fluid_receptacle' || k === 'submersion' || k === 'buoyancy_force') {
+              neonColor = 0x38bdf8; // Lưu chất xanh cyan
+            } else if (k === 'thermal_exchange') {
+              neonColor = 0xfb923c; // Nhiệt học cam
+            } else if (k === 'optical_alignment' || k === 'optical_refraction' || k === 'optical_carrier') {
+              neonColor = 0xe879f9; // Quang học tím
+            } else if (cand.link.direction === 'output') {
+              neonColor = 0x00bceb; // Dòng tác động ra
             }
 
-            // Ống dẫn 3D phát sáng Neon mảnh mai (Độ dày mỏng còn 1.2, đường kính ~3.0mm)
-            const tubeGeom = new THREE.TubeGeometry(curve, 32, 0.0015, 8, false);
+            // Ống dẫn 3D phát sáng Neon mảnh mai bán trong suốt (Tránh che khuất vật 3D trên bàn)
+            const tubeGeom = new THREE.TubeGeometry(curve, 32, 0.0013, 8, false);
             const tubeMat = new THREE.MeshBasicMaterial({
               color: neonColor,
               transparent: true,
-              opacity: 0.88,
+              opacity: 0.72,
             });
             const tubeMesh = new THREE.Mesh(tubeGeom, tubeMat);
             neuralGroup.add(tubeMesh);
 
             // Lõi phát sáng trung tâm rực rỡ
-            const coreGeom = new THREE.TubeGeometry(curve, 32, 0.0006, 8, false);
+            const coreGeom = new THREE.TubeGeometry(curve, 32, 0.0005, 8, false);
             const coreMat = new THREE.MeshBasicMaterial({
               color: 0xffffff,
               transparent: true,
-              opacity: 0.95,
+              opacity: 0.85,
             });
             const coreMesh = new THREE.Mesh(coreGeom, coreMat);
             neuralGroup.add(coreMesh);
 
-            // Thêm chuỗi hạt photon chạy thành dòng nhỏ lại còn 50% (Bán kính 0.0045m)
-            const photonGeom = new THREE.SphereGeometry(0.0045, 12, 12);
+            // Thêm chuỗi hạt photon chạy thành dòng nhỏ lại còn 50% (Bán kính 0.004m)
+            const photonGeom = new THREE.SphereGeometry(0.004, 12, 12);
             const photonMat = new THREE.MeshBasicMaterial({
               color: neonColor,
             });
@@ -9405,6 +9590,14 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         }
       }
     }
+
+    // Đồng bộ Mạng Nơ-ron Tri thức Nhận thức 3 Tầng & Bus truyền tin nhân quả liên thiết bị
+    cognitiveNeuralEngine.syncSceneInstances(instances, assetsMap);
+    neuralConnectionEngine.syncSceneSignals(instances, assetsMap);
+    epistemicHologramRenderer.updateHolograms(
+      cognitiveNeuralEngine.getActiveVariableTags(),
+      isNeuralGuideEnabled ?? cognitiveNeuralEngine.isEpistemicLayerEnabled,
+    );
 
     updateProjectedOverlays();
     requestRenderRef.current();
@@ -10407,6 +10600,59 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           </div>
         )}
 
+        {/* Live Contextual Neural Synapse Relationship Introduction Panel */}
+        {viewMode === 'lab-scene' &&
+          Boolean(isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled) &&
+          activeInstance &&
+          isNeuralSynapseIntroOpen && (
+            <NeuralSynapseIntroPanel
+              selectedInstance={activeInstance}
+              allInstances={instances}
+              assetsMap={assetsMap}
+              isNeuralGuideEnabled={Boolean(
+                isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled,
+              )}
+              onToggleNeuralGuide={() => {
+                neuralConnectionEngine.toggleGuideEnabled();
+                requestRenderRef.current?.();
+              }}
+              onOpenNeuralModal={(deviceId) => {
+                window.dispatchEvent(
+                  new CustomEvent('openlab:open-neural-modal', {
+                    detail: { deviceId: deviceId || activeInstance.assetId },
+                  }),
+                );
+              }}
+              onDropAssetIntoScene={(assetId) => {
+                onDropAssetIntoScene(assetId, [0.18, 0, 0.08]);
+                onNotify?.(
+                  'Đã đưa thiết bị liên kết nơ-ron ra bàn thí nghiệm 3D!',
+                  'success',
+                );
+              }}
+              onClose={() => setIsNeuralSynapseIntroOpen(false)}
+              isDarkMode={isDarkMode}
+            />
+          )}
+
+        {/* Re-open Pill if user dismissed Neural Synapse Intro Panel */}
+        {viewMode === 'lab-scene' &&
+          Boolean(isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled) &&
+          activeInstance &&
+          !isNeuralSynapseIntroOpen && (
+            <div className="absolute top-12 left-3 z-30 pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => setIsNeuralSynapseIntroOpen(true)}
+                className="px-2.5 py-1.5 rounded-xl bg-[#061122]/90 hover:bg-[#0c1f3d] border border-cyan-400/50 text-cyan-200 text-xs font-bold backdrop-blur-xl shadow-xl flex items-center gap-1.5 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                title="Mở Bảng Giới thiệu Mối liên kết Nơ-ron của thiết bị đang chọn"
+              >
+                <span>🧠</span>
+                <span>Mối liên kết Nơ-ron</span>
+              </button>
+            </div>
+          )}
+
         {/* Loading Progress Indicator */}
         {loadingCount > 0 && (
           <div className="absolute top-3 left-3 bg-slate-900/45 backdrop-blur-md border border-white/25 px-3 py-1.5 rounded-[9px] text-[13px] text-slate-100 font-semibold flex items-center gap-2 z-20 shadow-xs">
@@ -10497,6 +10743,20 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
 
             {onQuickLabAction && (
               <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const instId = viewportContextMenu.instanceId;
+                    setViewportContextMenu(null);
+                    onSelectInstance(instId);
+                    setIsNeuralSynapseIntroOpen(true);
+                  }}
+                  className="w-full px-2.5 py-2.5 rounded-[8px] bg-gradient-to-r from-[#1E1B4B] to-[#0F2847] hover:from-[#2E296E] hover:to-[#174378] border border-[#9B83FF]/70 text-left text-[12.5px] font-extrabold text-[#E8F2FF] flex items-center gap-2 cursor-pointer transition-all shadow-sm"
+                >
+                  <span className="text-sm shrink-0">🧠</span>
+                  <span>Xem liên kết Nơ-ron & Quy luật</span>
+                </button>
+
                 {viewportContextMenu.asset.geometry.proceduralArchetype ===
                   'optical-microscope' && (
                   <button
@@ -10537,19 +10797,6 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 >
                   <Sliders className="w-4 h-4 text-[#38BDF8] shrink-0" />
                   <span>Sửa thông số sản phẩm này</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const instId = viewportContextMenu.instanceId;
-                    setViewportContextMenu(null);
-                    onQuickLabAction('open-html-updater', instId);
-                  }}
-                  className="w-full px-2.5 py-2 rounded-[8px] bg-emerald-950/60 hover:bg-emerald-900/75 border border-[#14B8A6]/60 text-left text-[12.5px] font-extrabold text-[#5EEAD4] flex items-center gap-2 cursor-pointer transition-colors"
-                >
-                  <Sparkles className="w-4 h-4 text-[#2DD4BF] shrink-0" />
-                  <span>Cập nhật sản phẩm bằng .HTML</span>
                 </button>
 
                 <button
@@ -10662,6 +10909,60 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
               </button>
             );
           })}
+
+        {/* MICRO-ARC BADGES: Huy hiệu viên thuốc siêu mỏng trên đỉnh vòm sợi dây Nơ-ron (Không che khuất mô phỏng) */}
+        {viewMode === 'lab-scene' &&
+          Boolean(isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled) &&
+          projectedArcBadges.map((arc) => {
+            const isHovered = hoveredArcId === arc.id;
+            return (
+              <div
+                key={arc.id}
+                onMouseEnter={() => setHoveredArcId(arc.id)}
+                onMouseLeave={() => setHoveredArcId(null)}
+                onClick={() => onSelectInstance(arc.targetInstanceId)}
+                style={{
+                  transform: `translate3d(${arc.x}px, ${arc.y}px, 0) translate(-50%, -50%)`,
+                  borderColor: arc.colorHex,
+                }}
+                className="absolute top-0 left-0 z-20 pointer-events-auto cursor-pointer px-2 py-0.5 rounded-full bg-[#050B18]/80 backdrop-blur-md border text-white shadow-[0_2px_10px_rgba(0,0,0,0.5)] flex items-center gap-1 transition-all duration-150 hover:scale-105 whitespace-nowrap"
+                title={arc.detailText}
+              >
+                <span className="text-[10.5px] leading-none">{arc.icon}</span>
+                <span
+                  style={{ color: arc.colorHex }}
+                  className="text-[10px] font-mono font-extrabold tracking-tight"
+                >
+                  {isHovered ? arc.detailText : arc.symbolText}
+                </span>
+              </div>
+            );
+          })}
+
+        {/* MICRO-HUD 1 DÒNG: Hiển thị luồng thiết bị "nói chuyện" với nhau sát cạnh trên (Không che vật 3D) */}
+        {viewMode === 'lab-scene' &&
+          Boolean(isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled) &&
+          (neuralBusSignals.length > 0 || neuralCausalInferences.length > 0) && (
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none max-w-[92%] flex items-center gap-2 px-3 py-1 rounded-full bg-[#050B18]/82 backdrop-blur-md border border-emerald-400/50 shadow-[0_4px_16px_rgba(0,0,0,0.45)] text-[11px] whitespace-nowrap overflow-hidden">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              {neuralCausalInferences.length > 0 ? (
+                <span className="font-mono font-bold text-amber-300 truncate">
+                  ✨ {neuralCausalInferences[0].computedValueText}
+                </span>
+              ) : (
+                <div className="flex items-center gap-2 overflow-hidden">
+                  {neuralBusSignals.slice(0, 3).map((sig) => (
+                    <span key={sig.id} className="text-slate-200 font-semibold">
+                      {sig.sourceNameVi}:{' '}
+                      <strong className="text-emerald-300 font-mono">
+                        {sig.value.toFixed(sig.unit === 'g' || sig.unit === 'cm³' ? 1 : 2)} {sig.unit}
+                      </strong>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
         {/* Thanh điều khiển Mở van lấy nước theo thể tích cần — Gọn 1 hàng ngang sát đáy khung mô phỏng */}
         {viewMode === 'lab-scene' &&

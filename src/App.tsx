@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
   AssetDefinition,
   EquipmentCategoryId,
@@ -36,7 +36,6 @@ import {
   TransformToolMode,
   ViewportDisplayMode,
 } from './three-runtime/LabViewport3D';
-import { GovernanceOverviewModal } from './components/modals/GovernanceOverviewModal';
 import { StudentHomeView } from './components/student/StudentHomeView';
 import { StudentEquipmentSidebar } from './components/student/StudentEquipmentSidebar';
 import {
@@ -44,15 +43,20 @@ import {
   StudentGuidedStepNumber,
 } from './components/student/StudentGuidedStepPanel';
 import { StudentBottomPanelsRow } from './components/student/StudentBottomPanelsRow';
+import { RichMathText } from './components/common/MathFormula';
 import {
   StudentKitsView,
   StudentHelpModal,
   StudentVideoGuideModal,
   StudentEquipmentDetailModal,
 } from './components/student/StudentModalsAndSubViews';
-import { HtmlModuleImporterModal } from './components/modals/HtmlModuleImporterModal';
 import { MicroscopeSimulationModal } from './components/microscope/MicroscopeSimulationModal';
 import { NeuralDeviceNetworkModal } from './components/modals/NeuralDeviceNetworkModal';
+import {
+  SocraticTutorModal,
+  MicroMacroLensModal,
+} from './components/modals';
+import { cognitiveNeuralEngine } from './domain/CognitiveNeuralEngine';
 import { neuralConnectionEngine } from './domain/neuralConnectionEngine';
 import {
   EquipmentPreviewPanel,
@@ -85,10 +89,6 @@ export default function App() {
   const [isStudentGuideOpen, setIsStudentGuideOpen] = useState<boolean>(false);
   const [showStudentHelpModal, setShowStudentHelpModal] = useState<boolean>(false);
   const [showVideoGuideModal, setShowVideoGuideModal] = useState<boolean>(false);
-  const [showHtmlModuleImporterModal, setShowHtmlModuleImporterModal] =
-    useState<boolean>(false);
-  const [htmlUpdaterTargetAsset, setHtmlUpdaterTargetAsset] =
-    useState<AssetDefinition | null>(null);
   const [moduleRegistryRevision, setModuleRegistryRevision] = useState<number>(0);
   const [studentDetailModalAsset, setStudentDetailModalAsset] =
     useState<AssetDefinition | null>(null);
@@ -103,6 +103,7 @@ export default function App() {
   );
   const [showNeuralNetworkModal, setShowNeuralNetworkModal] = useState<boolean>(false);
   const [neuralModalTargetDeviceId, setNeuralModalTargetDeviceId] = useState<string | null>(null);
+  const [showMicroMacroModal, setShowMicroMacroModal] = useState<boolean>(false);
 
   useEffect(() => {
     const handleOpenMic = () => setShowMicroscopeModal(true);
@@ -120,9 +121,17 @@ export default function App() {
       }
       setShowNeuralNetworkModal(true);
     };
+    const handleGuideToggle = (e: any) => {
+      if (typeof e?.detail?.enabled === 'boolean') {
+        setIsNeuralGuideEnabled(e.detail.enabled);
+      }
+    };
     window.addEventListener('openlab:open-neural-modal', handleOpenNeural);
-    return () =>
+    window.addEventListener('openlab:neural-guide-toggle', handleGuideToggle);
+    return () => {
       window.removeEventListener('openlab:open-neural-modal', handleOpenNeural);
+      window.removeEventListener('openlab:neural-guide-toggle', handleGuideToggle);
+    };
   }, []);
 
   // Tự động đồng bộ khi các module từ thư viện ổ cứng C:\Users\ltlie\Documents\libraries3DLab được nạp/cập nhật
@@ -365,10 +374,7 @@ export default function App() {
     });
   }, []);
 
-  // 4. Governance / Overview Modal & Toast Feedback State
-  const [governanceModalMode, setGovernanceModalMode] = useState<
-    'overview' | 'governance' | null
-  >(null);
+  // 4. Toast Feedback & Activity Logs State
   const [toast, setToast] = useState<ToastNotification | null>(null);
   const [recentLogs, setRecentLogs] = useState<
     Array<{ id: string; text: string; time: string }>
@@ -408,6 +414,23 @@ export default function App() {
     }, 8000);
     return () => clearTimeout(timer);
   }, [toast]);
+
+  // Lắng nghe các sự kiện Mạng nơ-ron nhận thức 3 tầng (Vi mô, Kịch bản Vàng)
+  useEffect(() => {
+    const handleOpenLens = () => setShowMicroMacroModal(true);
+    const handleRunGoldenDemo = () => {
+      cognitiveNeuralEngine.triggerGoldenViSEFDemo();
+      notify('🎉 Eureka! Đã kích hoạt Kịch bản Vàng ViSEF: Khối lượng riêng ($\\rho = \\frac{m}{V} = 2.70\\,\\text{g/cm}^3$)', 'success');
+    };
+
+    window.addEventListener('openlab:open-micro-macro-lens', handleOpenLens);
+    window.addEventListener('openlab:run-golden-demo', handleRunGoldenDemo);
+
+    return () => {
+      window.removeEventListener('openlab:open-micro-macro-lens', handleOpenLens);
+      window.removeEventListener('openlab:run-golden-demo', handleRunGoldenDemo);
+    };
+  }, [notify]);
 
   // Phím tắt Alt + N toàn cục để Bật/Tắt Trợ lý Nơ-ron Thần kinh
   useEffect(() => {
@@ -2414,36 +2437,71 @@ export default function App() {
     );
   }, [scene.instances, assetsMap, handlePhysicalDockInteraction]);
 
+  const handleQuickLabActionRef = useRef<(action: QuickLabActionType, instanceId: string) => void>(() => {});
+
   // Guided Step Change Handler
   const handleChangeStudentGuidedStep = useCallback(
     (nextStep: StudentGuidedStepNumber) => {
       setStudentGuidedStep(nextStep);
       labSoundEngine.play('step-complete', 0.85);
-      if (nextStep === 2) {
-        handleQuickWeighSpecimen();
-      } else if (nextStep === 3) {
-        if (measuredMassG === null) {
-          setMeasuredMassG(66.25);
-        }
-        handleQuickSubmergeSpecimen();
-      } else if (nextStep === 4 || nextStep === 5) {
-        if (measuredMassG === null) {
-          setMeasuredMassG(66.25);
-        }
-        if (finalVolumeCm3 === null) {
+
+      const expId = activeExperiment.experimentId;
+      const isDensity =
+        expId === 'OL3D-EXP-DENSITY-SOLID-0001' ||
+        expId === 'OL3D-EXP-DENSITY-0001';
+      const isOptics = expId === 'OL3D-EXP-OPTICS-LENS-0001';
+      const isDisplacement = expId === 'OL3D-EXP-DISPLACEMENT-0001';
+
+      if (isDensity) {
+        if (nextStep === 2) {
+          handleQuickWeighSpecimen();
+        } else if (nextStep === 3) {
           handleQuickSubmergeSpecimen();
+        } else if (nextStep === 4 || nextStep === 5) {
+          if (measuredMassG !== null && finalVolumeCm3 !== null) {
+            const v = finalVolumeCm3 - initialVolumeCm3;
+            const rho = (measuredMassG / Math.max(0.1, v)).toFixed(2);
+            notify(
+              `Khối lượng riêng thực nghiệm: $\\rho = \\frac{m}{V} = \\frac{${measuredMassG}}{${v.toFixed(1)}} = ${rho}\\,\\text{g/cm}^3$.`,
+              'success',
+            );
+          }
         }
-        notify(
-          'Khối lượng riêng của vật rắn: ρ = m / V = 66.25 / 24.5 = 2.70 g/cm³ (Nhôm).',
-          'success',
-        );
+      } else if (isOptics) {
+        if (nextStep === 1) {
+          handlePlaceAllRequiredForExperiment();
+        } else if (nextStep === 2) {
+          handleQuickLabActionRef.current('assemble-optical-bench', selectedInstanceId ?? '');
+        } else if (nextStep === 3) {
+          notify(
+            'Ảnh thật chữ F trên màn đạt độ sắc nét cao nhất ($d\' = 20.0\\,\\text{cm},\\ d = 20.0\\,\\text{cm},\\ f = 10.0\\,\\text{cm}$).',
+            'success',
+          );
+        } else if (nextStep === 4) {
+          notify(
+            'Khảo sát ảnh ảo: Khi dịch vật vào trong khoảng tiêu cự ($d < f = 10\\,\\text{cm}$), ảnh chữ F cùng chiều, lớn hơn vật ($k > 0$).',
+            'info',
+          );
+        }
+      } else if (isDisplacement) {
+        if (nextStep === 1) {
+          handlePlaceAllRequiredForExperiment();
+        } else if (nextStep === 2) {
+          notify('Lực kế lò xo 5 N đo trọng lượng vật trong không khí: $P = 0.65\\,\\text{N}$.', 'info');
+        } else if (nextStep === 3) {
+          notify('Lực đẩy Archimedes: $F_A = P - F = 0.65 - 0.41 = 0.24\\,\\text{N}$ ($V = 24.5\\,\\text{mL}$).', 'success');
+        }
       }
     },
     [
+      activeExperiment.experimentId,
       handleQuickWeighSpecimen,
       handleQuickSubmergeSpecimen,
+      handlePlaceAllRequiredForExperiment,
+      selectedInstanceId,
       measuredMassG,
       finalVolumeCm3,
+      initialVolumeCm3,
       notify,
     ],
   );
@@ -2451,12 +2509,13 @@ export default function App() {
   // Header 4-step bar click handler
   const handleChangeHeaderProgressStep = useCallback(
     (hStep: HeaderProgressStep) => {
+      const totalSteps = activeExperiment.steps.length || 5;
       if (hStep === 1) handleChangeStudentGuidedStep(1);
-      else if (hStep === 2) handleChangeStudentGuidedStep(2);
-      else if (hStep === 3) handleChangeStudentGuidedStep(3);
-      else handleChangeStudentGuidedStep(5);
+      else if (hStep === 2) handleChangeStudentGuidedStep(Math.min(2, totalSteps) as StudentGuidedStepNumber);
+      else if (hStep === 3) handleChangeStudentGuidedStep(Math.min(3, totalSteps) as StudentGuidedStepNumber);
+      else handleChangeStudentGuidedStep(Math.min(5, totalSteps) as StudentGuidedStepNumber);
     },
-    [handleChangeStudentGuidedStep],
+    [activeExperiment.steps.length, handleChangeStudentGuidedStep],
   );
 
   // Quick Physical Lab Action Handler (Triggered from the contextual 3D bottom bar)
@@ -3617,13 +3676,6 @@ export default function App() {
         return;
       }
 
-      if (action === 'open-html-updater' && asset) {
-        labSoundEngine.play('ui-toggle', 0.85);
-        setHtmlUpdaterTargetAsset(asset);
-        setShowHtmlModuleImporterModal(true);
-        return;
-      }
-
       if (action === 'delete-instance') {
         const target = scene.instances.find((i) => i.instanceId === instanceId);
         const isAlreadyOnShelf =
@@ -4004,6 +4056,8 @@ export default function App() {
     },
     [scene.instances, assetsMap, reconcileCumulativeLabMeasurements, notify],
   );
+  handleQuickLabActionRef.current = handleQuickLabAction;
+
   const handleUpdateInstanceState = useCallback(
     (
       instanceId: string,
@@ -4171,7 +4225,11 @@ export default function App() {
   // Switch Active Experiment (Pre-populates required equipment onto Khu trưng bày 2-tier shelf)
   const handleSelectExperiment = useCallback(
     (experimentId: string, clearWorkbenchForNewLesson = true) => {
-      const exp = experimentRepository.getById(experimentId);
+      const canonicalId =
+        experimentId === 'OL3D-EXP-DENSITY-0001'
+          ? 'OL3D-EXP-DENSITY-SOLID-0001'
+          : experimentId;
+      const exp = experimentRepository.getById(canonicalId);
       if (!exp) return;
 
       const kit = kitRepository.getById(exp.recommendedKitId);
@@ -4193,7 +4251,7 @@ export default function App() {
 
       setScene((prev) => ({
         ...prev,
-        experimentId,
+        experimentId: exp.experimentId,
         environmentId: exp.recommendedEnvironmentId || prev.environmentId,
       }));
       setSelectedInstanceId(null);
@@ -4317,10 +4375,8 @@ export default function App() {
   // Teacher Section Navigation Handler
   const handleSelectNavSection = (section: NavSectionId) => {
     setActiveNavSection(section);
-    if (section === 'overview') {
-      setGovernanceModalMode('overview');
-    } else if (section === 'governance') {
-      setGovernanceModalMode('governance');
+    if (section === 'overview' || section === 'governance') {
+      setShowNeuralNetworkModal(true);
     } else if (section === 'library-3d') {
       setExplorerTab('equipment');
       setIsExplorerCollapsed(false);
@@ -4330,8 +4386,6 @@ export default function App() {
     } else if (section === 'environments') {
       setExplorerTab('environments');
       setIsExplorerCollapsed(false);
-    } else if (section === 'lab-workspace') {
-      setGovernanceModalMode(null);
     }
   };
 
@@ -4344,7 +4398,6 @@ export default function App() {
     } else {
       setShowAxes(false);
       setShowDimensions(false);
-      setGovernanceModalMode(null);
     }
   };
 
@@ -4364,6 +4417,8 @@ export default function App() {
         globalSearch={searchQuery}
         headerProgressStep={headerProgressStep}
         studentGuidedStep={studentGuidedStep}
+        guidedStepTitle={(activeExperiment.steps[studentGuidedStep - 1]?.title ?? '').replace(/^Bước\s+\d+:\s*/i, '')}
+        maxGuidedSteps={activeExperiment.steps.length || 5}
         isDarkMode={isDarkMode}
         isLibraryOpen={!isExplorerCollapsed}
         isGuideOpen={isStudentGuideOpen}
@@ -4383,6 +4438,11 @@ export default function App() {
           setNeuralModalTargetDeviceId(null);
           setShowNeuralNetworkModal(true);
         }}
+        onOpenMicroMacroLens={() => setShowMicroMacroModal(true)}
+        onRunGoldenDemo={() => {
+          cognitiveNeuralEngine.triggerGoldenViSEFDemo();
+          notify('🎉 Eureka! Đã kích hoạt Kịch bản Vàng ViSEF: Khối lượng riêng ($\\rho = \\frac{m}{V} = 2.70\\,\\text{g/cm}^3$)', 'success');
+        }}
         onToggleDarkMode={() => setIsDarkMode((v) => !v)}
         onToggleLibraryPanel={handleToggleLibrarySidebar}
         onToggleGuidePanel={handleToggleStudentGuide}
@@ -4393,10 +4453,6 @@ export default function App() {
         onChangeUserRole={handleChangeUserRole}
         onSelectStudentScreen={handleSelectStudentScreen}
         onOpenStudentHelp={() => setShowStudentHelpModal(true)}
-        onOpenHtmlModuleImporter={() => {
-          setHtmlUpdaterTargetAsset(null);
-          setShowHtmlModuleImporterModal(true);
-        }}
         onSelectSection={handleSelectNavSection}
         onGlobalSearchChange={(val) => {
           setSearchQuery(val);
@@ -4489,14 +4545,6 @@ export default function App() {
                     setDetailModalEditMode(editMode);
                     setStudentDetailModalAsset(asset);
                   }}
-                  onOpenHtmlModuleImporter={() => {
-                    setHtmlUpdaterTargetAsset(null);
-                    setShowHtmlModuleImporterModal(true);
-                  }}
-                  onOpenHtmlUpdaterForAsset={(asset) => {
-                    setHtmlUpdaterTargetAsset(asset);
-                    setShowHtmlModuleImporterModal(true);
-                  }}
                   onOpenPhotoUpdaterForAsset={(asset) => {
                     setPhotoUpdaterTargetAsset(asset);
                   }}
@@ -4526,10 +4574,6 @@ export default function App() {
                   onInspectAssetDetail={(asset, editMode = false) => {
                     setDetailModalEditMode(editMode);
                     setStudentDetailModalAsset(asset);
-                  }}
-                  onOpenHtmlUpdaterForAsset={(asset) => {
-                    setHtmlUpdaterTargetAsset(asset);
-                    setShowHtmlModuleImporterModal(true);
                   }}
                   onOpenPhotoUpdaterForAsset={(asset) => {
                     setPhotoUpdaterTargetAsset(asset);
@@ -4662,6 +4706,13 @@ export default function App() {
                     onQuickSubmergeSpecimen={() =>
                       handleChangeStudentGuidedStep(3)
                     }
+                    activeExperiment={activeExperiment}
+                    onAssembleOpticalBench={() =>
+                      handleQuickLabAction(
+                        'assemble-optical-bench',
+                        selectedInstanceId ?? '',
+                      )
+                    }
                   />
                 )}
               </div>
@@ -4739,10 +4790,6 @@ export default function App() {
               onInspectAssetDetail={(asset, editMode = false) => {
                 setDetailModalEditMode(editMode);
                 setStudentDetailModalAsset(asset);
-              }}
-              onOpenHtmlUpdaterForAsset={(asset) => {
-                setHtmlUpdaterTargetAsset(asset);
-                setShowHtmlModuleImporterModal(true);
               }}
               onOpenPhotoUpdaterForAsset={(asset) => {
                 setPhotoUpdaterTargetAsset(asset);
@@ -4894,7 +4941,7 @@ export default function App() {
           {toast.tone === 'info' && (
             <Info className="w-5 h-5 text-cyan-400 shrink-0" />
           )}
-          <span className="font-semibold text-slate-100 flex-1 leading-snug">{toast.message}</span>
+          <span className="font-semibold text-slate-100 flex-1 leading-snug"><RichMathText text={toast.message} /></span>
           <button
             type="button"
             onClick={() => setToast(null)}
@@ -4982,10 +5029,6 @@ export default function App() {
               'success',
             );
           }}
-          onOpenHtmlUpdaterForAsset={(targetAsset) => {
-            setHtmlUpdaterTargetAsset(targetAsset);
-            setShowHtmlModuleImporterModal(true);
-          }}
           onOpenPhotoUpdaterForAsset={(targetAsset) => {
             setPhotoUpdaterTargetAsset(targetAsset);
           }}
@@ -5008,79 +5051,6 @@ export default function App() {
           onSwitchToEditParams={(asset) => {
             setDetailModalEditMode(true);
             setStudentDetailModalAsset(asset);
-          }}
-          onSwitchToHtmlUpdater={(asset) => {
-            setHtmlUpdaterTargetAsset(asset);
-            setShowHtmlModuleImporterModal(true);
-          }}
-        />
-      )}
-
-      {/* HTML Equipment Module Importer Modal (.html child modules with Icon + 3D + Real Photo + In-Place Product Override) */}
-      {showHtmlModuleImporterModal && (
-        <HtmlModuleImporterModal
-          targetAsset={htmlUpdaterTargetAsset}
-          onClose={() => {
-            setShowHtmlModuleImporterModal(false);
-            setHtmlUpdaterTargetAsset(null);
-          }}
-          onModuleImportedAndSpawn={(pkg, updatedExistingInPlace) => {
-            openLabAssetLoader.invalidateAssetCache(pkg.asset.assetId);
-            setModuleRegistryRevision((r) => r + 1);
-            setSelectedCatalogAssetId(pkg.asset.assetId);
-
-            if (updatedExistingInPlace) {
-              const hasInstanceOnTable = scene.instances.some(
-                (i) => i.assetId === pkg.asset.assetId && i.visible,
-              );
-              setScene((prev) => {
-                const defaultCap = pkg.asset.scientificProperties.capacity
-                  ? pkg.asset.scientificProperties.capacity.value * 0.5
-                  : undefined;
-                const ctrl = pkg.moduleControls;
-                const draft = prev.instances.map((inst) =>
-                  inst.assetId === pkg.asset.assetId
-                    ? {
-                        ...inst,
-                        assetVersion: pkg.asset.assetVersion,
-                        customLabel: pkg.asset.name.vi,
-                        instanceState: {
-                          ...inst.instanceState,
-                          ...(defaultCap !== undefined
-                            ? {
-                                liquidLevelMl: defaultCap,
-                                baseLiquidLevelMl: defaultCap,
-                              }
-                            : {}),
-                          [ctrl.stateKey]: ctrl.defaultValue,
-                        },
-                      }
-                    : inst,
-                );
-                return {
-                  ...prev,
-                  sceneRevision: prev.sceneRevision + 1,
-                  updatedAt: new Date().toISOString(),
-                  instances: reconcileCumulativeLabMeasurements(draft),
-                };
-              });
-
-              if (!hasInstanceOnTable) {
-                handleAddAssetToScene(pkg.asset.assetId, undefined, pkg.asset);
-              }
-              labSoundEngine.play('step-complete', 0.95);
-              notify(
-                `Đã cập nhật chính sản phẩm "${pkg.asset.name.vi}" (${pkg.asset.assetId}) bằng file .HTML thành công!`,
-                'success',
-              );
-            } else {
-              handleAddAssetToScene(pkg.asset.assetId, undefined, pkg.asset);
-              labSoundEngine.play('step-complete', 0.95);
-              notify(
-                `Đã nạp thành công module .HTML "${pkg.asset.name.vi}" (Đầy đủ Icon + Vật 3D + Ảnh thật + Hồ sơ 5 nguồn) lên bàn thí nghiệm!`,
-                'success',
-              );
-            }
           }}
         />
       )}
@@ -5121,24 +5091,6 @@ export default function App() {
         }}
       />
 
-      {/* Teacher Overview & Governance Modal */}
-      {governanceModalMode && (
-        <GovernanceOverviewModal
-          mode={governanceModalMode}
-          assets={allAssets}
-          kits={kits}
-          environments={environments}
-          onClose={() => {
-            setGovernanceModalMode(null);
-            setActiveNavSection('lab-workspace');
-          }}
-          onSelectAssetAndInspect={(assetId) => {
-            handleSelectCatalogAsset(assetId);
-            setIsRightPanelCollapsed(false);
-          }}
-        />
-      )}
-
       {/* Sơ đồ Mạng Nơ-ron Thần kinh Thiết bị KHTN THCS & Causal Studio Modal */}
       <NeuralDeviceNetworkModal
         isOpen={showNeuralNetworkModal}
@@ -5155,16 +5107,26 @@ export default function App() {
           notify(`Đã nạp "${node?.nameVi || targetAssetId}" vào bàn thí nghiệm 3D`, 'success');
         }}
         onTriggerMacroCluster={(cluster) => {
-          cluster.deviceIds.forEach((devSlug) => {
+          cluster.deviceIds.forEach((devSlug, idx) => {
             const node = neuralConnectionEngine.getNode(devSlug);
             if (node) {
-              handleAddAssetToScene(node.assetId);
+              const xPos = -0.35 + idx * 0.18;
+              handleAddAssetToScene(node.assetId, [xPos, 0, 0.08]);
             }
           });
           setShowNeuralNetworkModal(false);
-          notify(`Đã nạp trọn bộ bài thực hành "${cluster.title}" lên bàn 3D`, 'success');
+          notify(`⚡ Đã đưa toàn bộ ${cluster.deviceIds.length} thiết bị bài "${cluster.title}" ra bàn 3D!`, 'success');
         }}
         activeSceneDeviceIds={scene.instances.map((i) => i.assetId)}
+      />
+
+      {/* Mạng Nơ-ron Nhận thức 3 Tầng: Trợ lý Socratic chẩn đoán ngộ nhận tư duy */}
+      <SocraticTutorModal />
+
+      {/* Lăng kính Đa thang đo Vi mô (Micro-Macro Lens Modal) */}
+      <MicroMacroLensModal
+        isOpen={showMicroMacroModal}
+        onClose={() => setShowMicroMacroModal(false)}
       />
     </div>
   );

@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { AssetDefinition, SceneInstance } from '../../domain/types';
 import { deviceControlEngine } from '../../device-control/DeviceControlEngine';
 import { neuralConnectionEngine } from '../../domain/neuralConnectionEngine';
+import { MathFormula, RichMathText } from '../common/MathFormula';
 import {
   Sliders,
   RotateCcw,
@@ -279,9 +280,11 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
                           <span className="shrink-0 font-bold mt-0.5">➔</span>
                           <div className="min-w-0 flex-1">
                             <span className="font-bold">{axon.targetNameVi}:</span> {axon.actionVerbVi}
-                            <div className="text-[9px] text-blue-300/80 font-mono mt-0.5">
-                              {axon.mathFormulaLatex}
-                            </div>
+                            {axon.mathFormulaLatex && (
+                              <div className="text-[10px] text-blue-200 mt-0.5 overflow-x-auto">
+                                <MathFormula math={axon.mathFormulaLatex} />
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -406,10 +409,10 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
               <span>Công thức áp dụng:</span>
             </div>
             {profile.equations.map((eq) => (
-              <div key={eq.id} className="text-[11px] font-mono text-amber-200">
-                <span>${eq.latex}$</span>
+              <div key={eq.id} className="text-[11px] text-amber-200 overflow-x-auto">
+                <MathFormula math={eq.latex} displayMode className="text-amber-200 my-0.5" />
                 <span className="text-[10px] text-slate-300 block mt-0.5 font-sans">
-                  → {eq.meaningVi}
+                  → <RichMathText text={eq.meaningVi} />
                 </span>
               </div>
             ))}

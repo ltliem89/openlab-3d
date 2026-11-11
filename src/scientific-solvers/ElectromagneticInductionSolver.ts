@@ -16,6 +16,8 @@ export interface InductionDerivedOutputs {
   inducedEmfVolts: number;
   inducedCurrentMicroAmps: number;
   fluxDerivativeWbPerS: number;
+  lenzDampingForceNewtons: number;
+  netMagnetAccelerationMps2: number;
   ledRedIntensity: number;   // 0.0 .. 2.0
   ledGreenIntensity: number; // 0.0 .. 2.0
   isLedRedOn: boolean;
@@ -36,11 +38,24 @@ export class ElectromagneticInductionSolver {
     const magnetVelocityMps = Number(state.magnetVelocityMps ?? state.magnetSpeed ?? 0.0);
     const coilTurnsN = Number(state.coilTurns ?? 500);
 
-    // Độ biến thiên từ thông dPhi/dt tỷ lệ thuận với vận tốc v
-    const fluxDerivativeWbPerS = magnetVelocityMps * 2.0e-3;
+    // Độ biến thiên từ thông theo vị trí kPhi = dPhi/dz (Wb/m) và dPhi/dt = kPhi * v
+    // Cho phép tùy biến gradient thực tế qua dipole hoặc giá trị mặc định 2.0e-3 Wb/m
+    const dPhiDz = Number(state.fluxGradientWbPerM ?? 2.0e-3);
+    const fluxDerivativeWbPerS = magnetVelocityMps * dPhiDz;
     const inducedEmfVolts = -coilTurnsN * fluxDerivativeWbPerS;
-    const coilResistanceOhms = 50.0;
-    const inducedCurrentMicroAmps = (inducedEmfVolts / coilResistanceOhms) * 1e6;
+    const coilResistanceOhms = Math.max(0.1, Number(state.coilResistanceOhms ?? 2.4));
+    const loadResistanceOhms = Math.max(0.0, Number(state.loadResistanceOhms ?? 47.6));
+    const totalResistanceOhms = Math.max(0.1, coilResistanceOhms + loadResistanceOhms);
+    const inducedCurrentMicroAmps = (inducedEmfVolts / totalResistanceOhms) * 1e6;
+
+    // Lực hãm cảm ứng điện từ Lenz tuân thủ Bảo toàn Năng lượng (F_Lenz * v = -E^2 / R_total):
+    // F_Lenz = - (N * dPhi/dz)^2 / R_total * v
+    const electromechanicalCoupling = coilTurnsN * dPhiDz;
+    const rawLenzForce = -((electromechanicalCoupling * electromechanicalCoupling) / totalResistanceOhms) * magnetVelocityMps;
+    const lenzDampingForceNewtons = Math.max(-100.0, Math.min(100.0, rawLenzForce));
+    const magnetMassKg = Math.max(0.001, Number(state.magnetMassKg ?? 0.08));
+    const gravityMps2 = 9.80665;
+    const netMagnetAccelerationMps2 = Math.max(-50.0, Math.min(50.0, gravityMps2 + (lenzDampingForceNewtons / magnetMassKg)));
 
     let ledRedIntensity = 0.0;
     let ledGreenIntensity = 0.0;
@@ -83,6 +98,8 @@ export class ElectromagneticInductionSolver {
         inducedEmfVolts,
         inducedCurrentMicroAmps,
         fluxDerivativeWbPerS,
+        lenzDampingForceNewtons,
+        netMagnetAccelerationMps2,
         ledRedIntensity,
         ledGreenIntensity,
         isLedRedOn,

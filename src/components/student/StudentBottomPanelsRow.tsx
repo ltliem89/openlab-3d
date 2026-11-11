@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Lightbulb,
   Calculator,
@@ -19,6 +19,8 @@ import {
   Minimize2,
 } from 'lucide-react';
 import { StudentGuidedStepNumber } from './StudentGuidedStepPanel';
+import { ExperimentDefinition } from '../../domain/types';
+import { MathFormula, RichMathText } from '../common/MathFormula';
 
 export type MeasurementUnitSystem = 'CGS' | 'MG_L' | 'SI';
 export type StudentBottomTabId =
@@ -40,6 +42,8 @@ interface StudentBottomPanelsRowProps {
   onQuickSubmergeSpecimen?: () => void;
   showDetailedGuides?: boolean;
   onToggleDetailedGuides?: () => void;
+  activeExperiment?: ExperimentDefinition;
+  onAssembleOpticalBench?: () => void;
 }
 
 const MOBILE_PRACTICE_STEPS: Array<{
@@ -54,18 +58,18 @@ const MOBILE_PRACTICE_STEPS: Array<{
   },
   {
     step: 2,
-    title: 'Cân vật (m)',
-    shortDesc: 'Đặt vật lên đĩa cân để đọc khối lượng m.',
+    title: 'Cân vật ($m$)',
+    shortDesc: 'Đặt vật lên đĩa cân để đọc khối lượng $m$.',
   },
   {
     step: 3,
-    title: 'Đo thể tích (V)',
-    shortDesc: 'Thả ngập vật vào ống đong để đọc V.',
+    title: 'Đo thể tích ($V$)',
+    shortDesc: 'Thả ngập vật vào ống đong để đọc $V = V_2 - V_1$.',
   },
   {
     step: 4,
-    title: 'Tính KLR (ρ)',
-    shortDesc: 'Tính theo công thức ρ = m / V.',
+    title: 'Tính KLR ($\\rho$)',
+    shortDesc: 'Tính theo công thức $\\rho = \\frac{m}{V}$.',
   },
   {
     step: 5,
@@ -87,12 +91,29 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
   onQuickSubmergeSpecimen,
   showDetailedGuides,
   onToggleDetailedGuides,
+  activeExperiment,
+  onAssembleOpticalBench,
 }) => {
   const [activeTab, setActiveTab] = useState<StudentBottomTabId>('results');
   const [unitSystem, setUnitSystem] = useState<MeasurementUnitSystem>('CGS');
   const [isDockCollapsed, setIsDockCollapsed] = useState<boolean>(true);
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [localDetailedGuides, setLocalDetailedGuides] = useState<boolean>(false);
+
+  const isOptics = activeExperiment?.experimentId === 'OL3D-EXP-OPTICS-LENS-0001';
+  const isDisplacement = activeExperiment?.experimentId === 'OL3D-EXP-DISPLACEMENT-0001';
+  const isDensity = !isOptics && !isDisplacement;
+
+  const currentPracticeSteps = useMemo(() => {
+    if (activeExperiment?.steps && activeExperiment.steps.length > 0) {
+      return activeExperiment.steps.slice(0, 5).map((s, idx) => ({
+        step: ((idx + 1) as StudentGuidedStepNumber),
+        title: s.title.replace(/^Bước\s*\d+\s*:\s*/i, ''),
+        shortDesc: s.instructionDetail || s.description,
+      }));
+    }
+    return MOBILE_PRACTICE_STEPS;
+  }, [activeExperiment]);
 
   const isDetailedMode =
     showDetailedGuides !== undefined ? showDetailedGuides : localDetailedGuides;
@@ -142,61 +163,179 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
       : `±${absErrGCm3.toFixed(2)} g/cm³`;
   })();
 
-  const rows = [
-    {
-      id: 'mass',
-      label: 'Khối lượng vật',
-      symbol: 'm',
-      value: formatMass(measuredMassG),
-      unit: massUnit,
-      leastCountNote: isMgL ? 'ĐCNN: 10 mg' : isSI ? 'ĐCNN: 0,00001 kg' : 'ĐCNN: 0,01 g',
-      isReady: measuredMassG !== null,
-      onClick: onQuickWeighSpecimen,
-      actionLabel: 'Đặt vật lên cân',
-    },
-    {
-      id: 'v1',
-      label: 'Mực nước đầu',
-      symbol: 'V₁',
-      value: formatVolume(initialVolumeCm3),
-      unit: volUnit,
-      leastCountNote: isSI || isMgL ? 'ĐCNN: 0,001 L' : 'ĐCNN: 1,0 cm³',
-      isReady: true,
-    },
-    {
-      id: 'v2',
-      label: 'Mực nước sau',
-      symbol: 'V₂',
-      value: formatVolume(finalVolumeCm3),
-      unit: volUnit,
-      leastCountNote: isSI || isMgL ? 'ĐCNN: 0,001 L' : 'ĐCNN: 1,0 cm³',
-      isReady: finalVolumeCm3 !== null,
-      onClick: onQuickSubmergeSpecimen,
-      actionLabel: 'Thả ngập vật vào ống đong',
-    },
-    {
-      id: 'v',
-      label: 'Thể tích vật (V₂ − V₁)',
-      symbol: 'V',
-      value: formatVolume(objectVolumeCm3),
-      unit: volUnit,
-      leastCountNote: 'Độ dâng mực nước',
-      isReady: objectVolumeCm3 !== null,
-      onClick: onQuickSubmergeSpecimen,
-    },
-    {
-      id: 'rho',
-      label: 'Khối lượng riêng (m / V)',
-      symbol: 'ρ',
-      value: formatDensity(densityGCm3),
-      unit: densityUnit,
-      leastCountNote: combinedUncertaintyText
-        ? `Sai số: ${combinedUncertaintyText}`
-        : 'Cần đo m và V',
-      isReady: densityGCm3 !== null,
-      highlight: true,
-    },
-  ];
+  const rows = useMemo(() => {
+    if (isOptics) {
+      return [
+        {
+          id: 'opt-d',
+          label: 'Khoảng cách vật sáng chữ F tới thấu kính',
+          symbol: 'd',
+          mathSymbol: 'd',
+          value: '20.0',
+          unit: 'cm',
+          leastCountNote: 'ĐCNN: 1 mm (thước ray 90 cm)',
+          isReady: true,
+          onClick: onAssembleOpticalBench,
+          actionLabel: 'Căn chỉnh vị trí vật sáng F',
+        },
+        {
+          id: 'opt-dp',
+          label: 'Khoảng cách màn hứng ảnh tới thấu kính',
+          symbol: "d'",
+          mathSymbol: "d'",
+          value: '20.0',
+          unit: 'cm',
+          leastCountNote: 'Vị trí cho ảnh sắc nét nhất',
+          isReady: true,
+          onClick: onAssembleOpticalBench,
+          actionLabel: 'Dịch chuyển màn chắn tìm ảnh nét',
+        },
+        {
+          id: 'opt-f',
+          label: 'Tiêu cự thấu kính đo được (đối xứng d = d\')',
+          symbol: 'f',
+          mathSymbol: 'f = \\frac{d + d\'}{4}',
+          value: '10.0',
+          unit: 'cm',
+          leastCountNote: 'Khớp tiêu cự danh định +10 cm',
+          isReady: true,
+          highlight: true,
+        },
+        {
+          id: 'opt-mag',
+          label: 'Số phóng đại ảnh thật (|k| = d\' / d)',
+          symbol: '|k|',
+          mathSymbol: '|k| = \\frac{d\'}{d}',
+          value: '1.00',
+          unit: 'lần',
+          leastCountNote: 'Ảnh ngược chiều, cao bằng vật',
+          isReady: true,
+        },
+      ];
+    }
+    if (isDisplacement) {
+      return [
+        {
+          id: 'arch-p',
+          label: 'Trọng lượng vật ngoài không khí',
+          symbol: 'P',
+          mathSymbol: 'P',
+          value: '0.65',
+          unit: 'N',
+          leastCountNote: 'Đọc trên lực kế 5 N (ĐCNN: 0.1 N)',
+          isReady: true,
+        },
+        {
+          id: 'arch-f',
+          label: 'Số chỉ lực kế khi vật ngập nước',
+          symbol: 'F',
+          mathSymbol: 'F',
+          value: '0.41',
+          unit: 'N',
+          leastCountNote: 'Lực căng giảm do lực đẩy chất lỏng',
+          isReady: true,
+        },
+        {
+          id: 'arch-fa',
+          label: 'Độ lớn lực đẩy Archimedes (P − F)',
+          symbol: 'F_A',
+          mathSymbol: 'F_A = P - F',
+          value: '0.24',
+          unit: 'N',
+          leastCountNote: '0.65 N - 0.41 N = 0.24 N',
+          isReady: true,
+          highlight: true,
+        },
+        {
+          id: 'arch-v',
+          label: 'Thể tích nước dời chỗ hứng được',
+          symbol: 'V',
+          mathSymbol: 'V',
+          value: '24.5',
+          unit: 'mL',
+          leastCountNote: 'Tương ứng lực đẩy F_A = d × V',
+          isReady: true,
+        },
+      ];
+    }
+    return [
+      {
+        id: 'mass',
+        label: 'Khối lượng vật',
+        symbol: 'm',
+        mathSymbol: 'm',
+        value: formatMass(measuredMassG),
+        unit: massUnit,
+        leastCountNote: isMgL ? 'ĐCNN: 10 mg' : isSI ? 'ĐCNN: 0,00001 kg' : 'ĐCNN: 0,01 g',
+        isReady: measuredMassG !== null,
+        onClick: onQuickWeighSpecimen,
+        actionLabel: 'Đặt vật lên cân',
+      },
+      {
+        id: 'v1',
+        label: 'Mực nước đầu',
+        symbol: 'V₁',
+        mathSymbol: 'V_1',
+        value: formatVolume(initialVolumeCm3),
+        unit: volUnit,
+        leastCountNote: isSI || isMgL ? 'ĐCNN: 0,001 L' : 'ĐCNN: 1,0 cm³',
+        isReady: true,
+      },
+      {
+        id: 'v2',
+        label: 'Mực nước sau',
+        symbol: 'V₂',
+        mathSymbol: 'V_2',
+        value: formatVolume(finalVolumeCm3),
+        unit: volUnit,
+        leastCountNote: isSI || isMgL ? 'ĐCNN: 0,001 L' : 'ĐCNN: 1,0 cm³',
+        isReady: finalVolumeCm3 !== null,
+        onClick: onQuickSubmergeSpecimen,
+        actionLabel: 'Thả ngập vật vào ống đong',
+      },
+      {
+        id: 'v',
+        label: 'Thể tích vật (V₂ − V₁)',
+        symbol: 'V',
+        mathSymbol: 'V = V_2 - V_1',
+        value: formatVolume(objectVolumeCm3),
+        unit: volUnit,
+        leastCountNote: 'Độ dâng mực nước',
+        isReady: objectVolumeCm3 !== null,
+        onClick: onQuickSubmergeSpecimen,
+      },
+      {
+        id: 'rho',
+        label: 'Khối lượng riêng (m / V)',
+        symbol: 'ρ',
+        mathSymbol: '\\rho = \\frac{m}{V}',
+        value: formatDensity(densityGCm3),
+        unit: densityUnit,
+        leastCountNote: combinedUncertaintyText
+          ? `Sai số: ${combinedUncertaintyText}`
+          : 'Cần đo m và V',
+        isReady: densityGCm3 !== null,
+        highlight: true,
+      },
+    ];
+  }, [
+    isOptics,
+    isDisplacement,
+    measuredMassG,
+    initialVolumeCm3,
+    finalVolumeCm3,
+    objectVolumeCm3,
+    densityGCm3,
+    isMgL,
+    isSI,
+    massUnit,
+    volUnit,
+    densityUnit,
+    combinedUncertaintyText,
+    onQuickWeighSpecimen,
+    onQuickSubmergeSpecimen,
+    onAssembleOpticalBench,
+  ]);
 
   const handleExportCSV = () => {
     const escapeCSV = (val: string) => `"${String(val).replace(/"/g, '""')}"`;
@@ -243,7 +382,7 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
       >
         {/* Nhóm Tab chuyển đổi nội dung bằng Ký hiệu & Thông số trực tiếp */}
         <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar min-w-0">
-          {/* Tab 1: Bảng số liệu m · V · ρ */}
+          {/* Tab 1: Bảng số liệu */}
           <button
             type="button"
             onClick={() => {
@@ -257,22 +396,26 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                   ? 'text-slate-200 hover:bg-white/10'
                   : 'text-[#123059] hover:bg-[#DCE8F8]'
             }`}
-            title="Bảng kết quả đo Khối lượng (m), Thể tích (V) và Khối lượng riêng (ρ)"
+            title="Bảng kết quả đo số liệu thực nghiệm"
           >
             <Table2 className="w-4 h-4 shrink-0 text-[#38BDF8]" />
             <span className="font-mono font-extrabold">
-              {isDetailedMode
-                ? `Kết quả đo (${massUnit} · ${isSI ? 'L' : 'cm³'} · ${densityUnit})`
-                : `m(${massUnit}) · V(${isSI ? 'L' : 'cm³'})`}
+              {isOptics
+                ? (isDetailedMode ? 'Kết quả đo Quang học (d · d\' · f)' : 'd · d\' · f (cm)')
+                : isDisplacement
+                ? (isDetailedMode ? 'Kết quả đo Lực & Thể tích (P · F · F_A)' : 'P · F · F_A (N)')
+                : (isDetailedMode
+                  ? `Kết quả đo (${massUnit} · ${isSI ? 'L' : 'cm³'} · ${densityUnit})`
+                  : `m(${massUnit}) · V(${isSI ? 'L' : 'cm³'})`)}
             </span>
-            {densityGCm3 !== null && (
+            {isDensity && densityGCm3 !== null && (
               <span className="ml-0.5 font-mono text-[11.5px] sm:text-[12.5px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 tabular-nums">
                 ρ={formatDensity(densityGCm3)} {densityUnit}
               </span>
             )}
           </button>
 
-          {/* Tab 2: Hiển thị thẳng công thức ρ = m / V thay cho chữ "Công thức" */}
+          {/* Tab 2: Hiển thị thẳng công thức */}
           <button
             type="button"
             onClick={() => {
@@ -286,17 +429,22 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                   ? 'text-slate-200 hover:bg-white/10'
                   : 'text-[#123059] hover:bg-[#DCE8F8]'
             }`}
-            title="Công thức tính khối lượng riêng: ρ = m / V"
+            title="Công thức vật lý chủ đạo"
           >
             <Calculator className="w-3.5 h-3.5 shrink-0 text-[#F59E0B]" />
-            <span className="font-mono font-extrabold tracking-tight">
-              {isDetailedMode
-                ? `Công thức: ρ = m / V (${densityUnit})`
-                : `ρ = m / V (${densityUnit})`}
+            <span className="font-extrabold tracking-tight flex items-center gap-1">
+              {isDetailedMode && <span>Công thức:</span>}
+              {isOptics ? (
+                <MathFormula math="\frac{1}{f} = \frac{1}{d} + \frac{1}{d'}" />
+              ) : isDisplacement ? (
+                <MathFormula math={isDetailedMode ? 'F_A = P - F = d\\cdot V' : 'F_A = P - F'} />
+              ) : (
+                <MathFormula math={`\\rho = \\frac{m}{V}\\text{ (${densityUnit})}`} />
+              )}
             </span>
           </button>
 
-          {/* Tab 3: Ký hiệu cách đo (Con mắt ngắm vạch chia) + Ghi rõ đơn vị ĐCNN */}
+          {/* Tab 3: Ký hiệu cách đo & ĐCNN */}
           <button
             type="button"
             onClick={() => {
@@ -310,17 +458,21 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                   ? 'text-slate-200 hover:bg-white/10'
                   : 'text-[#123059] hover:bg-[#DCE8F8]'
             }`}
-            title="Cách đọc vạch chia mặt khum (Meniscus) & Độ chia nhỏ nhất (ĐCNN)"
+            title="Cách đọc vạch chia & Độ chia nhỏ nhất (ĐCNN)"
           >
             <Eye className="w-4 h-4 shrink-0 text-[#FF647C]" />
             <span className="font-mono font-extrabold">
-              {isDetailedMode
-                ? `Cách đo & ĐCNN: ±${isSI ? '0,00001 kg' : '0,01 g'} · ±${isSI ? '0,001 L' : '1 mL'}`
-                : `±${isSI ? '0,00001 kg' : '0,01 g'} · ±${isSI ? '0,001 L' : '1 mL'}`}
+              {isOptics
+                ? (isDetailedMode ? 'Thước ray Giá quang: ĐCNN ±1 mm' : 'ĐCNN ±1 mm')
+                : isDisplacement
+                ? (isDetailedMode ? 'Lực kế: ±0,1 N · Ống đong: ±1 mL' : '±0,1 N · ±1 mL')
+                : (isDetailedMode
+                  ? `Cách đo & ĐCNN: ±${isSI ? '0,00001 kg' : '0,01 g'} · ±${isSI ? '0,001 L' : '1 mL'}`
+                  : `±${isSI ? '0,00001 kg' : '0,01 g'} · ±${isSI ? '0,001 L' : '1 mL'}`)}
             </span>
           </button>
 
-          {/* Tab 4: Ký hiệu Bước thực hành B1/5 */}
+          {/* Tab 4: Ký hiệu Bước thực hành */}
           <button
             type="button"
             onClick={() => {
@@ -338,65 +490,78 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
           >
             <BookOpen className="w-3.5 h-3.5 shrink-0 text-[#22C55E]" />
             <span className="font-mono font-extrabold">
-              {isDetailedMode ? `Hướng dẫn (B${guidedStep}/5)` : `B${guidedStep}/5`}
+              {isDetailedMode ? `Hướng dẫn (B${guidedStep}/${currentPracticeSteps.length})` : `B${guidedStep}/${currentPracticeSteps.length}`}
             </span>
           </button>
         </div>
 
-        {/* Cụm chuyển đổi đơn vị (Ghi rõ đơn vị g/cm³ · mL và kg/m³ · L) + Nút Bật/Tắt Giải thích (?) + Nút Mở/Ẩn khay */}
+        {/* Cụm chuyển đổi đơn vị (Cho phép đổi đơn vị KLR ở bài 1, hoặc hiển thị hệ đo chuẩn ở bài khác) */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-          <div
-            className={`flex items-center p-0.5 rounded-[8px] border font-mono text-[11.5px] sm:text-[12.5px] font-extrabold ${
-              isDarkMode
-                ? 'bg-[#162234]/80 border-[#2E476B]'
-                : 'bg-white/90 border-[#C4D5E8]'
-            }`}
-            role="group"
-            aria-label="Đổi đơn vị đo"
-          >
-            <button
-              type="button"
-              onClick={() => setUnitSystem('CGS')}
-              className={`px-1.5 sm:px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
-                unitSystem === 'CGS'
-                  ? 'bg-[#1D63E8] text-white'
-                  : isDarkMode
-                    ? 'text-slate-300 hover:text-white'
-                    : 'text-[#4B6280] hover:text-[#123059]'
+          {isDensity ? (
+            <div
+              className={`flex items-center p-0.5 rounded-[8px] border font-mono text-[11.5px] sm:text-[12.5px] font-extrabold ${
+                isDarkMode
+                  ? 'bg-[#162234]/80 border-[#2E476B]'
+                  : 'bg-white/90 border-[#C4D5E8]'
               }`}
-              title="Hệ đơn vị thực hành: g, cm³ (mL), g/cm³"
+              role="group"
+              aria-label="Đổi đơn vị đo"
             >
-              <span>g · mL</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setUnitSystem('MG_L')}
-              className={`px-1.5 sm:px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
-                unitSystem === 'MG_L'
-                  ? 'bg-[#1D63E8] text-white'
-                  : isDarkMode
-                    ? 'text-slate-300 hover:text-white'
-                    : 'text-[#4B6280] hover:text-[#123059]'
+              <button
+                type="button"
+                onClick={() => setUnitSystem('CGS')}
+                className={`px-1.5 sm:px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
+                  unitSystem === 'CGS'
+                    ? 'bg-[#1D63E8] text-white'
+                    : isDarkMode
+                      ? 'text-slate-300 hover:text-white'
+                      : 'text-[#4B6280] hover:text-[#123059]'
+                }`}
+                title="Hệ đơn vị thực hành: g, cm³ (mL), g/cm³"
+              >
+                <span>g · mL</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUnitSystem('MG_L')}
+                className={`px-1.5 sm:px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
+                  unitSystem === 'MG_L'
+                    ? 'bg-[#1D63E8] text-white'
+                    : isDarkMode
+                      ? 'text-slate-300 hover:text-white'
+                      : 'text-[#4B6280] hover:text-[#123059]'
+                }`}
+                title="Chuyển đổi đơn vị: miligam (mg), lít (L), g/L"
+              >
+                <span>mg · L</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUnitSystem('SI')}
+                className={`px-1.5 sm:px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
+                  unitSystem === 'SI'
+                    ? 'bg-[#1D63E8] text-white'
+                    : isDarkMode
+                      ? 'text-slate-300 hover:text-white'
+                      : 'text-[#4B6280] hover:text-[#123059]'
+                }`}
+                title="Hệ đơn vị SI chuẩn: kg, L (dm³), kg/m³"
+              >
+                <span>kg/m³ · L</span>
+              </button>
+            </div>
+          ) : (
+            <div
+              className={`px-2 py-0.5 rounded-[7px] border font-mono text-[11.5px] sm:text-[12px] font-extrabold whitespace-nowrap ${
+                isDarkMode
+                  ? 'bg-[#162234]/80 border-[#2E476B] text-cyan-300'
+                  : 'bg-white/90 border-[#C4D5E8] text-[#1D63E8]'
               }`}
-              title="Chuyển đổi đơn vị: miligam (mg), lít (L), g/L"
+              title="Đơn vị chuẩn của bài thí nghiệm"
             >
-              <span>mg · L</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setUnitSystem('SI')}
-              className={`px-1.5 sm:px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
-                unitSystem === 'SI'
-                  ? 'bg-[#1D63E8] text-white'
-                  : isDarkMode
-                    ? 'text-slate-300 hover:text-white'
-                    : 'text-[#4B6280] hover:text-[#123059]'
-              }`}
-              title="Hệ đơn vị SI chuẩn: kg, L (dm³), kg/m³"
-            >
-              <span>kg/m³ · L</span>
-            </button>
-          </div>
+              {isOptics ? 'Đơn vị: cm · mm' : 'Đơn vị: N · mL'}
+            </div>
+          )}
 
           {/* Nút Xuất dữ liệu CSV */}
           <button
@@ -496,47 +661,83 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
             <div className="flex flex-col lg:flex-row items-stretch gap-2.5 sm:gap-3 h-full">
               <div className="flex-1 overflow-y-auto space-y-2">
                 {/* Hàng nút Thao tác đo nhanh dành cho Mobile / Tablet (< 1280px) */}
-                <div className="flex xl:hidden items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={onQuickWeighSpecimen}
-                    className={`flex-1 py-1.5 px-2.5 rounded-[7px] text-[12.5px] sm:text-[13.5px] font-bold flex items-center justify-center gap-1.5 border transition-colors cursor-pointer ${
-                      measuredMassG !== null
-                        ? isDarkMode
-                          ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
-                          : 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                        : 'bg-[#1D63E8] hover:bg-[#1552C7] text-white border-transparent'
-                    }`}
-                  >
-                    <Scale className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate">
-                      {measuredMassG !== null
-                        ? `m = ${formatMass(measuredMassG)} ${massUnit}`
-                        : '1. Cân vật (m)'}
-                    </span>
-                  </button>
+                {isDensity ? (
+                  <div className="flex xl:hidden items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onQuickWeighSpecimen}
+                      className={`flex-1 py-1.5 px-2.5 rounded-[7px] text-[12.5px] sm:text-[13.5px] font-bold flex items-center justify-center gap-1.5 border transition-colors cursor-pointer ${
+                        measuredMassG !== null
+                          ? isDarkMode
+                            ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
+                            : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                          : 'bg-[#1D63E8] hover:bg-[#1552C7] text-white border-transparent'
+                      }`}
+                    >
+                      <Scale className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">
+                        {measuredMassG !== null
+                          ? `m = ${formatMass(measuredMassG)} ${massUnit}`
+                          : '1. Cân vật (m)'}
+                      </span>
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={onQuickSubmergeSpecimen}
-                    className={`flex-1 py-1.5 px-2.5 rounded-[7px] text-[12.5px] sm:text-[13.5px] font-bold flex items-center justify-center gap-1.5 border transition-colors cursor-pointer ${
-                      finalVolumeCm3 !== null
-                        ? isDarkMode
-                          ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
-                          : 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                        : isDarkMode
-                          ? 'bg-[#1A273D] hover:bg-[#243552] border-[#2E476B] text-slate-100'
-                          : 'bg-white hover:bg-[#DCE8F8] border-[#C4D5E8] text-[#123059]'
-                    }`}
-                  >
-                    <Droplets className="w-3.5 h-3.5 shrink-0 text-[#00BCEB]" />
-                    <span className="truncate">
-                      {finalVolumeCm3 !== null
-                        ? `V = ${formatVolume(objectVolumeCm3)} ${volUnit}`
-                        : '2. Đo thể tích (V)'}
-                    </span>
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={onQuickSubmergeSpecimen}
+                      className={`flex-1 py-1.5 px-2.5 rounded-[7px] text-[12.5px] sm:text-[13.5px] font-bold flex items-center justify-center gap-1.5 border transition-colors cursor-pointer ${
+                        finalVolumeCm3 !== null
+                          ? isDarkMode
+                            ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
+                            : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                          : isDarkMode
+                            ? 'bg-[#1A273D] hover:bg-[#243552] border-[#2E476B] text-slate-100'
+                            : 'bg-white hover:bg-[#DCE8F8] border-[#C4D5E8] text-[#123059]'
+                      }`}
+                    >
+                      <Droplets className="w-3.5 h-3.5 shrink-0 text-[#00BCEB]" />
+                      <span className="truncate">
+                        {finalVolumeCm3 !== null
+                          ? `V = ${formatVolume(objectVolumeCm3)} ${volUnit}`
+                          : '2. Đo thể tích (V)'}
+                      </span>
+                    </button>
+                  </div>
+                ) : isOptics ? (
+                  <div className="flex xl:hidden items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={onAssembleOpticalBench}
+                      className="flex-1 py-1.5 px-2.5 rounded-[7px] text-[12.5px] font-bold flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer"
+                    >
+                      <span>⚡ Lắp bộ Thấu kính</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onChangeGuidedStep?.(3)}
+                      className="flex-1 py-1.5 px-2.5 rounded-[7px] text-[12.5px] font-bold flex items-center justify-center gap-1.5 bg-[#1D63E8] hover:bg-[#1552C7] text-white cursor-pointer"
+                    >
+                      <span>🎯 Lấy nét (d&apos; = 20 cm)</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex xl:hidden items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onChangeGuidedStep?.(2)}
+                      className="flex-1 py-1.5 px-2.5 rounded-[7px] text-[12.5px] font-bold flex items-center justify-center gap-1.5 bg-[#1D63E8] hover:bg-[#1552C7] text-white cursor-pointer"
+                    >
+                      <span>1. Đo P = 0.65 N</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onChangeGuidedStep?.(3)}
+                      className="flex-1 py-1.5 px-2.5 rounded-[7px] text-[12.5px] font-bold flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                    >
+                      <span>2. Nhúng ngập bình tràn</span>
+                    </button>
+                  </div>
+                )}
 
                 <table className="w-full text-left border-collapse">
                   <thead>
@@ -590,7 +791,7 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                             isDarkMode ? 'text-[#00BCEB]' : 'text-[#1D63E8]'
                           }`}
                         >
-                          {r.symbol}
+                          <MathFormula math={r.mathSymbol || r.symbol} />
                         </td>
                         <td
                           className={`py-1 px-2 sm:px-2.5 text-right font-mono tabular-nums font-bold ${
@@ -654,45 +855,83 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                   </button>
                 </div>
                 <div className="space-y-1.5">
-                  <button
-                    type="button"
-                    onClick={onQuickWeighSpecimen}
-                    className={`w-full py-1.5 px-2.5 rounded-[7px] text-[13.5px] font-bold flex items-center gap-2 border transition-colors cursor-pointer ${
-                      measuredMassG !== null
-                        ? isDarkMode
-                          ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
-                          : 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                        : 'bg-[#1D63E8] hover:bg-[#1552C7] text-white border-transparent'
-                    }`}
-                  >
-                    <Scale className="w-4 h-4 shrink-0" />
-                    <span className="truncate">
-                      {measuredMassG !== null
-                        ? `m = ${formatMass(measuredMassG)} ${massUnit}`
-                        : '1. Cân vật (m)'}
-                    </span>
-                  </button>
+                  {isDensity ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={onQuickWeighSpecimen}
+                        className={`w-full py-1.5 px-2.5 rounded-[7px] text-[13.5px] font-bold flex items-center gap-2 border transition-colors cursor-pointer ${
+                          measuredMassG !== null
+                            ? isDarkMode
+                              ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
+                              : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                            : 'bg-[#1D63E8] hover:bg-[#1552C7] text-white border-transparent'
+                        }`}
+                      >
+                        <Scale className="w-4 h-4 shrink-0" />
+                        <span className="truncate">
+                          {measuredMassG !== null
+                            ? `m = ${formatMass(measuredMassG)} ${massUnit}`
+                            : '1. Cân vật (m)'}
+                        </span>
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={onQuickSubmergeSpecimen}
-                    className={`w-full py-1.5 px-2.5 rounded-[7px] text-[13.5px] font-bold flex items-center gap-2 border transition-colors cursor-pointer ${
-                      finalVolumeCm3 !== null
-                        ? isDarkMode
-                          ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
-                          : 'bg-emerald-50 border-emerald-300 text-emerald-800'
-                        : isDarkMode
-                          ? 'bg-[#1A273D] hover:bg-[#243552] border-[#2E476B] text-slate-100'
-                          : 'bg-white hover:bg-[#DCE8F8] border-[#C4D5E8] text-[#123059]'
-                    }`}
-                  >
-                    <Droplets className="w-4 h-4 shrink-0 text-[#00BCEB]" />
-                    <span className="truncate">
-                      {finalVolumeCm3 !== null
-                        ? `V = ${formatVolume(objectVolumeCm3)} ${volUnit}`
-                        : '2. Đo thể tích (V)'}
-                    </span>
-                  </button>
+                      <button
+                        type="button"
+                        onClick={onQuickSubmergeSpecimen}
+                        className={`w-full py-1.5 px-2.5 rounded-[7px] text-[13.5px] font-bold flex items-center gap-2 border transition-colors cursor-pointer ${
+                          finalVolumeCm3 !== null
+                            ? isDarkMode
+                              ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
+                              : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                            : isDarkMode
+                              ? 'bg-[#1A273D] hover:bg-[#243552] border-[#2E476B] text-slate-100'
+                              : 'bg-white hover:bg-[#DCE8F8] border-[#C4D5E8] text-[#123059]'
+                        }`}
+                      >
+                        <Droplets className="w-4 h-4 shrink-0 text-[#00BCEB]" />
+                        <span className="truncate">
+                          {finalVolumeCm3 !== null
+                            ? `V = ${formatVolume(objectVolumeCm3)} ${volUnit}`
+                            : '2. Đo thể tích (V)'}
+                        </span>
+                      </button>
+                    </>
+                  ) : isOptics ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={onAssembleOpticalBench}
+                        className="w-full py-2 px-2.5 rounded-[7px] text-[13px] font-extrabold flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer shadow-xs"
+                      >
+                        <span>⚡ Lắp bộ Thấu kính</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onChangeGuidedStep?.(3)}
+                        className="w-full py-1.5 px-2.5 rounded-[7px] text-[13px] font-bold flex items-center justify-center gap-1.5 bg-[#1D63E8] hover:bg-[#1552C7] text-white cursor-pointer"
+                      >
+                        <span>🎯 Lấy nét (d&apos; = 20 cm)</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => onChangeGuidedStep?.(2)}
+                        className="w-full py-1.5 px-2.5 rounded-[7px] text-[13px] font-bold flex items-center justify-center gap-1.5 bg-[#1D63E8] hover:bg-[#1552C7] text-white cursor-pointer"
+                      >
+                        <span>1. Đo P = 0.65 N</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onChangeGuidedStep?.(3)}
+                        className="w-full py-1.5 px-2.5 rounded-[7px] text-[13px] font-bold flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                      >
+                        <span>2. Nhúng vào bình tràn</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -701,190 +940,309 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
           {/* TAB 2: CÔNG THỨC */}
           {activeTab === 'formula' && (
             <div className="flex flex-col sm:flex-row items-center gap-4 h-full py-1">
-              <div
-                className={`px-6 py-3.5 rounded-[10px] border flex flex-col items-center justify-center shrink-0 ${
-                  isDarkMode
-                    ? 'bg-[#1A273D] border-[#00BCEB]/50'
-                    : 'bg-[#FAF3DD] border-[#E8B84B]'
-                }`}
-              >
-                <div className="text-[30px] font-extrabold font-mono tracking-wide">
-                  ρ = <span className="text-[#3B82F6]">m</span> /{' '}
-                  <span className="text-[#00BCEB]">V</span>
-                </div>
-                <span
-                  className={`text-[13.5px] mt-1 font-semibold ${
-                    isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
-                  }`}
-                >
-                  V = V₂ − V₁ (bình chia độ / bình tràn)
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1 w-full text-[14.5px]">
-                <div
-                  className={`p-2.5 rounded-[9px] border ${
-                    isDarkMode
-                      ? 'bg-[#162234] border-[#263854]'
-                      : 'bg-white border-[#C4D5E8]'
-                  }`}
-                >
-                  <div className="font-extrabold text-[15.5px]">
-                    <span className="font-mono text-[#3B82F6]">m</span> — Khối lượng ({massUnit})
-                  </div>
-                  <p
-                    className={`text-[14px] mt-1 ${
-                      isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
+              {isOptics ? (
+                <>
+                  <div
+                    className={`px-5 py-3 rounded-[10px] border flex flex-col items-center justify-center shrink-0 ${
+                      isDarkMode
+                        ? 'bg-[#1A273D] border-[#00BCEB]/50'
+                        : 'bg-[#FAF3DD] border-[#E8B84B]'
                     }`}
                   >
-                    Đo bằng cân điện tử sau khi bấm <strong>Trừ bì (TARE)</strong> về 0,00 g.
-                  </p>
-                </div>
-
-                <div
-                  className={`p-2.5 rounded-[9px] border ${
-                    isDarkMode
-                      ? 'bg-[#162234] border-[#263854]'
-                      : 'bg-white border-[#C4D5E8]'
-                  }`}
-                >
-                  <div className="font-extrabold text-[15.5px]">
-                    <span className="font-mono text-[#00BCEB]">V</span> — Thể tích ({volUnit})
+                    <div className="text-xl font-bold font-mono tracking-wide">
+                      <MathFormula displayMode math="f = \frac{d \cdot d'}{d + d'} \quad \text{hoặc} \quad f = \frac{d + d'}{4}" />
+                    </div>
+                    <span
+                      className={`text-[12px] mt-1 font-semibold ${
+                        isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
+                      }`}
+                    >
+                      Khi ảnh thật rõ nét cao bằng vật: <MathFormula math="d = d' = 2f" />
+                    </span>
                   </div>
-                  <p
-                    className={`text-[14px] mt-1 ${
-                      isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 flex-1 w-full text-[13.5px]">
+                    <div className={`p-2.5 rounded-[9px] border ${isDarkMode ? 'bg-[#162234] border-[#263854]' : 'bg-white border-[#C4D5E8]'}`}>
+                      <div className="font-extrabold text-[14.5px] flex items-center gap-1.5">
+                        <MathFormula math="d" className="text-[#3B82F6]" /> — Khoảng cách vật (cm)
+                      </div>
+                      <p className={`text-[12.5px] mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'}`}>
+                        Khoảng cách từ vật sáng chữ F đến quang tâm O của thấu kính.
+                      </p>
+                    </div>
+
+                    <div className={`p-2.5 rounded-[9px] border ${isDarkMode ? 'bg-[#162234] border-[#263854]' : 'bg-white border-[#C4D5E8]'}`}>
+                      <div className="font-extrabold text-[14.5px] flex items-center gap-1.5">
+                        <MathFormula math="d'" className="text-[#00BCEB]" /> — Khoảng cách ảnh (cm)
+                      </div>
+                      <p className={`text-[12.5px] mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'}`}>
+                        Khoảng cách từ màn chắn hứng ảnh nét đến thấu kính.
+                      </p>
+                    </div>
+
+                    <div className={`p-2.5 rounded-[9px] border ${isDarkMode ? 'bg-[#162234] border-[#263854]' : 'bg-white border-[#C4D5E8]'}`}>
+                      <div className="font-extrabold text-[14.5px] flex items-center gap-1.5">
+                        <MathFormula math="f" className="text-emerald-400" /> — Tiêu cự (cm)
+                      </div>
+                      <p className={`text-[12.5px] mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'}`}>
+                        Thấu kính hội tụ có <MathFormula math="f > 0" /> (+10 cm trong bộ thí nghiệm KHTN 9).
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : isDisplacement ? (
+                <>
+                  <div
+                    className={`px-5 py-3 rounded-[10px] border flex flex-col items-center justify-center shrink-0 ${
+                      isDarkMode
+                        ? 'bg-[#1A273D] border-[#00BCEB]/50'
+                        : 'bg-[#FAF3DD] border-[#E8B84B]'
                     }`}
                   >
-                    Phần nước dâng lên khi nhúng ngập vật rắn.
-                  </p>
-                </div>
-
-                <div
-                  className={`p-2.5 rounded-[9px] border ${
-                    isDarkMode
-                      ? 'bg-[#162234] border-[#263854]'
-                      : 'bg-white border-[#C4D5E8]'
-                  }`}
-                >
-                  <div className="font-extrabold text-[15.5px]">
-                    <span className="font-mono text-emerald-400">ρ</span> — KLR ({densityUnit})
+                    <div className="text-xl font-bold font-mono tracking-wide">
+                      <MathFormula displayMode math="F_A = P - F = d_{\text{lỏng}} \cdot V" />
+                    </div>
+                    <span
+                      className={`text-[12px] mt-1 font-semibold ${
+                        isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
+                      }`}
+                    >
+                      Lực đẩy Archimedes bằng trọng lượng phần nước bị chiếm chỗ
+                    </span>
                   </div>
-                  <p
-                    className={`text-[14px] mt-1 ${
-                      isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 flex-1 w-full text-[13.5px]">
+                    <div className={`p-2.5 rounded-[9px] border ${isDarkMode ? 'bg-[#162234] border-[#263854]' : 'bg-white border-[#C4D5E8]'}`}>
+                      <div className="font-extrabold text-[14.5px] flex items-center gap-1.5">
+                        <MathFormula math="P" className="text-[#3B82F6]" /> — Trọng lượng không khí (N)
+                      </div>
+                      <p className={`text-[12.5px] mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'}`}>
+                        Đo bằng lực kế khi treo vật tự do ngoài không khí.
+                      </p>
+                    </div>
+
+                    <div className={`p-2.5 rounded-[9px] border ${isDarkMode ? 'bg-[#162234] border-[#263854]' : 'bg-white border-[#C4D5E8]'}`}>
+                      <div className="font-extrabold text-[14.5px] flex items-center gap-1.5">
+                        <MathFormula math="F" className="text-[#00BCEB]" /> — Lực kế khi nhúng nước (N)
+                      </div>
+                      <p className={`text-[12.5px] mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'}`}>
+                        Số chỉ giảm vì nước tác dụng lực đẩy thẳng đứng hướng lên.
+                      </p>
+                    </div>
+
+                    <div className={`p-2.5 rounded-[9px] border ${isDarkMode ? 'bg-[#162234] border-[#263854]' : 'bg-white border-[#C4D5E8]'}`}>
+                      <div className="font-extrabold text-[14.5px] flex items-center gap-1.5">
+                        <MathFormula math="F_A" className="text-emerald-400" /> — Lực đẩy Archimedes (N)
+                      </div>
+                      <p className={`text-[12.5px] mt-1 ${isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'}`}>
+                        Độ chênh lệch <MathFormula math="F_A = P - F" /> chính bằng <MathFormula math="d \cdot V" />.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div
+                    className={`px-6 py-3.5 rounded-[10px] border flex flex-col items-center justify-center shrink-0 ${
+                      isDarkMode
+                        ? 'bg-[#1A273D] border-[#00BCEB]/50'
+                        : 'bg-[#FAF3DD] border-[#E8B84B]'
                     }`}
                   >
-                    Khối lượng 1 đơn vị thể tích (1 g/cm³ = 1000 kg/m³).
-                  </p>
-                </div>
-              </div>
+                    <div className="text-2xl font-extrabold font-mono tracking-wide">
+                      <MathFormula displayMode math="\rho = \frac{m}{V}" />
+                    </div>
+                    <span
+                      className={`text-[12.5px] mt-1 font-semibold ${
+                        isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
+                      }`}
+                    >
+                      <MathFormula math="V = V_2 - V_1" /> (bình chia độ / bình tràn)
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 flex-1 w-full text-[14.5px]">
+                    <div
+                      className={`p-2.5 rounded-[9px] border ${
+                        isDarkMode
+                          ? 'bg-[#162234] border-[#263854]'
+                          : 'bg-white border-[#C4D5E8]'
+                      }`}
+                    >
+                      <div className="font-extrabold text-[15.5px] flex items-center gap-1.5">
+                        <MathFormula math="m" className="text-[#3B82F6]" /> — Khối lượng ({massUnit})
+                      </div>
+                      <p
+                        className={`text-[13px] mt-1 ${
+                          isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
+                        }`}
+                      >
+                        Đo bằng cân điện tử sau khi bấm <strong>Trừ bì (TARE)</strong> về 0,00 g.
+                      </p>
+                    </div>
+
+                    <div
+                      className={`p-2.5 rounded-[9px] border ${
+                        isDarkMode
+                          ? 'bg-[#162234] border-[#263854]'
+                          : 'bg-white border-[#C4D5E8]'
+                      }`}
+                    >
+                      <div className="font-extrabold text-[15.5px] flex items-center gap-1.5">
+                        <MathFormula math="V" className="text-[#00BCEB]" /> — Thể tích ({volUnit})
+                      </div>
+                      <p
+                        className={`text-[13px] mt-1 ${
+                          isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
+                        }`}
+                      >
+                        Phần nước dâng lên khi nhúng ngập vật rắn.
+                      </p>
+                    </div>
+
+                    <div
+                      className={`p-2.5 rounded-[9px] border ${
+                        isDarkMode
+                          ? 'bg-[#162234] border-[#263854]'
+                          : 'bg-white border-[#C4D5E8]'
+                      }`}
+                    >
+                      <div className="font-extrabold text-[15.5px] flex items-center gap-1.5">
+                        <MathFormula math="\rho" className="text-emerald-400" /> — KLR ({densityUnit})
+                      </div>
+                      <p
+                        className={`text-[13px] mt-1 ${
+                          isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
+                        }`}
+                      >
+                        Khối lượng 1 đơn vị thể tích (<MathFormula math="1\text{ g/cm}^3 = 1000\text{ kg/m}^3" />).
+                      </p>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
           {/* TAB 3: CÁCH ĐỌC & ĐCNN */}
           {activeTab === 'reading-guide' && (
             <div className="flex items-center gap-4 h-full py-1">
-              <div
-                className={`w-[110px] h-[120px] rounded-[10px] border flex items-center justify-center shrink-0 p-1 ${
-                  isDarkMode
-                    ? 'bg-[#1A273D] border-[#2E476B]'
-                    : 'bg-[#E6EEF8] border-[#C4D5E8]'
-                }`}
-              >
-                <svg
-                  viewBox="0 0 120 130"
-                  className="w-full h-full"
-                  aria-label="Minh họa đọc đáy mặt khum"
-                >
-                  <rect
-                    x="22"
-                    y="14"
-                    width="44"
-                    height="102"
-                    fill="rgba(224,242,254,0.38)"
-                    stroke="#0284C7"
-                    strokeWidth="2"
-                    rx="2"
-                  />
-                  <path
-                    d="M23 56 Q44 68 65 56 V115 H23 Z"
-                    fill="rgba(56,189,248,0.58)"
-                  />
-                  <path
-                    d="M23 56 Q44 68 65 56"
-                    fill="none"
-                    stroke="#0284C7"
-                    strokeWidth="2.5"
-                  />
-                  {[28, 40, 52, 62, 74, 86, 98].map((y, idx) => (
-                    <line
-                      key={y}
-                      x1="23"
-                      y1={y}
-                      x2={idx % 2 === 1 ? '38' : '32'}
-                      y2={y}
-                      stroke="#0B3A7D"
-                      strokeWidth={idx % 2 === 1 ? '1.8' : '1.2'}
-                    />
-                  ))}
-                  <line
-                    x1="36"
-                    y1="62"
-                    x2="92"
-                    y2="62"
-                    stroke="#22C55E"
-                    strokeWidth="2"
-                    strokeDasharray="3 2"
-                  />
-                  <circle cx="44" cy="62" r="3" fill="#22C55E" />
-                  <path
-                    d="M94 62 Q103 55 112 62 Q103 69 94 62 Z"
-                    fill="#FFFFFF"
-                    stroke="#12346B"
-                    strokeWidth="1.8"
-                  />
-                  <circle cx="103" cy="62" r="2.8" fill="#1E6BFF" />
-                  <text
-                    x="72"
-                    y="54"
-                    fill="#22C55E"
-                    fontSize="11"
-                    fontWeight="bold"
-                    fontFamily="sans-serif"
-                  >
-                    Đúng
-                  </text>
-                </svg>
-              </div>
-
-              <div className="space-y-1.5 text-[14.5px]">
-                <div className="font-extrabold text-[16px]">
-                  Quy tắc đọc mặt khum & ĐCNN
+              {isOptics ? (
+                <div className="space-y-2 text-[14.5px] flex-1">
+                  <div className="font-extrabold text-[16px] text-cyan-300">
+                    Quy tắc ngắm chừng & đo khoảng cách trên Giá quang học
+                  </div>
+                  <p className={isDarkMode ? 'text-slate-200 leading-relaxed' : 'text-[#4B6280] leading-relaxed'}>
+                    • <strong>Đọc tọa độ vạch:</strong> Đọc kim chỉ vạch của đế trượt chữ U trên thước ray 90 cm (ĐCNN: 1 mm). Khoảng cách <MathFormula math="d = |x_{\text{thấu kính}} - x_{\text{vật}}|" />.
+                  </p>
+                  <p className={isDarkMode ? 'text-slate-200 leading-relaxed' : 'text-[#4B6280] leading-relaxed'}>
+                    • <strong>Tiêu chuẩn ảnh thật rõ nét:</strong> Khi dịch chuyển màn chắn, dừng lại đúng vị trí viền chữ F tương phản sắc nét nhất, không có quầng sáng nhòe.
+                  </p>
                 </div>
-                <p
-                  className={
-                    isDarkMode ? 'text-slate-200 leading-relaxed' : 'text-[#4B6280] leading-relaxed'
-                  }
-                >
-                  • <strong>Đọc mặt khum:</strong> Đặt mắt ngang <strong>đáy mặt khum lõm</strong>, đọc theo vạch chia gần nhất.
-                </p>
-                <p
-                  className={
-                    isDarkMode ? 'text-slate-200 leading-relaxed' : 'text-[#4B6280] leading-relaxed'
-                  }
-                >
-                  • <strong>ĐCNN & Sai số:</strong> ĐCNN là hiệu 2 vạch liên tiếp (ống đong: 1,0 mL). ĐCNN cho biết độ phân giải đọc vạch.
-                </p>
-              </div>
+              ) : (
+                <>
+                  <div
+                    className={`w-[110px] h-[120px] rounded-[10px] border flex items-center justify-center shrink-0 p-1 ${
+                      isDarkMode
+                        ? 'bg-[#1A273D] border-[#2E476B]'
+                        : 'bg-[#E6EEF8] border-[#C4D5E8]'
+                    }`}
+                  >
+                    <svg
+                      viewBox="0 0 120 130"
+                      className="w-full h-full"
+                      aria-label="Minh họa đọc đáy mặt khum"
+                    >
+                      <rect
+                        x="22"
+                        y="14"
+                        width="44"
+                        height="102"
+                        fill="rgba(224,242,254,0.38)"
+                        stroke="#0284C7"
+                        strokeWidth="2"
+                        rx="2"
+                      />
+                      <path
+                        d="M23 56 Q44 68 65 56 V115 H23 Z"
+                        fill="rgba(56,189,248,0.58)"
+                      />
+                      <path
+                        d="M23 56 Q44 68 65 56"
+                        fill="none"
+                        stroke="#0284C7"
+                        strokeWidth="2.5"
+                      />
+                      {[28, 40, 52, 62, 74, 86, 98].map((y, idx) => (
+                        <line
+                          key={y}
+                          x1="23"
+                          y1={y}
+                          x2={idx % 2 === 1 ? '38' : '32'}
+                          y2={y}
+                          stroke="#0B3A7D"
+                          strokeWidth={idx % 2 === 1 ? '1.8' : '1.2'}
+                        />
+                      ))}
+                      <line
+                        x1="36"
+                        y1="62"
+                        x2="92"
+                        y2="62"
+                        stroke="#22C55E"
+                        strokeWidth="2"
+                        strokeDasharray="3 2"
+                      />
+                      <circle cx="44" cy="62" r="3" fill="#22C55E" />
+                      <path
+                        d="M94 62 Q103 55 112 62 Q103 69 94 62 Z"
+                        fill="#FFFFFF"
+                        stroke="#12346B"
+                        strokeWidth="1.8"
+                      />
+                      <circle cx="103" cy="62" r="2.8" fill="#1E6BFF" />
+                      <text
+                        x="72"
+                        y="54"
+                        fill="#22C55E"
+                        fontSize="11"
+                        fontWeight="bold"
+                        fontFamily="sans-serif"
+                      >
+                        Đúng
+                      </text>
+                    </svg>
+                  </div>
+
+                  <div className="space-y-1.5 text-[14.5px]">
+                    <div className="font-extrabold text-[16px]">
+                      Quy tắc đọc mặt khum & ĐCNN
+                    </div>
+                    <p
+                      className={
+                        isDarkMode ? 'text-slate-200 leading-relaxed' : 'text-[#4B6280] leading-relaxed'
+                      }
+                    >
+                      • <strong>Đọc mặt khum:</strong> Đặt mắt ngang <strong>đáy mặt khum lõm</strong>, đọc theo vạch chia gần nhất.
+                    </p>
+                    <p
+                      className={
+                        isDarkMode ? 'text-slate-200 leading-relaxed' : 'text-[#4B6280] leading-relaxed'
+                      }
+                    >
+                      • <strong>ĐCNN & Sai số:</strong> ĐCNN là hiệu 2 vạch liên tiếp (ống đong: 1,0 mL). ĐCNN cho biết độ phân giải đọc vạch.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           )}
 
-          {/* TAB 4: HƯỚNG DẪN 5 BƯỚC (Tích hợp trực tiếp cho Mobile / Tablet) */}
+          {/* TAB 4: HƯỚNG DẪN BƯỚC THỰC HÀNH */}
           {activeTab === 'steps' && (
             <div className="flex flex-col gap-2 py-0.5">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
-                {MOBILE_PRACTICE_STEPS.map((item) => {
+                {currentPracticeSteps.map((item) => {
                   const isCurrent = guidedStep === item.step;
                   const isCompleted = guidedStep > item.step;
                   return (
@@ -925,14 +1283,14 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="text-[13.5px] font-bold leading-snug">
-                          {item.step}. {item.title}
+                          {item.step}. <RichMathText text={item.title} />
                         </div>
                         <div
                           className={`text-[12px] leading-snug mt-0.5 ${
                             isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
                           }`}
                         >
-                          {item.shortDesc}
+                          <RichMathText text={item.shortDesc} />
                         </div>
                       </div>
                     </button>
@@ -965,16 +1323,16 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                     type="button"
                     onClick={() =>
                       onChangeGuidedStep(
-                        (guidedStep < 5
+                        (guidedStep < currentPracticeSteps.length
                           ? guidedStep + 1
                           : 1) as StudentGuidedStepNumber,
                       )
                     }
                     className="px-3.5 py-1.5 rounded-[8px] bg-[#1D63E8] hover:bg-[#1552C7] text-white text-[13px] font-extrabold flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors"
-                    title={guidedStep < 5 ? `Tiến tới Bước ${guidedStep + 1} (⟳)` : 'Làm lại từ Bước 1 (⟳)'}
+                    title={guidedStep < currentPracticeSteps.length ? `Tiến tới Bước ${guidedStep + 1} (⟳)` : 'Làm lại từ Bước 1 (⟳)'}
                   >
                     <span>
-                      {guidedStep < 5
+                      {guidedStep < currentPracticeSteps.length
                         ? `Sang Bước ${guidedStep + 1}`
                         : 'Làm lại từ Bước 1'}
                     </span>

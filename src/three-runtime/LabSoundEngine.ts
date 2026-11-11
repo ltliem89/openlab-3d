@@ -723,6 +723,19 @@ class LabSoundEngineImpl {
       // Ignore Web Audio autoplay restrictions until first user gesture
     }
   }
+
+  playTriumphChime(): void {
+    this.play('record-stop');
+    setTimeout(() => this.play('step-complete'), 100);
+  }
+
+  playBeep(freq?: number, dur?: number): void {
+    this.play('scale-tare');
+  }
+
+  playChime(freq?: number): void {
+    this.play('step-complete');
+  }
 }
 
 export const labSoundEngine = new LabSoundEngineImpl();

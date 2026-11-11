@@ -10,6 +10,7 @@ import {
 } from '../../data/multiSourceEquipmentDossier';
 import { EquipmentThumbnailSvg } from '../common/EquipmentThumbnailSvg';
 import { EquipmentRealPhotoView } from '../common/EquipmentRealPhotoView';
+import { MathFormula, RichMathText } from '../common/MathFormula';
 import {
   X,
   ArrowLeft,
@@ -250,7 +251,7 @@ export const StudentVideoGuideModal: React.FC<StudentVideoGuideModalProps> = ({
                 Bước 2: Cân vật rắn
               </div>
               <div className="text-[13px] font-mono font-extrabold text-[#1D63E8]">
-                m = 66.25 g
+                <MathFormula math="m = 66.25\text{ g}" />
               </div>
             </div>
 
@@ -263,7 +264,7 @@ export const StudentVideoGuideModal: React.FC<StudentVideoGuideModalProps> = ({
                 Bước 3: Nhúng ngập nước
               </div>
               <div className="text-[13px] font-mono font-extrabold text-[#0369A1]">
-                V = 74.5 - 50.0 = 24.5 cm³
+                <MathFormula math="V = 74.5 - 50.0 = 24.5\text{ cm}^3" />
               </div>
             </div>
 
@@ -272,10 +273,10 @@ export const StudentVideoGuideModal: React.FC<StudentVideoGuideModalProps> = ({
                 Bước 4 & 5: Tính toán
               </div>
               <div className="text-[20px] font-mono font-extrabold text-[#051630]">
-                ρ = m / V
+                <MathFormula math="\rho = \frac{m}{V}" />
               </div>
               <div className="text-[14px] font-mono font-extrabold text-[#15803D]">
-                ρ = 2.70 g/cm³ (Nhôm)
+                <MathFormula math="\rho = 2.70\text{ g/cm}^3\text{ (Nhôm)}" />
               </div>
             </div>
           </div>
@@ -329,7 +330,7 @@ const BASE_TEXTBOOK_REF_LOOKUP: Record<string, TextbookReferenceMetadata> = {
     lesson: 'Đo thể tích chất lỏng và thể tích vật rắn bằng phương pháp dâng nước',
     figureRef: 'Dụng cụ đo thể tích chuẩn 100 ml',
     standardFunction:
-      'Đo thể tích chất lỏng (V₁) và xác định thể tích vật rắn không thấm nước (V = V₂ - V₁) dựa vào độ dâng mực nước khi thả chìm vật.',
+      'Đo thể tích chất lỏng ($V_1$) và xác định thể tích vật rắn không thấm nước ($V = V_2 - V_1$) dựa vào độ dâng mực nước khi thả chìm vật.',
     usageGuidelines:
       'Đặt ống đong thẳng đứng trên mặt bàn, đặt mắt ngang với đáy mặt khum lõm của cột nước để đọc đúng vạch chia (ĐCNN 1 ml).',
     safetyNote:
@@ -1063,7 +1064,7 @@ export const StudentEquipmentDetailModal: React.FC<StudentEquipmentDetailModalPr
                   <span>Chức năng chuẩn trong phòng thí nghiệm (Theo SGK KHTN 9)</span>
                 </div>
                 <p className="text-[13.5px] text-[#051630] leading-relaxed font-bold">
-                  {sgkRef.standardFunction}
+                  <RichMathText text={sgkRef.standardFunction} />
                 </p>
               </div>
 
@@ -1073,7 +1074,7 @@ export const StudentEquipmentDetailModal: React.FC<StudentEquipmentDetailModalPr
                   <span>Hướng dẫn thao tác & Cách sử dụng đúng chuẩn</span>
                 </div>
                 <p className="text-[13.5px] text-[#051630] leading-relaxed font-bold">
-                  {sgkRef.usageGuidelines}
+                  <RichMathText text={sgkRef.usageGuidelines} />
                 </p>
               </div>
 
@@ -1083,7 +1084,7 @@ export const StudentEquipmentDetailModal: React.FC<StudentEquipmentDetailModalPr
                   <span>Lưu ý an toàn phòng thí nghiệm</span>
                 </div>
                 <p className="text-[13.5px] text-[#451A03] leading-relaxed font-bold">
-                  {sgkRef.safetyNote}
+                  <RichMathText text={sgkRef.safetyNote} />
                 </p>
               </div>
             </div>

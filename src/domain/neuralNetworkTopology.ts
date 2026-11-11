@@ -7,6 +7,25 @@
 
 export type ThcsGrade = 'grade6' | 'grade7' | 'grade8' | 'grade9';
 
+export type PhysicalSignalType =
+  | 'MASS_VALUE'
+  | 'FORCE_NEWTON'
+  | 'VOLTAGE_VOLT'
+  | 'CURRENT_AMPERE'
+  | 'RESISTANCE_OHM'
+  | 'VOLUME_DISPLACEMENT'
+  | 'TEMPERATURE_C'
+  | 'LIGHT_RAY'
+  | 'MAGNETIC_FLUX'
+  | 'DIMENSION_MM'
+  | 'MICROSCOPIC_VIEW';
+
+export interface DeviceIntercomProtocol {
+  emits: PhysicalSignalType[];
+  consumes: PhysicalSignalType[];
+  measurementTarget?: string;
+}
+
 export interface NeuralDeviceNode {
   id: string;              // Slug archetype (ví dụ: 'electronic-balance')
   assetId: string;         // Mã chuẩn 'OL3D-EQP-BAL-0001'
@@ -24,6 +43,7 @@ export interface NeuralDeviceNode {
   mathFormula?: string;    // Công thức vật lý chuẩn quốc tế / giáo viên
   sgkFormula?: string;     // Công thức rút gọn quen thuộc trong SGK THCS
   glyphIcon: string;       // Biểu tượng cảm xúc / hình đại diện
+  intercomProtocol?: DeviceIntercomProtocol; // Giao thức giao tiếp nhân quả giữa các thiết bị
 }
 
 export type DeviceCategory = 
@@ -1304,6 +1324,256 @@ export const NEURAL_SYNAPSE_EDGES: NeuralSynapseEdge[] = [
     causalRule: 'Liên kết nhận thức từ quan sát tiêu bản NST hiển vi đến mô hình phân tử DNA 3D',
     studentCausal: 'Soi tế bào dưới kính hiển vi → Nhìn sâu vào nhân thấy nhiễm sắc thể và phân tử DNA',
     experimentContext: 'Tìm hiểu tế bào và DNA di truyền'
+  },
+  {
+    id: 'SYN-STD-SEP',
+    source: 'retort-stand',
+    target: 'separatory-funnel',
+    type: 'mechanical_clamp',
+    weight: 0.88,
+    signalSpeed: 1.0,
+    causalRule: 'Ngàm kẹp giá sắt giữ cố định phễu chiết quả lê thẳng đứng trên cao để hứng chất lỏng',
+    studentCausal: 'Kẹp phễu chiết lên giá sắt → Phễu đứng vững trên cao để chất lỏng tách lớp và xả van đáy',
+    experimentContext: 'Tách chất lỏng không hòa tan bằng phễu chiết'
+  },
+
+  // Ống trụ kim loại rỗng khoang kín (Hollow Cylinder)
+  {
+    id: 'SYN-HLW-BAL',
+    source: 'hollow-cylinder',
+    target: 'electronic-balance',
+    type: 'mechanical_support',
+    connectorId: 'CONN_BALANCE_PAN',
+    weight: 0.90,
+    signalSpeed: 1.2,
+    causalRule: 'Truyền khối lượng mẫu vật rỗng m lên đĩa cân phục vụ so sánh khối lượng riêng với vật đặc',
+    studentCausal: 'Đặt ống rỗng lên đĩa cân → Đọc khối lượng m để chứng minh vật rỗng nhẹ hơn nhôm đặc',
+    experimentContext: 'Phân biệt vật đặc và vật rỗng'
+  },
+  {
+    id: 'SYN-HLW-GCY',
+    source: 'hollow-cylinder',
+    target: 'graduated-cylinder',
+    type: 'submersion',
+    connectorId: 'CONN_CYLINDER_APERTURE',
+    weight: 0.95,
+    signalSpeed: 1.5,
+    causalRule: 'Vật rỗng có khối lượng riêng trung bình nhỏ hơn nước nên nổi một phần trên mặt nước',
+    studentCausal: 'Thả ống rỗng vào ống đong → Vật nổi trên mặt nước do ruột rỗng chứa không khí!',
+    experimentContext: 'Khảo sát điều kiện vật nổi vật chìm'
+  },
+  {
+    id: 'SYN-HLW-DYN',
+    source: 'hollow-cylinder',
+    target: 'spring-dynamometer',
+    type: 'buoyancy_force',
+    connectorId: 'CONN_SPRING_DYNO_HOOK',
+    weight: 0.92,
+    signalSpeed: 1.4,
+    causalRule: 'Treo vật rỗng vào lực kế và nhúng nước: Lực đẩy Archimedes nâng vật làm giảm số chỉ lực kế',
+    studentCausal: 'Móc ống rỗng vào lực kế rồi hạ chìm vào nước → Lực kế giảm số chỉ do lực đẩy nâng lên',
+    experimentContext: 'Khảo sát lực đẩy Archimedes tác dụng lên vật rỗng'
+  },
+  {
+    id: 'SYN-HLW-OVF',
+    source: 'hollow-cylinder',
+    target: 'overflow-can',
+    type: 'submersion',
+    connectorId: 'CONN_OVERFLOW_CAN_APERTURE',
+    weight: 0.90,
+    signalSpeed: 1.3,
+    causalRule: 'Thả vật rỗng vào bình tràn đầy nước, thể tích nước tràn bằng đúng thể tích phần chìm của vật',
+    studentCausal: 'Thả vật nổi vào bình tràn → Nước tràn ra đúng bằng phần ngập trong nước',
+    experimentContext: 'Nghiệm chứng định luật Archimedes với vật nổi'
+  },
+
+  // Thước thẳng 30 cm (Ruler 30cm)
+  {
+    id: 'SYN-RUL-BLK',
+    source: 'ruler-30',
+    target: 'solid-block',
+    type: 'mechanical_clamp',
+    weight: 0.92,
+    signalSpeed: 1.2,
+    causalRule: 'Đo trực tiếp 3 kích thước chiều dài a, chiều rộng b, chiều cao c của khối hộp chữ nhật',
+    studentCausal: 'Dùng thước kẻ đo 3 cạnh của khối đồng → Tính thể tích hình học V = a × b × c',
+    experimentContext: 'Xác định thể tích vật rắn bằng kích thước hình học'
+  },
+  {
+    id: 'SYN-RUL-GCY',
+    source: 'ruler-30',
+    target: 'graduated-cylinder',
+    type: 'mechanical_support',
+    weight: 0.88,
+    signalSpeed: 1.1,
+    causalRule: 'Đối chiếu chiều cao cột chất lỏng h với thang chia mililit trên thân ống đong',
+    studentCausal: 'Áp thước kẻ vào ống đong → Kiểm tra chiều cao mực nước dâng lên khi thả vật',
+    experimentContext: 'Đo chiều cao cột nước'
+  },
+  {
+    id: 'SYN-RUL-SLD',
+    source: 'ruler-30',
+    target: 'solid-cylinder',
+    type: 'mechanical_clamp',
+    weight: 0.90,
+    signalSpeed: 1.2,
+    causalRule: 'Đo chiều cao h và đường kính đáy d của khối trụ để tính thể tích hình học V = π(d/2)^2 h',
+    studentCausal: 'Đo chiều cao khối nhôm bằng thước kẻ → Đối chiếu với thể tích dời chỗ nước',
+    experimentContext: 'Đối chiếu hai phương pháp đo thể tích'
+  },
+
+  // Đồng hồ bấm giây (Stopwatch)
+  {
+    id: 'SYN-STW-THM',
+    source: 'stopwatch',
+    target: 'thermometer',
+    type: 'thermal_exchange',
+    weight: 0.90,
+    signalSpeed: 1.3,
+    causalRule: 'Đo khoảng thời gian Δt tương ứng với độ tăng nhiệt độ ΔT của chất lỏng để xác định công suất truyền nhiệt',
+    studentCausal: 'Bấm giờ sau mỗi 1 phút → Ghi lại nhiệt độ trên nhiệt kế xem nước nóng lên nhanh hay chậm',
+    experimentContext: 'Khảo sát sự truyền nhiệt theo thời gian'
+  },
+  {
+    id: 'SYN-STW-ALC',
+    source: 'stopwatch',
+    target: 'alcohol-lamp',
+    type: 'thermal_exchange',
+    weight: 0.88,
+    signalSpeed: 1.1,
+    causalRule: 'Định thời gian đốt nóng để tính nhiệt lượng cung cấp Q = P · t',
+    studentCausal: 'Bấm giờ từ lúc châm đèn cồn đến khi nước bắt đầu sôi',
+    experimentContext: 'Đo thời gian đun sôi nước'
+  },
+
+  // Bình tam giác Erlenmeyer (Erlenmeyer Flask)
+  {
+    id: 'SYN-FLK-BAL',
+    source: 'erlenmeyer-flask',
+    target: 'electronic-balance',
+    type: 'mechanical_support',
+    connectorId: 'CONN_BALANCE_PAN',
+    weight: 0.88,
+    signalSpeed: 1.1,
+    causalRule: 'Đặt bình tam giác lên đĩa cân, nhấn TARE để trừ bì và cân chính xác chất phản ứng',
+    studentCausal: 'Đặt bình tam giác lên cân rồi nhấn TARE về 0.00g để cân hóa chất pha dung dịch',
+    experimentContext: 'Pha chế dung dịch theo nồng độ'
+  },
+  {
+    id: 'SYN-WDP-FLK',
+    source: 'water-dispenser',
+    target: 'erlenmeyer-flask',
+    type: 'fluid_spout',
+    weight: 0.92,
+    signalSpeed: 1.2,
+    causalRule: 'Mở van bình cấp nước rót nước cất vào bình tam giác phục vụ hòa tan và lắc dung dịch',
+    studentCausal: 'Rót nước sạch từ bình cấp vào bình tam giác để hòa tan muối',
+    experimentContext: 'Hòa tan và pha chế dung dịch'
+  },
+  {
+    id: 'SYN-SEP-FLK',
+    source: 'separatory-funnel',
+    target: 'erlenmeyer-flask',
+    type: 'fluid_spout',
+    weight: 0.94,
+    signalSpeed: 1.3,
+    causalRule: 'Đặt bình tam giác dưới vòi xả của phễu chiết để hứng phân đoạn chất lỏng nặng hơn',
+    studentCausal: 'Đặt bình tam giác dưới phễu chiết → Hứng lớp nước ở dưới chảy ra',
+    experimentContext: 'Tách chiết chất lỏng không hòa tan'
+  },
+
+  // Ống nghiệm thủy tinh (Test Tube)
+  {
+    id: 'SYN-ALC-TUB',
+    source: 'alcohol-lamp',
+    target: 'test-tube',
+    type: 'thermal_exchange',
+    weight: 0.94,
+    signalSpeed: 1.4,
+    causalRule: 'Hơ nóng đều đáy ống nghiệm trên ngọn lửa đèn cồn để kích hoạt phản ứng hóa học',
+    studentCausal: 'Hơ đều ống nghiệm trên ngọn lửa đèn cồn để đun nóng hóa chất bên trong',
+    experimentContext: 'Đun nóng chất lỏng trong ống nghiệm'
+  },
+  {
+    id: 'SYN-STD-TUB',
+    source: 'retort-stand',
+    target: 'test-tube',
+    type: 'mechanical_clamp',
+    weight: 0.90,
+    signalSpeed: 1.2,
+    causalRule: 'Ngàm kẹp gỗ hoặc kẹp sắt của giá đỡ giữ cố định ống nghiệm nghiêng góc 45 độ an toàn',
+    studentCausal: 'Kẹp ống nghiệm lên giá sắt nghiêng góc 45° hướng về phía không có người',
+    experimentContext: 'Cố định ống nghiệm khi làm phản ứng'
+  },
+  {
+    id: 'SYN-WDP-TUB',
+    source: 'water-dispenser',
+    target: 'test-tube',
+    type: 'fluid_spout',
+    weight: 0.88,
+    signalSpeed: 1.0,
+    causalRule: 'Nhỏ giọt nước cất từ bình cấp vào ống nghiệm làm dung môi hòa tan lượng nhỏ chất mẫu',
+    studentCausal: 'Rót một ít nước sạch vào ống nghiệm để thực hiện phản ứng thử',
+    experimentContext: 'Thí nghiệm phản ứng ống nghiệm'
+  },
+
+  // Hộp bộ 6 thấu kính tiêu chuẩn (Optical Lens Box)
+  {
+    id: 'SYN-LBX-OPT',
+    source: 'optical-lens-box',
+    target: 'optical-lens',
+    type: 'optical_carrier',
+    weight: 0.96,
+    signalSpeed: 1.6,
+    causalRule: 'Cung cấp các thấu kính hoán đổi (+5cm, +10cm, +15cm, -10cm, -20cm) gá lên đế mang thấu kính',
+    studentCausal: 'Lấy thấu kính từ hộp ra để đổi tiêu cự f hoặc đổi sang thấu kính phân kỳ',
+    experimentContext: 'Khảo sát thấu kính các tiêu cự khác nhau'
+  },
+  {
+    id: 'SYN-LBX-OBN',
+    source: 'optical-lens-box',
+    target: 'optical-bench',
+    type: 'mechanical_rail',
+    weight: 0.88,
+    signalSpeed: 1.1,
+    causalRule: 'Bố trí hộp thấu kính cạnh thanh ray quang học để bảo quản các mẫu thấu kính tránh trầy xước',
+    studentCausal: 'Đặt hộp thấu kính ngay cạnh ray để tiện thay đổi thấu kính khi thực hành',
+    experimentContext: 'Bảo quản và hoán đổi phụ kiện quang học'
+  },
+
+  // Kính lúp cầm tay 5x (Magnifying Glass 5x)
+  {
+    id: 'SYN-MAG-GCY',
+    source: 'magnifying-glass',
+    target: 'graduated-cylinder',
+    type: 'optical_alignment',
+    weight: 0.92,
+    signalSpeed: 1.4,
+    causalRule: 'Phóng đại 5 lần thang chia vạch và đáy mặt khum của cột chất lỏng để đọc chính xác thể tích',
+    studentCausal: 'Dùng kính lúp soi vạch ống đong → Nhìn rõ từng mililit và đáy mặt khum cong lõm',
+    experimentContext: 'Đọc thể tích chính xác qua kính lúp'
+  },
+  {
+    id: 'SYN-MAG-RUL',
+    source: 'magnifying-glass',
+    target: 'ruler-30',
+    type: 'optical_alignment',
+    weight: 0.90,
+    signalSpeed: 1.3,
+    causalRule: 'Phóng đại vạch chia milimet trên thước thẳng để triệt tiêu sai số thị sai (parallax)',
+    studentCausal: 'Cầm kính lúp soi vạch chia thước kẻ → Đọc chính xác đến từng milimet',
+    experimentContext: 'Đo chiều dài chính xác với kính lúp'
+  },
+  {
+    id: 'SYN-MAG-CAL',
+    source: 'magnifying-glass',
+    target: 'vernier-caliper',
+    type: 'optical_alignment',
+    weight: 0.92,
+    signalSpeed: 1.4,
+    causalRule: 'Phóng đại vạch chia du xích 0.02mm của thước cặp để nhận biết vạch trùng chính xác',
+    studentCausal: 'Dùng kính lúp soi vạch trùng trên thước kẹp → Đọc chuẩn xác 0.02 mm',
+    experimentContext: 'Đọc vạch du xích thước cặp'
   }
 ];
 
@@ -1480,3 +1750,36 @@ export const EXPERIMENT_MACRO_CLUSTERS: ExperimentMacroCluster[] = [
     ]
   }
 ];
+
+export const CATEGORY_META: Record<DeviceCategory, { name: string; studentName: string; color: string; icon: string }> = {
+  G01_DIMENSION:    { name: 'G01 · Kích thước & Góc', studentName: 'Dụng cụ Đo chiều dài', color: '#f97316', icon: '📏' },
+  G02_MASS_FORCE:   { name: 'G02 · Khối lượng & Lực', studentName: 'Cân & Đo lực', color: '#ef4444', icon: '⚖️' },
+  G03_TIME_TEMP:    { name: 'G03 · Thời gian & Nhiệt', studentName: 'Nhiệt kế & Bấm giờ', color: '#eab308', icon: '🌡️' },
+  G04_VOLUMETRIC:   { name: 'G04 · Đo Thể tích', studentName: 'Ống đong & Bình chứa', color: '#06b6d4', icon: '🧪' },
+  G05_CHEM_HEATING: { name: 'G05 · Hóa học & Gia nhiệt', studentName: 'Đèn cồn & Đun nóng', color: '#ec4899', icon: '🔥' },
+  G06_OPTICS:       { name: 'G06 · Quang học', studentName: 'Đèn chiếu & Thấu kính', color: '#8b5cf6', icon: '🔦' },
+  G07_ELECTRICITY:  { name: 'G07 · Điện & Cảm ứng', studentName: 'Nguồn điện & Nam châm', color: '#10b981', icon: '⚡' },
+  G08_MECHANICS:    { name: 'G08 · Cơ học & Cân bằng', studentName: 'Đòn bẩy & Bình nước', color: '#f59e0b', icon: '⚙️' },
+  G09_BIOLOGY:      { name: 'G09 · Sinh học & Vi mô', studentName: 'Kính hiển vi & Tế bào', color: '#22c55e', icon: '🔬' },
+  G10_FLUID_SUPPLY: { name: 'G10 · Nguồn Lưu chất', studentName: 'Bình cấp nước sạch', color: '#3b82f6', icon: '🚰' },
+};
+
+export const SYNAPSE_META: Record<SynapseKind, { name: string; studentName: string; color: string; dash?: number[] }> = {
+  mechanical_support:        { name: 'Đỡ tải cơ học', studentName: 'Đặt lên đĩa cân', color: '#ef4444' },
+  mechanical_clamp:          { name: 'Kẹp ôm khít', studentName: 'Kẹp đo kích thước', color: '#f97316' },
+  mechanical_hook:           { name: 'Móc treo đàn hồi', studentName: 'Móc treo lực kế', color: '#fb923c', dash: [6, 4] },
+  mechanical_rail:           { name: 'Ray trượt 1D', studentName: 'Gắn trượt trên ray', color: '#eab308' },
+  optical_carrier:           { name: 'Đế mang quang', studentName: 'Đế trượt quang học', color: '#a78bfa' },
+  optical_alignment:         { name: 'Đồng trục truyền quang', studentName: 'Chiếu tia sáng qua', color: '#c084fc', dash: [5, 5] },
+  optical_refraction:        { name: 'Khúc xạ & Tán sắc', studentName: 'Bẻ cong tia sáng / Cầu vồng', color: '#e879f9', dash: [4, 4] },
+  electrical_terminal:       { name: 'Cọc cắm điện 4mm', studentName: 'Dây cắm nguồn điện', color: '#10b981' },
+  electrical_interlock:      { name: 'Liên động nguồn điện', studentName: 'Cắm điện mới sáng đèn', color: '#06b6d4', dash: [8, 3] },
+  fluid_spout:               { name: 'Rót / Xả chất lỏng', studentName: 'Nước chảy từ vòi', color: '#3b82f6' },
+  fluid_receptacle:          { name: 'Miệng hứng chất lỏng', studentName: 'Hứng nước chảy vào', color: '#60a5fa', dash: [4, 4] },
+  submersion:                { name: 'Thả chìm chiếm chỗ', studentName: 'Thả chìm làm dâng nước', color: '#14b8a6', dash: [8, 4] },
+  buoyancy_force:            { name: 'Lực đẩy Archimedes', studentName: 'Lực đẩy nước nâng lên', color: '#2dd4bf', dash: [3, 5] },
+  electromagnetic_induction: { name: 'Cảm ứng điện từ', studentName: 'Nam châm tạo ra điện', color: '#facc15', dash: [6, 4] },
+  thermal_exchange:          { name: 'Truyền nhiệt đối lưu', studentName: 'Đun nóng truyền nhiệt', color: '#f43f5e', dash: [5, 5] },
+  microscopy_dock:           { name: 'Gá vi thể hiển vi', studentName: 'Soi mẫu vật tế bào', color: '#4ade80' }
+};
+

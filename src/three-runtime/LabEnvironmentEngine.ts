@@ -852,7 +852,7 @@ export const PHYSICS_FIDELITY_SPECS: PhysicsFidelitySpec[] = [
   {
     level: 'L1',
     titleVi: 'Cấp L1 – Tương tác cơ bản (Prototyping nhanh)',
-    formulaSummary: 'm_display = m_ref; V_display = V_base + V_obj',
+    formulaSummary: '$m_{\\text{display}} = m_{\\text{ref}}, \\quad V_{\\text{display}} = V_{\\text{base}} + V_{\\text{obj}}$',
     noiseAndErrorModel: 'Không tính nhiễu Gaussian hay trôi nhiệt độ (Sai số mô hình 0%)',
     targetWebGlFps: 60,
     accuracyPercent: 95.0,
@@ -862,7 +862,7 @@ export const PHYSICS_FIDELITY_SPECS: PhysicsFidelitySpec[] = [
   {
     level: 'L2',
     titleVi: 'Cấp L2 – Công thức Vật lý & Nhiễu chuẩn Datasheet (Mặc định)',
-    formulaSummary: 'F = m·g; Δx = F/k; ρ = m/V; ΔT_drift = ±0.05% / 10°C',
+    formulaSummary: '$F = mg, \\; \\Delta x = \\frac{F}{k}, \\; \\rho = \\frac{m}{V}$',
     noiseAndErrorModel: 'Nhiễu Gaussian ±0.5 ĐCNN + trôi nhiệt độ theo T_air & v_air',
     targetWebGlFps: 60,
     accuracyPercent: 98.4,
@@ -872,7 +872,7 @@ export const PHYSICS_FIDELITY_SPECS: PhysicsFidelitySpec[] = [
   {
     level: 'L3',
     titleVi: 'Cấp L3 – Động học & Dời chỗ chất lỏng thời gian thực',
-    formulaSummary: 'F_A = ρ_liquid · g · V_submerged; Q = P·t = m·c·ΔT',
+    formulaSummary: '$F_A = \\rho_{\\text{liquid}} g V_{\\text{sub}}, \\quad Q = Pt = mc\\Delta T$',
     noiseAndErrorModel: 'Va chạm BoundingBox 3D + mặt khum meniscus + dao động tắt dần lò xo/đĩa cân',
     targetWebGlFps: 55,
     accuracyPercent: 99.2,
@@ -882,7 +882,7 @@ export const PHYSICS_FIDELITY_SPECS: PhysicsFidelitySpec[] = [
   {
     level: 'L4',
     titleVi: 'Cấp L4 – Mô phỏng Chi tiết cao & Kiểm định Thống kê (t-test)',
-    formulaSummary: 'ρ(T, P_atm) hiệu chỉnh nén khí quyển + tán sắc Cauchy n(λ) + độ nhớt η',
+    formulaSummary: '$\\rho(T, P_{\\text{atm}}), \\quad n(\\lambda) = A + \\frac{B}{\\lambda^2}, \\quad \\eta(T)$',
     noiseAndErrorModel: 'Đầy đủ 24 biến môi trường + tự động xuất bản ghi MeasurementRecord kiểm định',
     targetWebGlFps: 48,
     accuracyPercent: 99.7,

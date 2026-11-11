@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { AssetDefinition, ProceduralArchetype, SceneInstance } from '../domain/types';
 import { htmlEquipmentModuleRegistry } from './HtmlEquipmentModuleRegistry';
+import { IsoGUMMetrologyEngine } from '../core-physics/IsoGUMMetrologyEngine';
 
 /**
  * OPENLAB 3D — PROCEDURAL MULTI-PART PBR EQUIPMENT GENERATOR
@@ -2488,9 +2489,25 @@ export function addConcaveMeniscusAndRipples(
 ): void {
   const profile = FLUID_PROFILES[fluidKind] || FLUID_PROFILES['clean-water'];
 
-  // 1. Glossy top water surface cap (radial rings for smooth hydrostatic deformation)
+  // 1. Glossy top water surface cap deformed by Laplace-Young capillary meniscus curve z(r) = h_c * (r/R)^2
+  const capRadius = radius * 0.992;
+  const capGeo = new THREE.RingGeometry(0.0001, capRadius, 48, 6).rotateX(-Math.PI / 2);
+  const hcCapillaryM = Math.min(
+    0.0032,
+    Math.max(0.0010, (0.000015 / Math.max(0.005, radius)) * profile.capillaryHeightFactor),
+  );
+  const capPos = capGeo.attributes.position;
+  for (let vi = 0; vi < capPos.count; vi++) {
+    const vx = capPos.getX(vi);
+    const vz = capPos.getZ(vi);
+    const rNorm = Math.min(1.0, Math.hypot(vx, vz) / Math.max(1e-5, capRadius));
+    capPos.setY(vi, hcCapillaryM * rNorm * rNorm);
+  }
+  capPos.needsUpdate = true;
+  capGeo.computeVertexNormals();
+
   const surfaceCap = new THREE.Mesh(
-    new THREE.RingGeometry(0.0001, radius * 0.992, 48, 6).rotateX(-Math.PI / 2),
+    capGeo,
     new THREE.MeshPhysicalMaterial({
       color: profile.baseColor,
       attenuationColor: new THREE.Color(profile.attenuationColor),
@@ -7277,10 +7294,25 @@ export function applyInstanceStateToObject3D(
   if (arch === 'electronic-balance') {
     const tare = instance.instanceState.tareOffsetG ?? 0;
     const rawMass = instance.instanceState.measuredMassG ?? 0;
-    const netMass = rawMass - tare;
-    const displayed = (Math.abs(netMass) < 0.005 ? 0 : netMass).toFixed(2);
 
     const lcdNode = instanceRoot.getObjectByName('scale_display') as THREE.Mesh | undefined;
+    let displayed: string;
+    if (lcdNode) {
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      if (
+        lcdNode.userData.lastTargetMass === undefined ||
+        Math.abs(lcdNode.userData.lastTargetMass - rawMass) > 1e-4
+      ) {
+        lcdNode.userData.lastTargetMass = rawMass;
+        lcdNode.userData.changeTimestamp = now;
+      }
+      const elapsedSec = (now - (lcdNode.userData.changeTimestamp ?? now)) / 1000.0;
+      const resp = IsoGUMMetrologyEngine.calculateLoadcellResponse(rawMass, elapsedSec, tare, 0.01);
+      displayed = resp.displayString;
+    } else {
+      const netMass = rawMass - tare;
+      displayed = (Math.abs(netMass) < 0.005 ? 0 : netMass).toFixed(2);
+    }
     if (lcdNode && lcdNode.material instanceof THREE.MeshBasicMaterial) {
       if (lcdNode.userData.lastText !== displayed) {
         lcdNode.userData.lastText = displayed;
@@ -7670,7 +7702,10 @@ export function applyInstanceStateToObject3D(
   if (arch === 'thermometer') {
     const colGroup = instanceRoot.getObjectByName('plunger');
     if (colGroup) {
-      const tempC = instance.instanceState.temperatureC ?? 25.0;
+      const tempC =
+        instance.instanceState.thermometerTempC ??
+        instance.instanceState.temperatureC ??
+        25.0;
       const ratio = THREE.MathUtils.clamp((tempC + 10) / 120, 0.08, 1.0);
       colGroup.scale.set(1, ratio, 1);
     }

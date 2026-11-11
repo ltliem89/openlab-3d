@@ -6,6 +6,7 @@ import {
   LabEnvironment,
   SceneInstance,
 } from '../../domain/types';
+import { MathFormula, RichMathText } from '../common/MathFormula';
 import {
   ChevronDown,
   ChevronUp,
@@ -120,11 +121,26 @@ export const BottomWorkspaceTray: React.FC<BottomWorkspaceTrayProps> = ({
       ? `${(sampleVolMl / 1000).toFixed(4)} L`
       : `${sampleVolMl.toFixed(1)} mL`;
 
+    const isOpticsExp = activeExperiment.experimentId === 'OL3D-EXP-OPTICS-LENS-0001';
+    const isDisplacementExp = activeExperiment.experimentId === 'OL3D-EXP-DISPLACEMENT-0001';
+
+    let metricLabel = `Khối lượng: ${formattedMass} · Thể tích: ${formattedVolume}`;
+    if (isOpticsExp) {
+      metricLabel = isConverted
+        ? "$d = 200\\text{ mm} \\cdot d' = 200\\text{ mm} \\cdot f = +100\\text{ mm}$"
+        : "$d = 20.0\\text{ cm} \\cdot d' = 20.0\\text{ cm} \\cdot f = +10.0\\text{ cm}$";
+    } else if (isDisplacementExp) {
+      metricLabel = isConverted
+        ? '$P = 650\\text{ mN} \\cdot F = 410\\text{ mN} \\cdot F_A = 240\\text{ mN}$'
+        : '$P = 0.65\\text{ N} \\cdot F = 0.41\\text{ N} \\cdot F_A = 0.24\\text{ N}$';
+    }
+
     return {
       formattedMass,
       formattedVolume,
+      metricLabel,
     };
-  }, [sceneInstances, assetsMap, isConverted]);
+  }, [sceneInstances, assetsMap, isConverted, activeExperiment.experimentId]);
 
   // Convert sample measurement rows based on current unitMode ('standard' vs 'converted')
   const displayedResults = useMemo<ExperimentMeasurementRow[]>(() => {
@@ -329,7 +345,7 @@ export const BottomWorkspaceTray: React.FC<BottomWorkspaceTrayProps> = ({
                         }`}
                       >
                         <span className="truncate">
-                          Bước {st.stepNumber}. {st.title}
+                          Bước {st.stepNumber}. <RichMathText text={st.title} />
                         </span>
                         <span className="text-[10px] font-mono shrink-0">
                           {idx < currentStepIndex ? 'Hoàn tất' : isCurrent ? 'Đang mở' : ''}
@@ -371,21 +387,21 @@ export const BottomWorkspaceTray: React.FC<BottomWorkspaceTrayProps> = ({
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <h4 className="text-xs font-bold text-slate-100">
-                      Bước {activeStep.stepNumber}: {activeStep.title}
+                      Bước {activeStep.stepNumber}: <RichMathText text={activeStep.title} />
                     </h4>
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] font-mono text-cyan-300 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded tabular-nums">
-                        Khối lượng: {liveScenarioSummary.formattedMass} · Thể tích:{' '}
-                        {liveScenarioSummary.formattedVolume}
+                        <RichMathText text={liveScenarioSummary.metricLabel} />
                       </span>
                       <span className="text-[11px] font-mono text-amber-400">
                         Mức mô phỏng: {activeExperiment.simulationFidelity.toUpperCase()}
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-slate-300">{activeStep.description}</p>
+                  <p className="text-xs text-slate-300"><RichMathText text={activeStep.description} /></p>
                   <p className="text-xs text-cyan-200/90 bg-cyan-950/30 border border-cyan-500/30 rounded p-2">
-                    Hướng dẫn thao tác: {activeStep.instructionDetail}
+                    <span className="font-bold text-cyan-300">Hướng dẫn thao tác: </span>
+                    <RichMathText text={activeStep.instructionDetail} />
                   </p>
                 </div>
 
@@ -432,15 +448,22 @@ export const BottomWorkspaceTray: React.FC<BottomWorkspaceTrayProps> = ({
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2 text-xs flex-wrap">
                 <div className="flex items-center gap-2 flex-wrap">
-                  {activeExperiment.formulas.map((f) => (
-                    <span
-                      key={f.expression}
-                      className="font-mono text-cyan-300 bg-[#0B0F17] border border-slate-800 px-2 py-0.5 rounded"
-                      title={f.description}
-                    >
-                      {f.expression}
-                    </span>
-                  ))}
+                  {activeExperiment.formulas.map((f) => {
+                    const cleanMath = f.expression
+                      .replace(/ρ/g, '\\rho')
+                      .replace(/V₂/g, 'V_2')
+                      .replace(/V₁/g, 'V_1')
+                      .replace(/×/g, '\\times ');
+                    return (
+                      <span
+                        key={f.expression}
+                        className="text-cyan-300 bg-[#0B0F17] border border-slate-800 px-2 py-0.5 rounded flex items-center"
+                        title={f.description}
+                      >
+                        <MathFormula math={cleanMath} />
+                      </span>
+                    );
+                  })}
                   <button
                     type="button"
                     onClick={handleToggleUnitMode}
@@ -476,7 +499,7 @@ export const BottomWorkspaceTray: React.FC<BottomWorkspaceTrayProps> = ({
                           {row.quantityName}
                         </td>
                         <td className="py-1.5 px-3 text-cyan-300 font-semibold">
-                          {row.symbol}
+                          <MathFormula math={row.symbol} />
                         </td>
                         <td className="py-1.5 px-3 text-right text-slate-100 font-semibold">
                           {row.value}
@@ -485,7 +508,7 @@ export const BottomWorkspaceTray: React.FC<BottomWorkspaceTrayProps> = ({
                           {row.unit}
                         </td>
                         <td className="py-1.5 px-3 font-sans text-slate-400">
-                          {row.formulaNote}
+                          <RichMathText text={row.formulaNote} />
                         </td>
                         <td className="py-1.5 px-3 text-amber-400 text-[11px]">
                           DỮ LIỆU MINH HỌA ({row.status})

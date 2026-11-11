@@ -23,6 +23,8 @@ export interface CircuitDerivedOutputs {
   lampSwitchOn: boolean;
   voltageSettingV: number;
   voltageAtLampV: number;
+  internalResistanceOhms: number;
+  voltageSagVolts: number;
   currentAmperes: number;
   lampPowerWatts: number;
   isLampLit: boolean;
@@ -52,12 +54,12 @@ export class CircuitSolver {
     const psuPoweredOn = Boolean(state.isPoweredOn ?? state.psuPoweredOn ?? false);
     const lampSwitchOn = state.lampSwitchOn !== false && state.isLampSwitchOn !== false;
     const voltageSettingV =
-      typeof state.voltageSetting === 'number' && state.voltageSetting > 0
-        ? state.voltageSetting
-        : typeof state.voltageStepV === 'number' && state.voltageStepV > 0
-          ? state.voltageStepV
-          : typeof state.supplyVoltageV === 'number' && state.supplyVoltageV > 0
-            ? state.supplyVoltageV
+      typeof state.voltageSetting === 'number' && Number.isFinite(state.voltageSetting)
+        ? Math.max(0.0, state.voltageSetting)
+        : typeof state.voltageStepV === 'number' && Number.isFinite(state.voltageStepV)
+          ? Math.max(0.0, state.voltageStepV)
+          : typeof state.supplyVoltageV === 'number' && Number.isFinite(state.supplyVoltageV)
+            ? Math.max(0.0, state.supplyVoltageV)
             : 12.0;
 
     let isCircuitClosed = false;
@@ -84,10 +86,25 @@ export class CircuitSolver {
         reasonVi = 'Công tắc trên vỏ đèn đang ngắt (Công tắc đèn OFF)';
       } else {
         // Cả nguồn và đèn đều bật, mạch kín
-        voltageAtLampV = voltageSettingV;
-        const lampResistanceOhms = 12.0; // Điện trở tim đèn danh định 12V / 12W -> 1A
-        currentAmperes = voltageAtLampV / lampResistanceOhms;
-        lampPowerWatts = voltageAtLampV * currentAmperes;
+        // Tính toán nội trở nguồn r và điện trở đường dây theo tiêu chuẩn Hermes P5
+        const internalResistanceOhms = Math.max(0.0, Number(state.internalResistanceOhms ?? (state.enableRealisticSag ? 0.5 : 0.0)));
+        const wireResistanceOhms = Math.max(0.0, Number(state.wireResistanceOhms ?? (state.enableRealisticSag ? 0.08 : 0.0)));
+
+        // Hỗ trợ điện trở phi tuyến Vonfram theo nhiệt độ dây tóc R(T) nếu có
+        let lampResistanceOhms = 12.0; // Danh định 12V / 12W -> 1A tại cân bằng nhiệt
+        if (typeof state.lampResistanceOhms === 'number' && state.lampResistanceOhms > 0) {
+          lampResistanceOhms = state.lampResistanceOhms;
+        } else if (typeof state.filamentTemperatureK === 'number') {
+          const T0 = 293.15;
+          const deltaT = Math.max(-100.0, state.filamentTemperatureK - T0);
+          lampResistanceOhms = Math.max(0.2, 1.0 * (1.0 + 4.5e-3 * deltaT + 1.0e-6 * deltaT * deltaT));
+        }
+
+        const totalResistanceOhms = Math.max(1e-4, lampResistanceOhms + internalResistanceOhms + wireResistanceOhms);
+        currentAmperes = voltageSettingV / totalResistanceOhms;
+        voltageAtLampV = Math.max(0.0, currentAmperes * lampResistanceOhms);
+        const voltageSagVolts = Math.max(0.0, voltageSettingV - voltageAtLampV);
+        lampPowerWatts = Math.max(0.0, voltageAtLampV * currentAmperes);
 
         if (voltageAtLampV < LAMP_IGNITION_THRESHOLD_VOLTAGE_V) {
           isLampLit = false;
@@ -141,6 +158,8 @@ export class CircuitSolver {
         lampSwitchOn,
         voltageSettingV,
         voltageAtLampV,
+        internalResistanceOhms: Number(state.internalResistanceOhms ?? 0.0),
+        voltageSagVolts: voltageSettingV - voltageAtLampV,
         currentAmperes,
         lampPowerWatts,
         isLampLit,

@@ -23,23 +23,12 @@ import {
   X,
   Trash2,
   AlertTriangle,
+  ZoomIn,
+  Award,
+  Sparkles,
 } from 'lucide-react';
 import { StudentGuidedStepNumber } from '../student/StudentGuidedStepPanel';
-import equipmentStandardMdRaw from '../../../docs/archive_reports/EQUIPMENT_MODULE_STANDARD.md?raw';
-
-const downloadEquipmentStandardMd = () => {
-  const blob = new Blob([equipmentStandardMdRaw], {
-    type: 'text/markdown;charset=utf-8',
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'EQUIPMENT_MODULE_STANDARD.md';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
+import { RichMathText } from '../common/MathFormula';
 
 export type UserRoleMode = 'student' | 'teacher';
 
@@ -67,6 +56,8 @@ interface TopNavBarProps {
   recentSearches?: string[];
   headerProgressStep?: HeaderProgressStep;
   studentGuidedStep?: StudentGuidedStepNumber;
+  guidedStepTitle?: string;
+  maxGuidedSteps?: number;
   isDarkMode?: boolean;
   isLibraryOpen?: boolean;
   isGuideOpen?: boolean;
@@ -84,7 +75,6 @@ interface TopNavBarProps {
   onChangeUserRole: (role: UserRoleMode) => void;
   onSelectStudentScreen: (screen: StudentScreenId) => void;
   onOpenStudentHelp: () => void;
-  onOpenHtmlModuleImporter?: () => void;
   onSelectSection: (section: NavSectionId) => void;
   onGlobalSearchChange: (value: string) => void;
   onCommitSearch?: (term: string) => void;
@@ -92,6 +82,8 @@ interface TopNavBarProps {
   onRemoveRecentSearch?: (term: string) => void;
   onClearRecentSearches?: () => void;
   onQuickAddSelectedAsset: () => void;
+  onOpenMicroMacroLens?: () => void;
+  onRunGoldenDemo?: () => void;
   notificationCount: number;
   recentLogs: Array<{ id: string; text: string; time: string }>;
 }
@@ -102,7 +94,7 @@ const TEACHER_NAV_ITEMS: Array<{ id: NavSectionId; label: string }> = [
   { id: 'lab-workspace', label: 'Phòng 3D' },
   { id: 'kits', label: 'Bộ dụng cụ' },
   { id: 'environments', label: 'Môi trường' },
-  { id: 'governance', label: 'Kiểm định' },
+  { id: 'governance', label: 'Mạng Nơ-ron' },
 ];
 
 const HEADER_FOUR_STEPS: Array<{ step: HeaderProgressStep; label: string }> = [
@@ -128,6 +120,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   recentSearches = [],
   headerProgressStep = 1,
   studentGuidedStep,
+  guidedStepTitle,
+  maxGuidedSteps: maxGuidedStepsProp,
   isDarkMode = false,
   isLibraryOpen = true,
   isGuideOpen = true,
@@ -145,7 +139,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onChangeUserRole,
   onSelectStudentScreen,
   onOpenStudentHelp,
-  onOpenHtmlModuleImporter,
   onSelectSection,
   onGlobalSearchChange,
   onCommitSearch,
@@ -153,6 +146,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onRemoveRecentSearch,
   onClearRecentSearches,
   onQuickAddSelectedAsset,
+  onOpenMicroMacroLens,
+  onRunGoldenDemo,
   notificationCount,
   recentLogs,
 }) => {
@@ -316,7 +311,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       ref={searchContainerRef}
       className={`relative ${
         compactMode
-          ? 'w-[148px] sm:w-[196px] xl:w-[236px] shrink-0'
+          ? 'w-[148px] sm:w-[196px] xl:w-[170px] 2xl:w-[236px] shrink-0'
           : 'w-full max-w-xs'
       }`}
     >
@@ -516,7 +511,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   );
 
   const currentGuidedStep = studentGuidedStep ?? (headerProgressStep as any) ?? 1;
-  const maxGuidedSteps = 5;
+  const maxGuidedSteps = maxGuidedStepsProp ?? 5;
 
   const handleStepBack = () => {
     if (onChangeGuidedStep) {
@@ -538,13 +533,14 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     }
   };
 
-  const STEP_TITLES: Record<number, string> = {
+  const FALLBACK_STEP_TITLES: Record<number, string> = {
     1: '1. Chuẩn bị',
-    2: '2. Cân khối lượng m',
-    3: '3. Đo thể tích V₁',
-    4: '4. Thả chìm đo V₂',
-    5: '5. Tính khối lượng riêng D',
+    2: '2. Cân khối lượng $m$',
+    3: '3. Đo thể tích $V_1$',
+    4: '4. Thả chìm đo $V_2$',
+    5: '5. Tính khối lượng riêng $D$',
   };
+  const resolvedStepTitle = guidedStepTitle || FALLBACK_STEP_TITLES[currentGuidedStep] || '';
 
   // STUDENT MODE HEADER — Planetary Cosmos Command Deck (Sleek, compact icon-driven top bar to maximize 3D simulation viewport)
   if (userRole === 'student') {
@@ -605,8 +601,11 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <span className="text-[#41D9F5] font-mono whitespace-nowrap">
               BƯỚC {currentGuidedStep}/{maxGuidedSteps}
             </span>
-            <span className="hidden xl:inline text-[#E8F2FF] font-semibold text-[11.5px] border-l border-[#41D9F5]/25 pl-1.5 whitespace-nowrap">
-              {STEP_TITLES[currentGuidedStep] ?? ''}
+            <span
+              title={resolvedStepTitle.replace(/\$/g, '')}
+              className="hidden xl:inline-block max-w-[165px] 2xl:max-w-[245px] truncate text-[#E8F2FF] font-semibold text-[11.5px] border-l border-[#41D9F5]/25 pl-1.5 whitespace-nowrap align-bottom"
+            >
+              <RichMathText text={resolvedStepTitle} />
             </span>
           </div>
 
@@ -636,8 +635,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               }
               if (onToggleLibraryPanel) {
                 onToggleLibraryPanel();
-              } else {
-                onOpenHtmlModuleImporter?.();
               }
             }}
             className="px-2.5 h-8 rounded-[7px] bg-[#10223D] hover:bg-[#4D8DFF] border border-[#41D9F5]/55 text-[#E8F2FF] text-[12px] font-extrabold flex items-center gap-1 shadow-xs transition-colors cursor-pointer whitespace-nowrap"
@@ -709,17 +706,30 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                   </button>
                 </div>
 
-                {onOpenHtmlModuleImporter && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowMobileMenuPopover(false);
+                    if (onOpenMicroMacroLens) onOpenMicroMacroLens();
+                    else window.dispatchEvent(new CustomEvent('openlab:open-micro-macro-lens'));
+                  }}
+                  className="w-full min-h-[44px] px-3 py-2 rounded-[9px] bg-[#0284C7] hover:bg-[#0369A1] text-white text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer"
+                >
+                  <ZoomIn className="w-4 h-4 shrink-0" />
+                  <span>Lăng kính Vi mô (Micro Lens)</span>
+                </button>
+
+                {onOpenNeuralModal && (
                   <button
                     type="button"
                     onClick={() => {
                       setShowMobileMenuPopover(false);
-                      onOpenHtmlModuleImporter();
+                      onOpenNeuralModal();
                     }}
-                    className="w-full min-h-[44px] px-3 py-2 rounded-[9px] bg-[#059669] hover:bg-[#047857] text-white text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer"
+                    className="w-full min-h-[44px] px-3 py-2 rounded-[9px] bg-gradient-to-r from-[#4D8DFF] to-[#9B83FF] text-white text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer"
                   >
-                    <FileCode className="w-4 h-4 shrink-0" />
-                    <span>Nạp Module Thiết Bị (.HTML)</span>
+                    <span>🪐</span>
+                    <span>Sơ đồ Mạng Nơ-ron Thiết bị</span>
                   </button>
                 )}
 
@@ -727,12 +737,13 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                   type="button"
                   onClick={() => {
                     setShowMobileMenuPopover(false);
-                    downloadEquipmentStandardMd();
+                    if (onRunGoldenDemo) onRunGoldenDemo();
+                    else window.dispatchEvent(new CustomEvent('openlab:run-golden-demo'));
                   }}
-                  className="w-full min-h-[44px] px-3 py-2 rounded-[9px] bg-[#D97706] hover:bg-[#B45309] text-white text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer"
+                  className="w-full min-h-[44px] px-3 py-2 rounded-[9px] bg-gradient-to-r from-[#BE185D] to-[#EC4899] text-white text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer"
                 >
-                  <Download className="w-4 h-4 shrink-0" />
-                  <span>.MD</span>
+                  <Sparkles className="w-4 h-4 shrink-0 text-amber-200" />
+                  <span>Kịch bản Thực hành Mẫu</span>
                 </button>
 
                 <button
@@ -840,17 +851,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         </div>
 
         {/* DESKTOP ACTION BAR (md+ >= 768px) */}
-        <div className="hidden md:flex items-center gap-1.5 shrink-0">
-          {/* Nút Tải ngay file chuẩn EQUIPMENT_MODULE_STANDARD.md (v2.4) — Chỉ hiển thị '.MD' */}
-          <button
-            type="button"
-            onClick={downloadEquipmentStandardMd}
-            className="px-2.5 h-8 rounded-[7px] bg-[#10223D] hover:bg-[#19335A] border border-[#FFB85C]/65 text-[#FFB85C] text-[13px] font-extrabold flex items-center justify-center shadow-xs transition-colors cursor-pointer whitespace-nowrap"
-            title="Tải file chuẩn EQUIPMENT_MODULE_STANDARD.md (v2.4) về máy tính"
-          >
-            <span>.MD</span>
-          </button>
-
+        <div className="hidden md:flex items-center gap-1 2xl:gap-1.5 shrink-0">
           {/* Nút mở/ẩn bảng Hướng dẫn thí nghiệm */}
           <button
             type="button"
@@ -865,7 +866,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 onOpenStudentHelp();
               }
             }}
-            className={`px-2.5 h-8 rounded-[7px] border flex items-center gap-1 text-[12.5px] font-extrabold transition-colors cursor-pointer shadow-xs ${
+            className={`px-2 2xl:px-2.5 h-8 rounded-[7px] border flex items-center gap-1 text-[12px] 2xl:text-[12.5px] font-extrabold transition-colors cursor-pointer shadow-xs whitespace-nowrap ${
               isGuideOpen
                 ? 'bg-[#DC2626] hover:bg-[#B91C1C] border-[#F87171] text-white'
                 : 'bg-[#10223D] hover:bg-[#19335A] border-[#48D6A0]/65 text-[#48D6A0]'
@@ -882,7 +883,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <button
               type="button"
               onClick={onToggleNeuralGuide}
-              className={`h-9 px-2.5 rounded-[8px] border flex items-center gap-1.5 transition-all cursor-pointer font-bold text-xs ${
+              className={`h-8 2xl:h-9 px-2 2xl:px-2.5 rounded-[8px] border flex items-center gap-1 2xl:gap-1.5 transition-all cursor-pointer font-bold text-xs whitespace-nowrap ${
                 isNeuralGuideEnabled
                   ? 'bg-gradient-to-r from-[#0B1930] to-[#10223D] border-[#48D6A0] text-[#48D6A0] shadow-[0_0_14px_rgba(72,214,160,0.32)]'
                   : 'bg-[#0B1930]/85 hover:bg-[#10223D] border-[#41D9F5]/25 text-[#A8BCD5]'
@@ -897,12 +898,42 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             </button>
           )}
 
+          {/* Nút Lăng kính Đa thang đo Vi mô (Micro-Macro Lens) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenMicroMacroLens) onOpenMicroMacroLens();
+              else window.dispatchEvent(new CustomEvent('openlab:open-micro-macro-lens'));
+            }}
+            className="h-8 2xl:h-9 px-2 2xl:px-2.5 rounded-[8px] bg-gradient-to-r from-[#0F2847] to-[#133E68] hover:from-[#174378] hover:to-[#1B5085] border border-[#38BDF8]/65 text-[#38BDF8] hover:text-white shadow-[0_0_12px_rgba(56,189,248,0.25)] flex items-center gap-1 2xl:gap-1.5 transition-all cursor-pointer text-xs font-extrabold whitespace-nowrap"
+            title="Lăng kính Đa thang đo Vi mô (Micro-Macro Lens): Quan sát động học phân tử H2O, electron & photon"
+            aria-label="Lăng kính Vi mô"
+          >
+            <ZoomIn className="w-3.5 h-3.5 shrink-0 text-[#38BDF8]" />
+            <span className="hidden xl:inline">Vi mô</span>
+          </button>
+
+          {/* Nút Kịch bản Thực hành Mẫu */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onRunGoldenDemo) onRunGoldenDemo();
+              else window.dispatchEvent(new CustomEvent('openlab:run-golden-demo'));
+            }}
+            className="h-8 2xl:h-9 px-2 2xl:px-2.5 rounded-[8px] bg-gradient-to-r from-[#831843] via-[#BE185D] to-[#EC4899] hover:brightness-110 border border-[#F472B6]/80 text-white shadow-[0_0_16px_rgba(236,72,153,0.4)] flex items-center gap-1 2xl:gap-1.5 transition-all cursor-pointer text-xs font-extrabold animate-pulse whitespace-nowrap"
+            title="Kịch bản Vàng ViSEF (Golden Run): 1-Click hoàn thành chu trình đo đạc & bừng sáng định luật Eureka trước Ban Giám khảo"
+            aria-label="Demo Vàng ViSEF"
+          >
+            <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-200" />
+            <span className="hidden 2xl:inline">Demo Vàng</span>
+          </button>
+
           {/* Nút Mở Sơ đồ Nơ-ron Toàn cảnh (Planetary Cosmos Map) */}
           {onOpenNeuralModal && (
             <button
               type="button"
               onClick={onOpenNeuralModal}
-              className="h-9 px-2.5 rounded-[8px] bg-gradient-to-r from-[#10223D] to-[#1E1B4B] hover:from-[#19335A] hover:to-[#2E296E] border border-[#9B83FF]/65 text-[#E8F2FF] shadow-[0_0_16px_rgba(155,131,255,0.28)] flex items-center gap-1.5 transition-all cursor-pointer text-xs font-extrabold"
+              className="h-8 2xl:h-9 px-2 2xl:px-2.5 rounded-[8px] bg-gradient-to-r from-[#10223D] to-[#1E1B4B] hover:from-[#19335A] hover:to-[#2E296E] border border-[#9B83FF]/65 text-[#E8F2FF] shadow-[0_0_16px_rgba(155,131,255,0.28)] flex items-center gap-1 2xl:gap-1.5 transition-all cursor-pointer text-xs font-extrabold whitespace-nowrap"
               title="Mở Bản đồ Vũ trụ Tri thức & Sơ đồ Mạng Nơ-ron KHTN THCS"
               aria-label="Sơ đồ Nơ-ron"
             >
@@ -916,7 +947,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <button
               type="button"
               onClick={onToggleFullscreen}
-              className={`w-9 h-9 rounded-[8px] border flex items-center justify-center transition-colors cursor-pointer ${
+              className={`w-8 h-8 2xl:w-9 2xl:h-9 rounded-[8px] border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                 isFullscreen
                   ? 'bg-[#41D9F5] text-[#050B18] border-white font-bold'
                   : 'bg-[#0B1930] hover:bg-[#10223D] border-[#41D9F5]/30 text-[#E8F2FF]'
@@ -937,7 +968,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <button
               type="button"
               onClick={onToggleDarkMode}
-              className={`w-9 h-9 rounded-[8px] border flex items-center justify-center transition-colors cursor-pointer ${
+              className={`w-8 h-8 2xl:w-9 2xl:h-9 rounded-[8px] border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
                 isDarkMode
                   ? 'bg-[#0B1930] hover:bg-[#10223D] border-[#41D9F5]/50 text-[#FFB85C]'
                   : 'bg-[#0B1930] hover:bg-[#10223D] border-[#41D9F5]/30 text-[#E8F2FF]'
@@ -957,7 +988,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <button
             type="button"
             onClick={onOpenStudentHelp}
-            className="w-9 h-9 rounded-[8px] bg-[#0B1930] hover:bg-[#10223D] border border-[#41D9F5]/30 text-[#E8F2FF] flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 2xl:w-9 2xl:h-9 rounded-[8px] bg-[#0B1930] hover:bg-[#10223D] border border-[#41D9F5]/30 text-[#E8F2FF] flex items-center justify-center transition-colors cursor-pointer shrink-0"
             title="Trợ giúp"
             aria-label="Trợ giúp"
           >
@@ -968,7 +999,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <button
             type="button"
             onClick={() => setShowResetConfirmModal(true)}
-            className="w-9 h-9 rounded-[8px] bg-[#0B1930] hover:bg-[#10223D] border border-[#41D9F5]/30 text-[#E8F2FF] flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 2xl:w-9 2xl:h-9 rounded-[8px] bg-[#0B1930] hover:bg-[#10223D] border border-[#41D9F5]/30 text-[#E8F2FF] flex items-center justify-center transition-colors cursor-pointer shrink-0"
             title="Đặt lại bàn thí nghiệm"
             aria-label="Đặt lại bàn thí nghiệm"
           >
@@ -983,7 +1014,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 studentScreen === 'home' ? 'lab-room' : 'home',
               )
             }
-            className={`w-9 h-9 rounded-[8px] flex items-center justify-center transition-colors border cursor-pointer ${
+            className={`w-8 h-8 2xl:w-9 2xl:h-9 rounded-[8px] flex items-center justify-center transition-colors border cursor-pointer shrink-0 ${
               studentScreen === 'home'
                 ? 'bg-[#4D8DFF] text-white border-[#41D9F5]'
                 : 'bg-[#0B1930] text-[#E8F2FF] border-[#41D9F5]/30 hover:bg-[#10223D]'
@@ -998,7 +1029,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <button
             type="button"
             onClick={() => onChangeUserRole('teacher')}
-            className="hidden sm:flex px-2.5 h-9 rounded-[8px] bg-[#0B1930] hover:bg-[#10223D] border border-[#41D9F5]/30 text-[#A8BCD5] hover:text-[#E8F2FF] text-[13.5px] font-bold items-center gap-1.5 transition-colors cursor-pointer"
+            className="hidden sm:flex px-2 2xl:px-2.5 h-8 2xl:h-9 rounded-[8px] bg-[#0B1930] hover:bg-[#10223D] border border-[#41D9F5]/30 text-[#A8BCD5] hover:text-[#E8F2FF] text-[12.5px] 2xl:text-[13.5px] font-bold items-center gap-1 2xl:gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
             title="Chế độ Kỹ thuật & Quản trị"
           >
             <SlidersHorizontal className="w-4 h-4 text-[#41D9F5]" />
@@ -1052,24 +1083,15 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
-        <button
-          type="button"
-          onClick={downloadEquipmentStandardMd}
-          className="px-3 py-2 rounded-lg bg-[#D97706] hover:bg-[#B45309] border border-[#FBBF24] text-[14px] font-extrabold text-white flex items-center justify-center transition-colors whitespace-nowrap cursor-pointer"
-          title="Tải file chuẩn EQUIPMENT_MODULE_STANDARD.md (v2.4) về máy tính"
-        >
-          <span>.MD</span>
-        </button>
-
-        {onOpenHtmlModuleImporter && (
+        {onOpenNeuralModal && (
           <button
             type="button"
-            onClick={onOpenHtmlModuleImporter}
-            className="px-3.5 py-2 rounded-lg bg-[#059669] hover:bg-[#047857] border border-[#34D399] text-[14px] font-extrabold text-white flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer"
-            title="Thêm thiết bị mới hoặc nạp file .HTML"
+            onClick={onOpenNeuralModal}
+            className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-[#4D8DFF] to-[#9B83FF] hover:brightness-110 border border-[#41D9F5]/50 text-[14px] font-extrabold text-white flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer"
+            title="Mở Bản đồ Mạng Nơ-ron Quan hệ Thiết bị"
           >
-            <Plus className="w-4 h-4 stroke-[2.8]" />
-            <span>Thêm thiết bị (.HTML)</span>
+            <span>🪐</span>
+            <span>Mạng Nơ-ron</span>
           </button>
         )}
 

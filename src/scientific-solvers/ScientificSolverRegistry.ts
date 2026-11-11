@@ -10,11 +10,19 @@ import { OpticsSolver } from './OpticsSolver';
 import { FluidThermalSolver } from './FluidThermalSolver';
 import { ElectromagneticInductionSolver } from './ElectromagneticInductionSolver';
 import { MechanicsSolver } from './MechanicsSolver';
+import { ChemicalSolutionSolver } from './ChemicalSolutionSolver';
+import { MultiPhysicsCouplingBus, MultiPhysicsBusSnapshot } from '../core-physics/MultiPhysicsCouplingBus';
+import { ChronoCausalRingBuffer } from '../core-physics/ChronoCausalRingBuffer';
 
 export class ScientificSolverRegistry {
   private static instance: ScientificSolverRegistry;
+  private readonly _multiPhysicsBus: MultiPhysicsCouplingBus;
+  private readonly _chronoBuffer: ChronoCausalRingBuffer;
 
-  private constructor() {}
+  private constructor() {
+    this._multiPhysicsBus = new MultiPhysicsCouplingBus();
+    this._chronoBuffer = new ChronoCausalRingBuffer();
+  }
 
   public static getInstance(): ScientificSolverRegistry {
     if (!ScientificSolverRegistry.instance) {
@@ -42,6 +50,9 @@ export class ScientificSolverRegistry {
     if (key === 'induction' || key.includes('coil') || key.includes('galvanometer') || key.includes('magnet')) {
       return ElectromagneticInductionSolver.solve(input);
     }
+    if (key === 'solution' || key.includes('chemical') || key.includes('nacl') || key.includes('salt') || key.includes('sugar') || key.includes('ph') || key.includes('acid') || key.includes('base') || key.includes('titration')) {
+      return ChemicalSolutionSolver.solve(input);
+    }
     if (key === 'mechanics' || key.includes('balance') || key.includes('dynamometer') || key.includes('lever') || key.includes('caliper') || key.includes('weight') || key.includes('solid')) {
       return MechanicsSolver.solve(input);
     }
@@ -68,6 +79,43 @@ export class ScientificSolverRegistry {
 
   public getMechanicsSolver() {
     return MechanicsSolver;
+  }
+
+  public getChemicalSolutionSolver() {
+    return ChemicalSolutionSolver;
+  }
+
+  /**
+   * Trả về Trục Liên thông Đa trường Vật lý Hợp nhất (120 Hz RK4)
+   */
+  public getMultiPhysicsBus(): MultiPhysicsCouplingBus {
+    return this._multiPhysicsBus;
+  }
+
+  /**
+   * Trả về Bộ đệm vòng nhân quả 3600 khung hình (Time Rewind & Counterfactual Forking)
+   */
+  public getChronoRingBuffer(): ChronoCausalRingBuffer {
+    return this._chronoBuffer;
+  }
+
+  /**
+   * Tiến một bước vi phân liên thông đa miền (Điện ↔ Nhiệt ↔ Thủy ↔ Từ ↔ Cơ)
+   */
+  public stepContinuousMultiPhysics(dt: number = 1.0 / 120.0): MultiPhysicsBusSnapshot {
+    if (this._chronoBuffer.isRewinding) {
+      return this._multiPhysicsBus.getSnapshot();
+    }
+    const snap = this._multiPhysicsBus.step(dt);
+    this._chronoBuffer.push(snap);
+    return snap;
+  }
+
+  /**
+   * Lấy ảnh chụp trạng thái vật lý đa trường mới nhất
+   */
+  public getMultiPhysicsSnapshot(): MultiPhysicsBusSnapshot {
+    return this._multiPhysicsBus.getSnapshot();
   }
 }
 
