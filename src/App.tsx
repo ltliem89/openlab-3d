@@ -432,7 +432,7 @@ export default function App() {
     };
   }, [notify]);
 
-  // Phím tắt Alt + N toàn cục để Bật/Tắt Trợ lý Nơ-ron Thần kinh
+  // Phím tắt Alt + N (Trợ lý Nơ-ron) & Alt + G / Ctrl + Shift + G (Demo Vàng ViSEF)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -448,6 +448,13 @@ export default function App() {
             : '🧠 Trợ lý Nơ-ron: ĐÃ TẮT (Chế độ tự do / Đánh giá thi)',
           next ? 'success' : 'info',
         );
+      } else if (
+        (e.altKey && (e.key === 'g' || e.key === 'G')) ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'g' || e.key === 'G'))
+      ) {
+        e.preventDefault();
+        cognitiveNeuralEngine.triggerGoldenViSEFDemo();
+        notify('🎉 Eureka! Đã kích hoạt Kịch bản Vàng ViSEF (Alt + G): Khối lượng riêng ($\\rho = \\frac{m}{V} = 2.70\\,\\text{g/cm}^3$)', 'success');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -5237,12 +5244,9 @@ export default function App() {
                   onToggleCollapse={handleToggleLibrarySidebar}
                   onSelectAsset={handleSelectCatalogAsset}
                   onAddAssetToTable={(assetId) => handleAddAssetToScene(assetId)}
-                  onInspectAssetDetail={(asset, editMode = false) => {
-                    setDetailModalEditMode(editMode);
+                  onInspectAssetDetail={(asset) => {
+                    setDetailModalEditMode(false);
                     setStudentDetailModalAsset(asset);
-                  }}
-                  onOpenPhotoUpdaterForAsset={(asset) => {
-                    setPhotoUpdaterTargetAsset(asset);
                   }}
                   onSelectCategoryTopic={(catId, labelVi) => {
                     handleSelectTopicCategory(catId, labelVi);
@@ -5260,19 +5264,17 @@ export default function App() {
                 />
               )}
 
-              {/* Host Equipment Real Photo Preview Panel (240 × 240, 1:1 contain — Mục 4.3) */}
+              {/* Host Equipment Real Photo Preview Panel (240 × 240, 1:1 contain — Tinh gọn học sinh) */}
               {!isViewportFullscreen && (
                 <EquipmentPreviewPanel
                   assetsMap={assetsMap}
                   isSidebarCollapsed={isExplorerCollapsed}
                   isDarkMode={isDarkMode}
+                  readOnlySpecs={true}
                   onAddAssetToTable={(assetId) => handleAddAssetToScene(assetId)}
-                  onInspectAssetDetail={(asset, editMode = false) => {
-                    setDetailModalEditMode(editMode);
+                  onInspectAssetDetail={(asset) => {
+                    setDetailModalEditMode(false);
                     setStudentDetailModalAsset(asset);
-                  }}
-                  onOpenPhotoUpdaterForAsset={(asset) => {
-                    setPhotoUpdaterTargetAsset(asset);
                   }}
                 />
               )}

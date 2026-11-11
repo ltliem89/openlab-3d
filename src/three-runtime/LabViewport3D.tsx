@@ -9915,10 +9915,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           aria-label="OpenLab 3D Interactive WebGL Viewport"
         />
 
-        {/* Top-Left Compact Bench-Corner O-XYZ Coordinates & Quick Grid Toggles (Ẩn mặc định trên Mobile trừ khi bật từ Công cụ 3D) */}
+        {/* Top-Left Compact Bench-Corner O-XYZ Coordinates (Chỉ hiển thị ở chế độ Kỹ thuật/Giáo viên để tránh làm rối học sinh THCS) */}
         <div
           className={`absolute top-1.5 left-2 ${
-            showMobileCoordHud ? 'flex' : 'hidden md:flex'
+            !isStudentMode && (showMobileCoordHud ? 'flex' : 'hidden md:flex') ? 'flex' : 'hidden'
           } flex-wrap items-center gap-1.5 z-20 max-w-[68%]`}
         >
           <div className="px-1.5 py-1 rounded-full bg-[#081528]/18 backdrop-blur-md border border-white/35 text-white text-[11px] font-mono flex items-center gap-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.28)] transition-all">
@@ -10326,9 +10326,9 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
 
         {/* Top-Right Compact Translucent Icon Toolbar on Desktop/Tablet (>= 768px) */}
         <div className="absolute top-1.5 right-1.5 hidden md:flex items-center justify-end gap-1 z-20">
-          {!isTopRightToolbarCollapsed && (
+          {isStudentMode ? (
             <>
-              {/* Nút Mặc định: Đưa góc nhìn về giữa thấy toàn bộ bàn thí nghiệm nằm đủ khung mô phỏng */}
+              {/* 1. Nút Mặc định: Đưa góc nhìn về giữa thấy toàn bộ bàn thí nghiệm */}
               <button
                 type="button"
                 onClick={() => handleFocusCameraPreset('bench-close')}
@@ -10337,52 +10337,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 aria-label="Mặc định thấy toàn bộ bàn thí nghiệm"
               >
                 <RotateCcw className="w-3.5 h-3.5 text-cyan-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-                <span>Mặc định (Toàn bàn)</span>
+                <span>Mặc định</span>
               </button>
 
-              {/* Cụm nút Tăng / Giảm cỡ chữ số đo trên dụng cụ (A- | % | A+) */}
-              <div
-                className="h-7 px-1 rounded-[7px] bg-[#081528]/45 backdrop-blur-md border border-emerald-400/75 flex items-center gap-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.28)]"
-                title="Tăng / Giảm cỡ chữ số đo hiển thị trên các dụng cụ thí nghiệm"
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!showLabels) onToggleLabels();
-                    adjustReadoutFontScale(-0.1);
-                  }}
-                  className="h-5 px-1.5 rounded-[5px] bg-slate-900/80 hover:bg-emerald-600/60 border border-white/20 text-white font-mono text-[11px] font-black cursor-pointer transition-colors"
-                  title="Giảm cỡ chữ số đo (A-)"
-                  aria-label="Giảm cỡ chữ số đo"
-                >
-                  A-
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!showLabels) onToggleLabels();
-                    else updateReadoutFontScale(1.25);
-                  }}
-                  className="h-5 px-1.5 rounded-[5px] hover:bg-white/10 text-[#5EEAD4] font-mono text-[11px] font-extrabold tabular-nums cursor-pointer"
-                  title="Cỡ chữ số đo hiện tại (Nhấn để đặt lại chuẩn 125%)"
-                >
-                  {Math.round(readoutFontScale * 100)}%
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!showLabels) onToggleLabels();
-                    adjustReadoutFontScale(0.1);
-                  }}
-                  className="h-5 px-1.5 rounded-[5px] bg-slate-900/80 hover:bg-emerald-600/60 border border-white/20 text-white font-mono text-[11px] font-black cursor-pointer transition-colors"
-                  title="Tăng cỡ chữ số đo (A+)"
-                  aria-label="Tăng cỡ chữ số đo"
-                >
-                  A+
-                </button>
-              </div>
-
-              {/* 0. Bật / Tắt chú thích trên đầu từng dụng cụ (?) */}
+              {/* 2. Bật / Tắt chú thích tên trên đầu từng dụng cụ (?) */}
               <button
                 type="button"
                 onClick={handleToggleDetailedGuides}
@@ -10401,102 +10359,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 <HelpCircle className="w-3.5 h-3.5 text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
               </button>
 
-              {/* 1. Ghi hình thực hành / Điều khiển REC */}
-              {!isRecordingVideo ? (
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={handleStartVideoRecording}
-                    className="w-7 h-7 rounded-[7px] bg-[#081528]/18 hover:bg-red-600/45 backdrop-blur-md border border-red-400/75 text-white flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer"
-                    title="Ghi hình thực hành 3D & tự động lưu các bước đo"
-                    aria-label="Ghi hình thực hành 3D"
-                  >
-                    <Video className="w-3.5 h-3.5 text-red-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-                  </button>
-
-                  {completedRecordingSession && (
-                    <button
-                      type="button"
-                      onClick={() => setShowVideoRecorderModal(true)}
-                      className="w-7 h-7 rounded-[7px] bg-[#081528]/18 hover:bg-[#1E6BFF]/45 backdrop-blur-md border border-[#FACC15]/80 text-[#FACC15] hover:text-white flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer"
-                      title={`Xuất Video tóm tắt quá trình (${completedRecordingSession.milestones.length} bước)`}
-                      aria-label="Xuất Video tóm tắt"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center gap-1 px-2 py-0.5 rounded-[7px] bg-[#081528]/25 backdrop-blur-md border border-red-400/80 text-white shadow-[0_4px_14px_rgba(0,0,0,0.32)]">
-                  <span className="flex items-center gap-1 font-mono text-[11px] font-extrabold text-red-200 pr-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        isRecordingPaused
-                          ? 'bg-amber-400'
-                          : 'bg-red-500 animate-ping'
-                      }`}
-                    />
-                    <span>{formatRecTime(recordingElapsedSec)}</span>
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const activeInst = instances.find(
-                        (i) => i.instanceId === selectedInstanceId,
-                      );
-                      const activeAst = activeInst
-                        ? assetsMap.get(activeInst.assetId)
-                        : undefined;
-                      const manualLabel = activeAst
-                        ? `Đánh dấu bước: ${activeInst?.customLabel || activeAst.name.vi}`
-                        : studentCurrentHint
-                          ? `Đánh dấu: ${studentCurrentHint}`
-                          : `Đánh dấu bước thực hành #${recordedMilestonesCount + 1}`;
-                      recordStepMilestoneInternal(manualLabel, false);
-                    }}
-                    className="w-6.5 h-6.5 rounded-[6px] bg-[#1E6BFF]/55 hover:bg-[#1E6BFF]/80 border border-white/30 text-white flex items-center justify-center cursor-pointer"
-                    title="Đánh dấu & chụp bước thực hành hiện tại"
-                  >
-                    <BookmarkPlus className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handlePauseResumeVideoRecording}
-                    className="w-6.5 h-6.5 rounded-[6px] bg-white/15 hover:bg-white/25 border border-white/25 text-white flex items-center justify-center cursor-pointer"
-                    title={isRecordingPaused ? 'Tiếp tục ghi hình' : 'Tạm dừng ghi hình'}
-                  >
-                    {isRecordingPaused ? (
-                      <Play className="w-3.5 h-3.5 text-emerald-400" />
-                    ) : (
-                      <Pause className="w-3.5 h-3.5 text-amber-300" />
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleStopVideoRecording}
-                    className="w-6.5 h-6.5 rounded-[6px] bg-emerald-500/75 hover:bg-emerald-500 text-white flex items-center justify-center cursor-pointer"
-                    title="Dừng ghi hình & Xuất Video"
-                  >
-                    <Square className="w-3.5 h-3.5 fill-current" />
-                  </button>
-                </div>
-              )}
-
-              {/* 2. Cài đặt Môi trường XYZ & Đồng hồ (Icon) */}
-              <button
-                type="button"
-                onClick={() => setShowEnvSpecModal(true)}
-                className="w-7 h-7 rounded-[7px] bg-[#081528]/18 hover:bg-[#081528]/35 backdrop-blur-md border border-white/35 text-white flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer"
-                title="Cài đặt Môi trường 3D: Hệ tọa độ XYZ, Đo khoảng cách & 13 Biến vật lý"
-                aria-label="Cài đặt Môi trường 3D"
-              >
-                <Sliders className="w-3.5 h-3.5 text-[#38BDF8] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-              </button>
-
-              {/* 3. Bật / Tắt Âm thanh hiện tượng (Icon) */}
+              {/* 3. Bật / Tắt Âm thanh hiện tượng phòng thí nghiệm */}
               <button
                 type="button"
                 onClick={() => {
@@ -10530,54 +10393,286 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 )}
               </button>
 
-              {/* 4. Toàn màn hình / Thu nhỏ (Icon) */}
-              {isStudentMode && (
-                <button
-                  type="button"
-                  onClick={onToggleFullscreen}
-                  className="w-7 h-7 rounded-[7px] bg-[#081528]/18 hover:bg-[#081528]/35 backdrop-blur-md border border-white/35 text-slate-100 flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer"
-                  title={
-                    isFullscreen
-                      ? 'Thu nhỏ về bố cục chuẩn'
-                      : 'Phóng to toàn màn hình vùng mô phỏng 3D'
-                  }
-                  aria-label="Toàn màn hình"
-                >
-                  {isFullscreen ? (
-                    <Minimize2 className="w-3.5 h-3.5 text-[#38BDF8] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-                  ) : (
-                    <Maximize2 className="w-3.5 h-3.5 text-[#38BDF8] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-                  )}
-                </button>
+              {/* Chỉ hiển thị REC nếu đang trong phiên ghi hình */}
+              {isRecordingVideo && (
+                <div className="flex items-center gap-1 px-2 py-0.5 rounded-[7px] bg-[#081528]/25 backdrop-blur-md border border-red-400/80 text-white shadow-[0_4px_14px_rgba(0,0,0,0.32)]">
+                  <span className="flex items-center gap-1 font-mono text-[11px] font-extrabold text-red-200 pr-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isRecordingPaused
+                          ? 'bg-amber-400'
+                          : 'bg-red-500 animate-ping'
+                      }`}
+                    />
+                    <span>{formatRecTime(recordingElapsedSec)}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleStopVideoRecording}
+                    className="w-6.5 h-6.5 rounded-[6px] bg-emerald-500/75 hover:bg-emerald-500 text-white flex items-center justify-center cursor-pointer"
+                    title="Dừng ghi hình & Xuất Video"
+                  >
+                    <Square className="w-3.5 h-3.5 fill-current" />
+                  </button>
+                </div>
               )}
             </>
-          )}
+          ) : (
+            <>
+              {!isTopRightToolbarCollapsed && (
+                <>
+                  {/* Nút Mặc định: Đưa góc nhìn về giữa thấy toàn bộ bàn thí nghiệm nằm đủ khung mô phỏng */}
+                  <button
+                    type="button"
+                    onClick={() => handleFocusCameraPreset('bench-close')}
+                    className="h-7 px-2 rounded-[7px] bg-[#081528]/35 hover:bg-cyan-500/35 backdrop-blur-md border border-cyan-300/75 text-cyan-100 flex items-center gap-1 shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer text-[11px] font-bold tracking-tight"
+                    title="Đưa góc nhìn về chính giữa để thấy toàn bộ bàn thí nghiệm nằm gọn trong khung mô phỏng"
+                    aria-label="Mặc định thấy toàn bộ bàn thí nghiệm"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5 text-cyan-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                    <span>Mặc định (Toàn bàn)</span>
+                  </button>
 
-          {/* Nút Ẩn / Mở thanh công cụ góc phải trên (Nền màu đỏ thu gọn) */}
-          <button
-            type="button"
-            onClick={() => setIsTopRightToolbarCollapsed((v) => !v)}
-            className="h-7 px-2 rounded-[7px] bg-[#DC2626] hover:bg-[#B91C1C] border border-[#F87171] text-white text-[11px] font-extrabold flex items-center justify-center gap-0.5 shadow-sm transition-colors cursor-pointer"
-            title={
-              isTopRightToolbarCollapsed
-                ? 'Mở thanh công cụ góc phải trên'
-                : 'Ẩn thanh công cụ góc phải trên'
-            }
-            aria-label={
-              isTopRightToolbarCollapsed
-                ? 'Mở thanh công cụ góc phải trên'
-                : 'Ẩn thanh công cụ góc phải trên'
-            }
-          >
-            {isTopRightToolbarCollapsed ? (
-              <>
-                <Sliders className="w-3.5 h-3.5 text-white" />
-                <span>Mở</span>
-              </>
-            ) : (
-              <span>Ẩn</span>
-            )}
-          </button>
+                  {/* Cụm nút Tăng / Giảm cỡ chữ số đo trên dụng cụ (A- | % | A+) */}
+                  <div
+                    className="h-7 px-1 rounded-[7px] bg-[#081528]/45 backdrop-blur-md border border-emerald-400/75 flex items-center gap-0.5 shadow-[0_4px_14px_rgba(0,0,0,0.28)]"
+                    title="Tăng / Giảm cỡ chữ số đo hiển thị trên các dụng cụ thí nghiệm"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!showLabels) onToggleLabels();
+                        adjustReadoutFontScale(-0.1);
+                      }}
+                      className="h-5 px-1.5 rounded-[5px] bg-slate-900/80 hover:bg-emerald-600/60 border border-white/20 text-white font-mono text-[11px] font-black cursor-pointer transition-colors"
+                      title="Giảm cỡ chữ số đo (A-)"
+                      aria-label="Giảm cỡ chữ số đo"
+                    >
+                      A-
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!showLabels) onToggleLabels();
+                        else updateReadoutFontScale(1.25);
+                      }}
+                      className="h-5 px-1.5 rounded-[5px] hover:bg-white/10 text-[#5EEAD4] font-mono text-[11px] font-extrabold tabular-nums cursor-pointer"
+                      title="Cỡ chữ số đo hiện tại (Nhấn để đặt lại chuẩn 125%)"
+                    >
+                      {Math.round(readoutFontScale * 100)}%
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!showLabels) onToggleLabels();
+                        adjustReadoutFontScale(0.1);
+                      }}
+                      className="h-5 px-1.5 rounded-[5px] bg-slate-900/80 hover:bg-emerald-600/60 border border-white/20 text-white font-mono text-[11px] font-black cursor-pointer transition-colors"
+                      title="Tăng cỡ chữ số đo (A+)"
+                      aria-label="Tăng cỡ chữ số đo"
+                    >
+                      A+
+                    </button>
+                  </div>
+
+                  {/* 0. Bật / Tắt chú thích trên đầu từng dụng cụ (?) */}
+                  <button
+                    type="button"
+                    onClick={handleToggleDetailedGuides}
+                    className={`w-7 h-7 rounded-[7px] backdrop-blur-md border flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer ${
+                      isDetailedGuideOn
+                        ? 'bg-amber-500/25 hover:bg-amber-500/40 border-amber-300/85 text-white'
+                        : 'bg-[#081528]/18 hover:bg-[#081528]/35 border-white/35 text-amber-300'
+                    }`}
+                    title={
+                      isDetailedGuideOn
+                        ? 'Đang BẬT hiển thị tên trên từng dụng cụ (Nhấn để ẩn bớt chữ)'
+                        : 'Bật hiển thị tên & chú thích trên đầu từng dụng cụ'
+                    }
+                    aria-pressed={isDetailedGuideOn}
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                  </button>
+
+                  {/* 1. Ghi hình thực hành / Điều khiển REC */}
+                  {!isRecordingVideo ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={handleStartVideoRecording}
+                        className="w-7 h-7 rounded-[7px] bg-[#081528]/18 hover:bg-red-600/45 backdrop-blur-md border border-red-400/75 text-white flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer"
+                        title="Ghi hình thực hành 3D & tự động lưu các bước đo"
+                        aria-label="Ghi hình thực hành 3D"
+                      >
+                        <Video className="w-3.5 h-3.5 text-red-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                      </button>
+
+                      {completedRecordingSession && (
+                        <button
+                          type="button"
+                          onClick={() => setShowVideoRecorderModal(true)}
+                          className="w-7 h-7 rounded-[7px] bg-[#081528]/18 hover:bg-[#1E6BFF]/45 backdrop-blur-md border border-[#FACC15]/80 text-[#FACC15] hover:text-white flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer"
+                          title={`Xuất Video tóm tắt quá trình (${completedRecordingSession.milestones.length} bước)`}
+                          aria-label="Xuất Video tóm tắt"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 px-2 py-0.5 rounded-[7px] bg-[#081528]/25 backdrop-blur-md border border-red-400/80 text-white shadow-[0_4px_14px_rgba(0,0,0,0.32)]">
+                      <span className="flex items-center gap-1 font-mono text-[11px] font-extrabold text-red-200 pr-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]">
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            isRecordingPaused
+                              ? 'bg-amber-400'
+                              : 'bg-red-500 animate-ping'
+                          }`}
+                        />
+                        <span>{formatRecTime(recordingElapsedSec)}</span>
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const activeInst = instances.find(
+                            (i) => i.instanceId === selectedInstanceId,
+                          );
+                          const activeAst = activeInst
+                            ? assetsMap.get(activeInst.assetId)
+                            : undefined;
+                          const manualLabel = activeAst
+                            ? `Đánh dấu bước: ${activeInst?.customLabel || activeAst.name.vi}`
+                            : studentCurrentHint
+                              ? `Đánh dấu: ${studentCurrentHint}`
+                              : `Đánh dấu bước thực hành #${recordedMilestonesCount + 1}`;
+                          recordStepMilestoneInternal(manualLabel, false);
+                        }}
+                        className="w-6.5 h-6.5 rounded-[6px] bg-[#1E6BFF]/55 hover:bg-[#1E6BFF]/80 border border-white/30 text-white flex items-center justify-center cursor-pointer"
+                        title="Đánh dấu & chụp bước thực hành hiện tại"
+                      >
+                        <BookmarkPlus className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handlePauseResumeVideoRecording}
+                        className="w-6.5 h-6.5 rounded-[6px] bg-white/15 hover:bg-white/25 border border-white/25 text-white flex items-center justify-center cursor-pointer"
+                        title={isRecordingPaused ? 'Tiếp tục ghi hình' : 'Tạm dừng ghi hình'}
+                      >
+                        {isRecordingPaused ? (
+                          <Play className="w-3.5 h-3.5 text-emerald-400" />
+                        ) : (
+                          <Pause className="w-3.5 h-3.5 text-amber-300" />
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleStopVideoRecording}
+                        className="w-6.5 h-6.5 rounded-[6px] bg-emerald-500/75 hover:bg-emerald-500 text-white flex items-center justify-center cursor-pointer"
+                        title="Dừng ghi hình & Xuất Video"
+                      >
+                        <Square className="w-3.5 h-3.5 fill-current" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 2. Cài đặt Môi trường XYZ & Đồng hồ (Icon) */}
+                  <button
+                    type="button"
+                    onClick={() => setShowEnvSpecModal(true)}
+                    className="w-7 h-7 rounded-[7px] bg-[#081528]/18 hover:bg-[#081528]/35 backdrop-blur-md border border-white/35 text-white flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer"
+                    title="Cài đặt Môi trường 3D: Hệ tọa độ XYZ, Đo khoảng cách & 13 Biến vật lý"
+                    aria-label="Cài đặt Môi trường 3D"
+                  >
+                    <Sliders className="w-3.5 h-3.5 text-[#38BDF8] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                  </button>
+
+                  {/* 3. Bật / Tắt Âm thanh hiện tượng (Icon) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextMuted = labSoundEngine.toggleMute();
+                      if (!nextMuted) {
+                        labSoundEngine.play('probe-measure', { value: 7.0 });
+                        onNotify(
+                          'Đã BẬT âm thanh hiện tượng thực tế (rót nước, thả vật, cân điện tử, tia laser, cảm ứng điện từ...).',
+                          'success',
+                        );
+                      } else {
+                        onNotify('Đã TẮT âm thanh hiện tượng phòng thí nghiệm.', 'info');
+                      }
+                    }}
+                    className={`w-7 h-7 rounded-[7px] backdrop-blur-md border flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer ${
+                      !isSoundMuted
+                        ? 'bg-[#081528]/18 hover:bg-emerald-900/35 border-emerald-400/75 text-[#4ADE80]'
+                        : 'bg-[#081528]/18 hover:bg-[#081528]/35 border-white/35 text-slate-200'
+                    }`}
+                    title={
+                      !isSoundMuted
+                        ? 'Âm thanh hiện tượng đang BẬT (Nhấn để tắt)'
+                        : 'Âm thanh hiện tượng đang TẮT (Nhấn để bật)'
+                    }
+                    aria-label="Bật hoặc tắt âm thanh"
+                  >
+                    {!isSoundMuted ? (
+                      <Volume2 className="w-3.5 h-3.5 text-[#4ADE80] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                    ) : (
+                      <VolumeX className="w-3.5 h-3.5 text-slate-200 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                    )}
+                  </button>
+
+                  {/* 4. Toàn màn hình / Thu nhỏ (Icon) */}
+                  {isStudentMode && (
+                    <button
+                      type="button"
+                      onClick={onToggleFullscreen}
+                      className="w-7 h-7 rounded-[7px] bg-[#081528]/18 hover:bg-[#081528]/35 backdrop-blur-md border border-white/35 text-slate-100 flex items-center justify-center shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-colors cursor-pointer"
+                      title={
+                        isFullscreen
+                          ? 'Thu nhỏ về bố cục chuẩn'
+                          : 'Phóng to toàn màn hình vùng mô phỏng 3D'
+                      }
+                      aria-label="Toàn màn hình"
+                    >
+                      {isFullscreen ? (
+                        <Minimize2 className="w-3.5 h-3.5 text-[#38BDF8] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                      ) : (
+                        <Maximize2 className="w-3.5 h-3.5 text-[#38BDF8] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                      )}
+                    </button>
+                  )}
+                </>
+              )}
+
+              {/* Nút Ẩn / Mở thanh công cụ góc phải trên (Nền màu đỏ thu gọn) */}
+              <button
+                type="button"
+                onClick={() => setIsTopRightToolbarCollapsed((v) => !v)}
+                className="h-7 px-2 rounded-[7px] bg-[#DC2626] hover:bg-[#B91C1C] border border-[#F87171] text-white text-[11px] font-extrabold flex items-center justify-center gap-0.5 shadow-sm transition-colors cursor-pointer"
+                title={
+                  isTopRightToolbarCollapsed
+                    ? 'Mở thanh công cụ góc phải trên'
+                    : 'Ẩn thanh công cụ góc phải trên'
+                }
+                aria-label={
+                  isTopRightToolbarCollapsed
+                    ? 'Mở thanh công cụ góc phải trên'
+                    : 'Ẩn thanh công cụ góc phải trên'
+                }
+              >
+                {isTopRightToolbarCollapsed ? (
+                  <>
+                    <Sliders className="w-3.5 h-3.5 text-white" />
+                    <span>Mở</span>
+                  </>
+                ) : (
+                  <span>Ẩn</span>
+                )}
+              </button>
+            </>
+          )}
         </div>
 
         {/* Drag & Drop Target Overlay */}
@@ -10986,28 +11081,15 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             );
           })}
 
-        {/* MICRO-HUD 1 DÒNG: Hiển thị luồng thiết bị "nói chuyện" với nhau sát cạnh trên (Không che vật 3D) */}
+        {/* MICRO-HUD: Chỉ hiển thị khi có suy luận định luật vật lý Eureka bừng sáng */}
         {viewMode === 'lab-scene' &&
           Boolean(isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled) &&
-          (neuralBusSignals.length > 0 || neuralCausalInferences.length > 0) && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none max-w-[92%] flex items-center gap-2 px-3 py-1 rounded-full bg-[#050B18]/82 backdrop-blur-md border border-emerald-400/50 shadow-[0_4px_16px_rgba(0,0,0,0.45)] text-[11px] whitespace-nowrap overflow-hidden">
+          neuralCausalInferences.length > 0 && (
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 pointer-events-none max-w-[92%] flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#050B18]/85 backdrop-blur-md border border-emerald-400/60 shadow-[0_4px_16px_rgba(0,0,0,0.45)] text-[11.5px] whitespace-nowrap overflow-hidden">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              {neuralCausalInferences.length > 0 ? (
-                <span className="font-mono font-bold text-amber-300 truncate">
-                  ✨ {neuralCausalInferences[0].computedValueText}
-                </span>
-              ) : (
-                <div className="flex items-center gap-2 overflow-hidden">
-                  {neuralBusSignals.slice(0, 3).map((sig) => (
-                    <span key={sig.id} className="text-slate-200 font-semibold">
-                      {sig.sourceNameVi}:{' '}
-                      <strong className="text-emerald-300 font-mono">
-                        {sig.value.toFixed(sig.unit === 'g' || sig.unit === 'cm³' ? 1 : 2)} {sig.unit}
-                      </strong>
-                    </span>
-                  ))}
-                </div>
-              )}
+              <span className="font-mono font-bold text-amber-300 truncate">
+                ✨ {neuralCausalInferences[0].computedValueText}
+              </span>
             </div>
           )}
 

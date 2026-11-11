@@ -25,7 +25,6 @@ import {
   AlertTriangle,
   ZoomIn,
   Award,
-  Sparkles,
 } from 'lucide-react';
 import { StudentGuidedStepNumber } from '../student/StudentGuidedStepPanel';
 import { RichMathText } from '../common/MathFormula';
@@ -733,18 +732,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                   </button>
                 )}
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowMobileMenuPopover(false);
-                    if (onRunGoldenDemo) onRunGoldenDemo();
-                    else window.dispatchEvent(new CustomEvent('openlab:run-golden-demo'));
-                  }}
-                  className="w-full min-h-[44px] px-3 py-2 rounded-[9px] bg-gradient-to-r from-[#BE185D] to-[#EC4899] text-white text-[14px] font-extrabold flex items-center gap-2.5 cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4 shrink-0 text-amber-200" />
-                  <span>Kịch bản Thực hành Mẫu</span>
-                </button>
+
 
                 <button
                   type="button"
@@ -913,20 +901,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <span className="hidden xl:inline">Vi mô</span>
           </button>
 
-          {/* Nút Kịch bản Thực hành Mẫu */}
-          <button
-            type="button"
-            onClick={() => {
-              if (onRunGoldenDemo) onRunGoldenDemo();
-              else window.dispatchEvent(new CustomEvent('openlab:run-golden-demo'));
-            }}
-            className="h-8 2xl:h-9 px-2 2xl:px-2.5 rounded-[8px] bg-gradient-to-r from-[#831843] via-[#BE185D] to-[#EC4899] hover:brightness-110 border border-[#F472B6]/80 text-white shadow-[0_0_16px_rgba(236,72,153,0.4)] flex items-center gap-1 2xl:gap-1.5 transition-all cursor-pointer text-xs font-extrabold animate-pulse whitespace-nowrap"
-            title="Kịch bản Vàng ViSEF (Golden Run): 1-Click hoàn thành chu trình đo đạc & bừng sáng định luật Eureka trước Ban Giám khảo"
-            aria-label="Demo Vàng ViSEF"
-          >
-            <Sparkles className="w-3.5 h-3.5 shrink-0 text-amber-200" />
-            <span className="hidden 2xl:inline">Demo Vàng</span>
-          </button>
+          {/* Kịch bản Vàng ViSEF: Alt + G hoặc phím tắt nhanh */}
 
           {/* Nút Mở Sơ đồ Nơ-ron Toàn cảnh (Planetary Cosmos Map) */}
           {onOpenNeuralModal && (

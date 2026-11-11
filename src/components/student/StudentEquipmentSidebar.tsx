@@ -3,7 +3,6 @@ import { AssetDefinition } from '../../domain/types';
 import { EquipmentThumbnailSvg } from '../common/EquipmentThumbnailSvg';
 import { EquipmentHoverCard, HoverTargetInfo } from '../common/EquipmentHoverCard';
 import { htmlEquipmentModuleRegistry } from '../../three-runtime/HtmlEquipmentModuleRegistry';
-import { localDiskLibraryEngine } from '../../three-runtime/LocalDiskLibraryEngine';
 import {
   equipmentImagePreviewController,
   PREINSTALLED_LIBRARY_REAL_PHOTOS,
@@ -14,12 +13,10 @@ import {
   Plus,
   Check,
   ChevronRight,
+  ChevronDown,
+  Filter,
   Camera,
-  FileCode,
-  FolderOpen,
-  ExternalLink,
   Info,
-  Wrench,
   PanelLeftClose,
   PanelLeftOpen,
   Eye,
@@ -160,6 +157,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
 
   const [activeCategory, setActiveCategory] =
     useState<ReferenceLibraryCategoryId>('all');
+  const [isQuickExperimentsOpen, setIsQuickExperimentsOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     asset: AssetDefinition;
     x: number;
@@ -187,78 +185,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
     }, 110);
   };
 
-  const [libraryDiskStatus, setLibraryDiskStatus] = useState(() =>
-    localDiskLibraryEngine.getStatus(),
-  );
-  const [showLibraryPathBox, setShowLibraryPathBox] = useState<boolean>(false);
-  const [libraryPathDraft, setLibraryPathDraft] = useState<string>(
-    () => localDiskLibraryEngine.getStatus().configuredBasePath,
-  );
-  const [libraryPathNotice, setLibraryPathNotice] = useState<string | null>(null);
-  const libraryFolderInputRef = React.useRef<HTMLInputElement | null>(null);
 
-  useEffect(() => {
-    const unsub = localDiskLibraryEngine.subscribe(() => {
-      const next = localDiskLibraryEngine.getStatus();
-      setLibraryDiskStatus(next);
-      setLibraryPathDraft(next.configuredBasePath);
-    });
-    return unsub;
-  }, []);
-
-  const handleApplyLibraryPath = () => {
-    localDiskLibraryEngine.setConfiguredBasePath(libraryPathDraft);
-    setLibraryPathNotice(
-      `Đã áp dụng: ${localDiskLibraryEngine.getStatus().configuredBasePath}`,
-    );
-    window.setTimeout(() => {
-      setShowLibraryPathBox(false);
-      setLibraryPathNotice(null);
-    }, 900);
-  };
-
-  const handleSelectFolderFromDisk = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    const firstRel = (files[0] as File & { webkitRelativePath?: string })
-      .webkitRelativePath;
-    const pickedFolderName = firstRel ? firstRel.split('/')[0] : 'libraries3DLab';
-    const resolvedPath = libraryPathDraft.includes('\\')
-      ? libraryPathDraft.replace(/[^\\]+$/, pickedFolderName)
-      : `C:\\Users\\ltlie\\Documents\\${pickedFolderName}`;
-
-    const htmlStrings: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      if (
-        f.name.toLowerCase().endsWith('.html') ||
-        f.name.toLowerCase().endsWith('.htm')
-      ) {
-        try {
-          htmlStrings.push(await f.text());
-        } catch {
-          // Ignore unreadable file
-        }
-      }
-    }
-    e.target.value = '';
-    setLibraryPathDraft(resolvedPath);
-    localDiskLibraryEngine.setConfiguredBasePath(resolvedPath);
-    if (htmlStrings.length > 0) {
-      await htmlEquipmentModuleRegistry.importMultipleHtmlStringsFromLibraryFolder(
-        htmlStrings,
-      );
-    }
-    setLibraryPathNotice(
-      `Đã áp dụng thư mục "${pickedFolderName}" (${htmlStrings.length} module .HTML)`,
-    );
-    window.setTimeout(() => {
-      setShowLibraryPathBox(false);
-      setLibraryPathNotice(null);
-    }, 1100);
-  };
 
   useEffect(() => {
     if (!contextMenu) return;
@@ -389,33 +316,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
           </button>
         </div>
 
-        <div className="flex flex-col items-center gap-1.5">
-          {libraryDiskStatus.hasConfiguredLibraryPath ? (
-            <a
-              href="/libraries3DLab/index.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-8 h-8 rounded-[7px] bg-[#4D8DFF] hover:bg-[#1E6BFF] text-white flex items-center justify-center transition-colors cursor-pointer shadow-xs"
-              title={`Thư viện (${libraryDiskStatus.configuredBasePath}) — Bấm để mở thư mục ra Tab mới`}
-              aria-label="Mở thư mục Thư viện"
-            >
-              <FolderOpen className="w-3.5 h-3.5" />
-            </a>
-          ) : (
-            <button
-              type="button"
-              onClick={() => {
-                onToggleCollapse();
-                setShowLibraryPathBox(true);
-              }}
-              className="w-8 h-8 rounded-[7px] bg-[#4D8DFF] hover:bg-[#1E6BFF] text-white flex items-center justify-center transition-colors cursor-pointer shadow-xs"
-              title="Chưa chỉ định đường dẫn Thư viện libraries3D — Bấm để chỉ định & áp dụng"
-              aria-label="Chỉ định Thư viện"
-            >
-              <FolderOpen className="w-3.5 h-3.5" />
-            </button>
-          )}
-        </div>
+
       </aside>
     );
   }
@@ -429,154 +330,29 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
           : 'bg-[#F2F6FB] md:border-[#C4D5E8] text-[#123059] shadow-[0_2px_10px_rgba(18,52,107,0.06)]'
       }`}
     >
-      {/* 1. Nút Ẩn + Hộp “Thư viện” (libraries3D) + “Nạp .HTML” trên cùng 1 hàng */}
-      <div className="flex items-center justify-between mb-2.5 gap-1.5">
+      {/* 1. Tiêu đề Kho thiết bị KHTN & Nút Ẩn */}
+      <div className="flex items-center justify-between mb-2.5 gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-base shrink-0">🧪</span>
+          <span className="text-[13.5px] font-black tracking-tight truncate">
+            Kho thiết bị KHTN
+          </span>
+          <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold bg-[#1E6BFF]/20 border border-[#38BDF8]/40 text-[#38BDF8] shrink-0">
+            {assets.length}
+          </span>
+        </div>
+
         <button
           type="button"
           onClick={onToggleCollapse}
           className="h-7 px-2 rounded-[6px] bg-[#DC2626] hover:bg-[#B91C1C] border border-[#F87171] text-white text-[12px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shrink-0 shadow-xs"
-          title="Ẩn thanh công cụ danh mục thiết bị"
-          aria-label="Ẩn danh mục thiết bị"
+          title="Thu gọn danh mục thiết bị"
+          aria-label="Thu gọn danh mục thiết bị"
         >
           <PanelLeftClose className="w-3.5 h-3.5 text-white shrink-0" />
           <span>Ẩn</span>
         </button>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          {libraryDiskStatus.hasConfiguredLibraryPath ? (
-            <a
-              href="/libraries3DLab/index.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              onContextMenu={(e) => {
-                e.preventDefault();
-                setShowLibraryPathBox((v) => !v);
-              }}
-              className="h-7 px-2.5 rounded-[6px] bg-[#1E6BFF] hover:bg-[#1557DB] border border-[#41D9F5]/75 text-white text-[12px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-xs whitespace-nowrap no-underline"
-              title={`Đường dẫn libraries3D: ${libraryDiskStatus.configuredBasePath}\n• Bấm chuột trái: Mở luôn thư mục ra Tab mới\n• Nhấp chuột phải: Chỉ định lại đường dẫn`}
-            >
-              <FolderOpen className="w-3.5 h-3.5 shrink-0" />
-              <span>Thư viện</span>
-              <ExternalLink className="w-3 h-3 opacity-85 shrink-0" />
-            </a>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowLibraryPathBox((v) => !v)}
-              className="h-7 px-2.5 rounded-[6px] bg-[#1E6BFF] hover:bg-[#1557DB] border border-[#41D9F5]/75 text-white text-[12px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-xs whitespace-nowrap"
-              title="Chưa chỉ định đường dẫn thư mục libraries3D — Bấm để chỉ định & áp dụng"
-            >
-              <FolderOpen className="w-3.5 h-3.5 shrink-0" />
-              <span>Thư viện</span>
-            </button>
-          )}
-        </div>
       </div>
-
-      {/* Hộp Chỉ định & Áp dụng đường dẫn đến thư mục libraries3D */}
-      {showLibraryPathBox && (
-        <div
-          className={`mb-2.5 p-2.5 rounded-[10px] border-[1.5px] space-y-2 shrink-0 ${
-            isDarkMode
-              ? 'bg-[#050B18] border-[#41D9F5]/65 text-[#E8F2FF]'
-              : 'bg-white border-[#1D63E8] text-[#051630] shadow-sm'
-          }`}
-        >
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[12px] font-extrabold flex items-center gap-1.5">
-              <FolderOpen className="w-3.5 h-3.5 text-[#1E6BFF] shrink-0" />
-              <span>Chỉ định thư mục libraries3D</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setShowLibraryPathBox(false)}
-              className="p-0.5 rounded hover:bg-slate-500/20 cursor-pointer"
-              title="Đóng"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          <input
-            type="text"
-            value={libraryPathDraft}
-            onChange={(e) => setLibraryPathDraft(e.target.value)}
-            placeholder="C:\Users\ltlie\Documents\libraries3DLab"
-            className={`w-full px-2.5 py-1.5 rounded-[7px] border font-mono text-[11.5px] font-bold focus:outline-none ${
-              isDarkMode
-                ? 'bg-[#0B1930] border-[#41D9F5]/40 text-[#E8F2FF] focus:border-[#41D9F5]'
-                : 'bg-slate-50 border-[#88ADD8] text-[#051630] focus:border-[#1D63E8]'
-            }`}
-          />
-
-          <input
-            ref={libraryFolderInputRef}
-            type="file"
-            {...({
-              webkitdirectory: '',
-              directory: '',
-            } as React.InputHTMLAttributes<HTMLInputElement>)}
-            multiple
-            onChange={handleSelectFolderFromDisk}
-            className="hidden"
-          />
-
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => libraryFolderInputRef.current?.click()}
-              className={`px-2.5 py-1.5 rounded-[7px] border text-[11.5px] font-extrabold flex items-center gap-1 cursor-pointer transition-colors ${
-                isDarkMode
-                  ? 'bg-[#10223D] hover:bg-[#19335A] border-[#41D9F5]/40 text-[#E8F2FF]'
-                  : 'bg-[#E6EEF8] hover:bg-[#D5E3F5] border-[#88ADD8] text-[#051630]'
-              }`}
-              title="Duyệt chọn thư mục libraries3DLab trên máy tính"
-            >
-              <FolderOpen className="w-3.5 h-3.5 text-[#1E6BFF]" />
-              <span>Chọn thư mục...</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleApplyLibraryPath}
-              className="flex-1 py-1.5 px-2.5 rounded-[7px] bg-[#1E6BFF] hover:bg-[#1557DB] text-white text-[11.5px] font-extrabold flex items-center justify-center gap-1 cursor-pointer transition-colors shadow-2xs"
-            >
-              <Check className="w-3.5 h-3.5 stroke-[2.8]" />
-              <span>Áp dụng</span>
-            </button>
-          </div>
-
-          {libraryDiskStatus.hasConfiguredLibraryPath && (
-            <div className="pt-1 border-t border-slate-400/25 flex items-center justify-between text-[11px]">
-              <a
-                href="/libraries3DLab/index.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-extrabold text-[#1E6BFF] hover:underline flex items-center gap-1"
-              >
-                <ExternalLink className="w-3 h-3" />
-                <span>Mở thư mục ra Tab mới</span>
-              </a>
-              <button
-                type="button"
-                onClick={() => {
-                  localDiskLibraryEngine.resetLibraryPathConfiguration();
-                  setLibraryPathNotice('Đã đặt lại trạng thái chưa chỉ định.');
-                }}
-                className="text-rose-500 font-bold hover:underline cursor-pointer"
-              >
-                Đặt lại
-              </button>
-            </div>
-          )}
-
-          {libraryPathNotice && (
-            <div className="text-[11px] font-bold text-emerald-500">
-              {libraryPathNotice}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* 2. Ô tìm kiếm ngắn gọn, chữ đậm + Recent Searches (5 từ khóa gần đây) */}
       <div className="relative mb-2 shrink-0">
@@ -692,7 +468,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
         )}
       </div>
 
-      {/* 2B. Chọn nhanh Bài thí nghiệm */}
+      {/* 2B. Chọn nhanh Bài thí nghiệm (Thu gọn mặc định để dành không gian rà tìm thiết bị) */}
       {onSelectExperiment && (
         <div
           className={`mb-2 rounded-[9px] border-[1.5px] p-1.5 shrink-0 ${
@@ -701,190 +477,192 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
               : 'bg-[#DCE8F8] border-[#88ADD8]'
           }`}
         >
-          <div className="flex items-center justify-between gap-1 mb-1 px-0.5">
-            <span
-              className={`text-[10.5px] font-extrabold uppercase tracking-wider ${
+          <div className="flex items-center justify-between gap-1 px-0.5">
+            <button
+              type="button"
+              onClick={() => setIsQuickExperimentsOpen((v) => !v)}
+              className={`flex-1 flex items-center justify-between gap-1 py-0.5 text-left cursor-pointer text-[11px] font-extrabold tracking-tight ${
                 isDarkMode ? 'text-[#41D9F5]' : 'text-[#0B3A7D]'
               }`}
+              title={
+                isQuickExperimentsOpen
+                  ? 'Thu gọn danh sách bài thực hành xếp sẵn'
+                  : 'Mở chọn nhanh các bài thực hành SGK (Hiển vi, Thấu kính, KLR, Bình tràn, Nhiệt)'
+              }
             >
-              Bài thực hành (Xếp sẵn lên kệ):
-            </span>
+              <span className="truncate">
+                📖 Bài thực hành (Xếp sẵn)
+              </span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 shrink-0 transition-transform duration-200 ${
+                  isQuickExperimentsOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
             {activeExperimentId === 'OL3D-EXP-OPTICS-LENS-0001' &&
               onAssembleOpticalBench && (
                 <button
                   type="button"
                   onClick={onAssembleOpticalBench}
-                  className="px-2 py-0.5 rounded-[5px] bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10.5px] font-extrabold shadow-2xs transition-colors cursor-pointer"
+                  className="px-2 py-0.5 rounded-[5px] bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10.5px] font-extrabold shadow-2xs transition-colors cursor-pointer shrink-0"
                   title="Tự động lắp ráp 7 chi tiết thành Bộ thí nghiệm Thấu kính hoàn chỉnh trên bàn"
                 >
                   ⚡ Lắp bộ 8.12
                 </button>
               )}
           </div>
-          <div className="grid grid-cols-2 gap-1">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory('biology-microscopy');
-                window.dispatchEvent(new CustomEvent('openlab:open-microscope'));
-              }}
-              className="col-span-2 px-2.5 py-1.5 rounded-[7px] text-[12px] font-black text-left leading-tight border transition-all cursor-pointer flex items-center justify-between shadow-xs bg-gradient-to-r from-[#0B1930] via-[#10223D] to-[#1E1B4B] border-[#9B83FF]/75 text-[#E8F2FF] hover:border-[#41D9F5]"
-              title="Mở buồng quan sát Kính hiển vi quang học 3D với 8 tiêu bản chuẩn KHTN THCS"
-            >
-              <span className="flex items-center gap-1.5">
-                <span className="text-sm">🔬</span>
-                <span>Soi Kính hiển vi 3D (8 Mẫu vật KHTN)</span>
-              </span>
-              <ChevronRight className="w-4 h-4 text-[#41D9F5]" />
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory('optical-equipment');
-                onSelectExperiment('OL3D-EXP-OPTICS-LENS-0001');
-              }}
-              className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
-                activeExperimentId === 'OL3D-EXP-OPTICS-LENS-0001'
-                  ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
-                  : isDarkMode
-                    ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
-                    : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
-              }`}
-              title="Chọn bài Lắp ráp & Khảo sát Thấu kính (Hình 8.12): 7 chi tiết bộ thí nghiệm sẽ có sẵn trên Kệ trưng bày"
-            >
-              🔬 Bài 8–9: Bộ Thấu kính (Hình 8.12)
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory('all');
-                onSelectExperiment('OL3D-EXP-DENSITY-SOLID-0001');
-              }}
-              className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
-                activeExperimentId === 'OL3D-EXP-DENSITY-SOLID-0001' ||
-                activeExperimentId === 'OL3D-EXP-DENSITY-0001'
-                  ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
-                  : isDarkMode
-                    ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
-                    : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
-              }`}
-              title="Chọn bài Đo khối lượng riêng của vật rắn"
-            >
-              ⚖️ Bài 14: Đo Khối lượng riêng
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory('all');
-                onSelectExperiment('OL3D-EXP-DISPLACEMENT-0001');
-              }}
-              className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
-                activeExperimentId === 'OL3D-EXP-DISPLACEMENT-0001'
-                  ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
-                  : isDarkMode
-                    ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
-                    : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
-              }`}
-              title="Chọn bài Đo thể tích vật rắn bằng Bình tràn & Lực đẩy Archimedes"
-            >
-              ⚓ Bài 15: Bình tràn & Ác-si-mét
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setActiveCategory('thermal-equipment');
-                onSelectExperiment('OL3D-EXP-THERMAL-BOIL-0001');
-              }}
-              className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
-                activeExperimentId === 'OL3D-EXP-THERMAL-BOIL-0001'
-                  ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
-                  : isDarkMode
-                    ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
-                    : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
-              }`}
-              title="Chọn bài Khảo sát Truyền nhiệt, Đo nhiệt độ sôi & Bảo toàn năng lượng"
-            >
-              🔥 Bài 27: Đo Nhiệt độ sôi & Q
-            </button>
-          </div>
+          {isQuickExperimentsOpen && (
+            <div className="grid grid-cols-2 gap-1 mt-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCategory('biology-microscopy');
+                  window.dispatchEvent(new CustomEvent('openlab:open-microscope'));
+                }}
+                className="col-span-2 px-2.5 py-1.5 rounded-[7px] text-[12px] font-black text-left leading-tight border transition-all cursor-pointer flex items-center justify-between shadow-xs bg-gradient-to-r from-[#0B1930] via-[#10223D] to-[#1E1B4B] border-[#9B83FF]/75 text-[#E8F2FF] hover:border-[#41D9F5]"
+                title="Mở buồng quan sát Kính hiển vi quang học 3D với 8 tiêu bản chuẩn KHTN THCS"
+              >
+                <span className="flex items-center gap-1.5">
+                  <span className="text-sm">🔬</span>
+                  <span>Soi Kính hiển vi 3D (8 Mẫu vật KHTN)</span>
+                </span>
+                <ChevronRight className="w-4 h-4 text-[#41D9F5]" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCategory('optical-equipment');
+                  onSelectExperiment('OL3D-EXP-OPTICS-LENS-0001');
+                }}
+                className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
+                  activeExperimentId === 'OL3D-EXP-OPTICS-LENS-0001'
+                    ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
+                    : isDarkMode
+                      ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
+                      : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
+                }`}
+                title="Chọn bài Lắp ráp & Khảo sát Thấu kính (Hình 8.12): 7 chi tiết bộ thí nghiệm sẽ có sẵn trên Kệ trưng bày"
+              >
+                🔬 Bài 8–9: Bộ Thấu kính (Hình 8.12)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCategory('all');
+                  onSelectExperiment('OL3D-EXP-DENSITY-SOLID-0001');
+                }}
+                className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
+                  activeExperimentId === 'OL3D-EXP-DENSITY-SOLID-0001' ||
+                  activeExperimentId === 'OL3D-EXP-DENSITY-0001'
+                    ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
+                    : isDarkMode
+                      ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
+                      : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
+                }`}
+                title="Chọn bài Đo khối lượng riêng của vật rắn"
+              >
+                ⚖️ Bài 14: Đo Khối lượng riêng
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCategory('all');
+                  onSelectExperiment('OL3D-EXP-DISPLACEMENT-0001');
+                }}
+                className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
+                  activeExperimentId === 'OL3D-EXP-DISPLACEMENT-0001'
+                    ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
+                    : isDarkMode
+                      ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
+                      : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
+                }`}
+                title="Chọn bài Đo thể tích vật rắn bằng Bình tràn & Lực đẩy Archimedes"
+              >
+                ⚓ Bài 15: Bình tràn & Ác-si-mét
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveCategory('thermal-equipment');
+                  onSelectExperiment('OL3D-EXP-THERMAL-BOIL-0001');
+                }}
+                className={`px-2 py-1.5 rounded-[7px] text-[11.5px] font-extrabold text-left leading-tight border transition-colors cursor-pointer ${
+                  activeExperimentId === 'OL3D-EXP-THERMAL-BOIL-0001'
+                    ? 'bg-[#1D63E8] text-white border-[#41D9F5] shadow-xs'
+                    : isDarkMode
+                      ? 'bg-[#10223D] hover:bg-[#19335A] text-[#E8F2FF] border-[#41D9F5]/25'
+                      : 'bg-white hover:bg-[#EBF2FA] text-[#051630] border-[#9BBBE0]'
+                }`}
+                title="Chọn bài Khảo sát Truyền nhiệt, Đo nhiệt độ sôi & Bảo toàn năng lượng"
+              >
+                🔥 Bài 27: Đo Nhiệt độ sôi & Q
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* 3A. Thanh chọn nhóm thiết bị cuộn ngang trên Mobile (< 768px) */}
-      <div
-        className="flex md:hidden items-center gap-1.5 overflow-x-auto pb-2 mb-1.5 shrink-0 no-scrollbar"
-        role="listbox"
-        aria-label="Danh mục dụng cụ trên điện thoại"
-      >
-        {REFERENCE_CATEGORIES.map((cat) => {
-          const isSelected = activeCategory === cat.id;
-          return (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => {
-                setActiveCategory(cat.id);
-                if (onSelectCategoryTopic) {
-                  onSelectCategoryTopic(cat.id, cat.label);
+      {/* 3. Bộ lọc Lĩnh vực thu gọn 1 dòng — Tối đa hóa không gian cuộn rà tìm thiết bị */}
+      <div className="flex items-center gap-1.5 mb-2 shrink-0">
+        <div className="relative flex-1 min-w-0">
+          <Filter
+            className={`w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none ${
+              isDarkMode ? 'text-[#41D9F5]' : 'text-[#1D63E8]'
+            }`}
+          />
+          <select
+            value={activeCategory}
+            onChange={(e) => {
+              const catId = e.target.value as ReferenceLibraryCategoryId;
+              setActiveCategory(catId);
+              const cat = REFERENCE_CATEGORIES.find((c) => c.id === catId);
+              if (cat && onSelectCategoryTopic) {
+                onSelectCategoryTopic(cat.id, cat.label);
+              }
+            }}
+            aria-label="Lọc theo lĩnh vực KHTN"
+            className={`w-full pl-8 pr-7 py-1.5 rounded-[8px] text-[12.5px] font-extrabold border-[1.5px] cursor-pointer focus:outline-none appearance-none transition-colors ${
+              isDarkMode
+                ? 'bg-[#0B1930] border-[#41D9F5]/35 text-[#E8F2FF] focus:border-[#41D9F5]'
+                : 'bg-white border-[#7FA3CE] text-[#051630] focus:border-[#1D63E8]'
+            }`}
+          >
+            {REFERENCE_CATEGORIES.map((cat) => (
+              <option
+                key={cat.id}
+                value={cat.id}
+                className={
+                  isDarkMode
+                    ? 'bg-[#0B1930] text-[#E8F2FF]'
+                    : 'bg-white text-[#051630]'
                 }
-              }}
-              className={`min-h-[38px] px-3 py-1.5 rounded-[8px] text-[13.5px] whitespace-nowrap shrink-0 transition-colors cursor-pointer border ${
-                isSelected
-                  ? 'bg-[#1D63E8] text-white border-[#41D9F5] font-extrabold shadow-xs'
-                  : isDarkMode
-                    ? 'bg-[#10223D] text-[#E8F2FF] border-[#41D9F5]/25 font-bold'
-                    : 'bg-[#DCE8F8] text-[#051630] border-[#88ADD8] font-bold'
-              }`}
-            >
-              {cat.label}
-            </button>
-          );
-        })}
-      </div>
+              >
+                {`Lĩnh vực: ${cat.label}`}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            className={`w-3.5 h-3.5 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-75 ${
+              isDarkMode ? 'text-[#41D9F5]' : 'text-[#1D63E8]'
+            }`}
+          />
+        </div>
 
-      {/* 3B. Danh mục dọc chuẩn trên Desktop (md+ >= 768px) */}
-      <div
-        className={`hidden md:block mb-2 border-[1.5px] rounded-[10px] p-1.5 space-y-0.5 shrink-0 max-h-[176px] overflow-y-auto ${
-          isDarkMode
-            ? 'bg-[#050B18]/85 border-[#41D9F5]/30'
-            : 'bg-[#E2ECF8] border-[#88ADD8]'
-        }`}
-        role="listbox"
-        aria-label="Danh mục dụng cụ"
-      >
-        {REFERENCE_CATEGORIES.map((cat) => {
-          const isSelected = activeCategory === cat.id;
-          return (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => {
-                setActiveCategory(cat.id);
-                if (onSelectCategoryTopic) {
-                  onSelectCategoryTopic(cat.id, cat.label);
-                }
-              }}
-              className={`w-full px-2.5 py-1.5 rounded-[7px] text-left text-[13.5px] flex items-center justify-between transition-colors cursor-pointer ${
-                isSelected
-                  ? 'bg-[#1D63E8] text-white font-extrabold shadow-xs'
-                  : isDarkMode
-                    ? 'text-[#E8F2FF] hover:bg-[#10223D] font-bold'
-                    : 'text-[#051630] hover:bg-[#C9DDF6] font-bold'
-              }`}
-            >
-              <span className="truncate">{cat.label}</span>
-              <ChevronRight
-                className={`w-4 h-4 shrink-0 ${
-                  isSelected
-                    ? 'text-white'
-                    : isDarkMode
-                      ? 'text-[#A8BCD5]'
-                      : 'text-[#1E3A5F]'
-                }`}
-              />
-            </button>
-          );
-        })}
+        {activeCategory !== 'all' && (
+          <button
+            type="button"
+            onClick={() => {
+              setActiveCategory('all');
+              if (onSelectCategoryTopic) {
+                onSelectCategoryTopic('all', 'Tất cả (40)');
+              }
+            }}
+            className="px-2 py-1.5 rounded-[8px] bg-[#1E6BFF]/20 hover:bg-[#1E6BFF]/35 border border-[#38BDF8]/40 text-[#38BDF8] text-[11px] font-extrabold cursor-pointer shrink-0 transition-colors"
+            title="Xóa bộ lọc để hiện tất cả thiết bị"
+          >
+            ✕ Tất cả
+          </button>
+        )}
       </div>
 
       {/* 4. Lưới thẻ thiết bị cảm ứng (2 cột trên Desktop) */}
@@ -1109,20 +887,7 @@ export const StudentEquipmentSidebar: React.FC<StudentEquipmentSidebarProps> = (
             </button>
           )}
 
-          {onInspectAssetDetail && (
-            <button
-              type="button"
-              onClick={() => {
-                const target = contextMenu.asset;
-                setContextMenu(null);
-                onInspectAssetDetail(target, true);
-              }}
-              className="w-full px-2.5 py-2 rounded-[8px] hover:bg-[#1E6BFF]/75 text-left text-[13px] font-extrabold text-white flex items-center gap-2 cursor-pointer transition-colors"
-            >
-              <Wrench className="w-4 h-4 text-amber-300 shrink-0" />
-              <span>Sửa thông số & Cài đặt</span>
-            </button>
-          )}
+
 
           {onInspectAssetDetail && (
             <button

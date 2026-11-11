@@ -492,7 +492,7 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
   const [challengeFeedback, setChallengeFeedback] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [mapTheme, setMapTheme] = useState<'dark' | 'light' | 'transparent'>('dark');
-  const [qualityMode, setQualityMode] = useState<'performance' | 'balanced' | 'cinematic'>('balanced');
+  const [qualityMode] = useState<'performance' | 'balanced' | 'cinematic'>('balanced');
   const [viewPresentation, setViewPresentation] = useState<'cosmos_canvas' | 'accessible_table'>('cosmos_canvas');
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const modalContainerRef = useRef<HTMLDivElement | null>(null);
@@ -1889,41 +1889,43 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
         }`}
       >
         {/* HEADER BAR — PLANETARY COSMOS COMMAND DECK */}
-        <div className="flex items-center justify-between gap-2 px-3.5 md:px-4 py-2 shrink-0 border-b border-[rgba(130,180,230,0.18)] bg-[#050B18]/90 backdrop-blur-xl">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#41D9F5]/20 via-[#4D8DFF]/20 to-[#9B83FF]/25 border border-[#41D9F5]/45 flex items-center justify-center text-base shadow-[0_0_16px_rgba(65,217,245,0.2)] shrink-0">
+        <div className="flex items-center justify-between gap-2 px-3 md:px-4 py-2 shrink-0 border-b border-[rgba(130,180,230,0.18)] bg-[#050B18]/90 backdrop-blur-xl">
+          {/* CỤM TIÊU ĐỀ TRÁI VÀ NÚT MỞ BÀI HỌC */}
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#41D9F5]/20 via-[#4D8DFF]/20 to-[#9B83FF]/25 border border-[#41D9F5]/45 flex items-center justify-center text-sm shadow-sm shrink-0">
               🪐
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <h2 className="text-xs md:text-sm font-bold text-[#E8F2FF] tracking-wide truncate">
-                  OPENLAB 3D: MẠNG NƠ-RON NHÂN QUẢ KẾT NỐI THIẾT BỊ KHTN THCS
-                </h2>
-                <span className="hidden sm:inline-block text-[9.5px] px-1.5 py-0.5 rounded-full bg-[#48D6A0]/15 border border-[#48D6A0]/40 text-[#48D6A0] font-semibold shrink-0">
-                  GDPT 2018
-                </span>
-              </div>
-              <p className="text-[10.5px] text-[#A8BCD5] truncate hidden md:block">
-                Nhấp trực tiếp vào sợi dây liên kết để nghe âm thanh chỉ dẫn & xem tóm tắt quy luật nhân quả
-              </p>
+            <div className="min-w-0 flex items-center gap-2">
+              <h2 className="text-xs md:text-sm font-bold text-[#E8F2FF] tracking-wide truncate">
+                MẠNG NƠ-RON THIẾT BỊ KHTN
+              </h2>
+              <span className="hidden xl:inline-block text-[9.5px] px-1.5 py-0.5 rounded-full bg-[#48D6A0]/15 border border-[#48D6A0]/40 text-[#48D6A0] font-semibold shrink-0">
+                GDPT 2018
+              </span>
             </div>
-          </div>
 
-          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-            {/* NÚT MỞ BẢNG ĐIỀU HƯỚNG KHI ĐANG THU GỌN */}
+            {/* NÚT MỞ BẢNG ĐIỀU HƯỚNG BÀI HỌC KHI ĐANG THU GỌN */}
             {!isSidebarOpen && (
               <button
+                type="button"
                 onClick={() => setIsSidebarOpen(true)}
-                className="px-2.5 py-1 rounded-xl bg-[#10223D] hover:bg-[#163056] border border-[#41D9F5]/40 text-[#E8F2FF] text-[11px] font-semibold shadow-sm flex items-center gap-1 transition-all cursor-pointer"
+                className="px-2.5 py-1 rounded-lg bg-[#10223D] hover:bg-[#163056] border border-[#41D9F5]/40 text-[#E8F2FF] text-[11px] font-semibold shadow-xs flex items-center gap-1 transition-all cursor-pointer shrink-0 ml-1"
+                title="Mở danh sách bài thực hành SGK"
               >
                 <span>📂</span>
                 <span className="hidden sm:inline">Bài học</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#4D8DFF]/30 text-[#41D9F5]">
+                  {filteredExperiments.length}
+                </span>
               </button>
             )}
+          </div>
 
-            {/* CHUYỂN ĐỔI BẢN ĐỒ VŨ TRỤ / CHẾ ĐỘ DANH SÁCH (ACCESSIBILITY) */}
+          {/* CỤM ĐIỀU KHIỂN TINH GỌN BÊN PHẢI */}
+          <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+            {/* 1. CHUYỂN ĐỔI BẢN ĐỒ / DANH SÁCH */}
             <div
-              className="flex rounded-xl bg-[#0B1930] p-0.5 border border-[rgba(130,180,230,0.2)] text-[11px]"
+              className="flex rounded-lg bg-[#0B1930] p-0.5 border border-[rgba(130,180,230,0.2)] text-[11px]"
               role="tablist"
               aria-label="Chế độ hiển thị mạng thiết bị"
             >
@@ -1932,145 +1934,108 @@ export const NeuralDeviceNetworkModal: React.FC<NeuralDeviceNetworkModalProps> =
                 role="tab"
                 aria-selected={viewPresentation === 'cosmos_canvas'}
                 onClick={() => setViewPresentation('cosmos_canvas')}
-                className={`px-2 py-1 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer ${
+                className={`px-2 py-0.5 rounded-md font-medium transition-all flex items-center gap-1 cursor-pointer ${
                   viewPresentation === 'cosmos_canvas'
-                    ? 'bg-[#4D8DFF] text-white shadow-sm'
+                    ? 'bg-[#4D8DFF] text-white shadow-xs font-semibold'
                     : 'text-[#A8BCD5] hover:text-white'
                 }`}
                 title="Hiển thị Bản đồ Hệ Hành Tinh tương tác (Canvas 2D)"
               >
                 <span>🌌</span>
-                <span>Bản đồ</span>
+                <span className="hidden sm:inline">Bản đồ</span>
               </button>
               <button
                 type="button"
                 role="tab"
                 aria-selected={viewPresentation === 'accessible_table'}
                 onClick={() => setViewPresentation('accessible_table')}
-                className={`px-2 py-1 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer ${
+                className={`px-2 py-0.5 rounded-md font-medium transition-all flex items-center gap-1 cursor-pointer ${
                   viewPresentation === 'accessible_table'
-                    ? 'bg-[#4D8DFF] text-white shadow-sm'
+                    ? 'bg-[#4D8DFF] text-white shadow-xs font-semibold'
                     : 'text-[#A8BCD5] hover:text-white'
                 }`}
-                title="Chế độ Danh sách Bảng hỗ trợ bàn phím & trình đọc màn hình"
+                title="Chế độ Danh sách Bảng hỗ trợ bàn phím & tra cứu"
               >
                 <span>📋</span>
-                <span>Danh sách</span>
+                <span className="hidden sm:inline">Danh sách</span>
               </button>
             </div>
 
-            {/* NÚT CHUYỂI ĐỔI DUAL-MODE */}
-            <div className="hidden md:flex rounded-xl bg-[#0B1930] p-0.5 border border-[rgba(130,180,230,0.2)] text-[11px]">
-              <button
-                onClick={() => setUserMode('student')}
-                className={`px-2 py-1 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer ${
-                  userMode === 'student'
-                    ? 'bg-[#48D6A0]/25 border border-[#48D6A0]/60 text-[#48D6A0]'
-                    : 'text-[#A8BCD5] hover:text-white'
-                }`}
+            {/* 2. BỘ LỌC KHỐI LỚP (DẠNG SELECT NHỎ GỌN) */}
+            <div className="flex items-center rounded-lg bg-[#0B1930] border border-[rgba(130,180,230,0.2)] px-2 py-0.5 text-[11px]">
+              <span className="text-[#A8BCD5] mr-1 text-[10.5px] hidden md:inline">Lớp:</span>
+              <select
+                aria-label="Chọn khối lớp"
+                value={selectedGrade}
+                onChange={(e) => setSelectedGrade(e.target.value as any)}
+                className="bg-transparent text-[#E8F2FF] text-[11px] font-medium focus:outline-none cursor-pointer"
               >
-                <span>🎒</span>
-                <span>Học sinh</span>
-              </button>
-              <button
-                onClick={() => setUserMode('expert')}
-                className={`px-2 py-1 rounded-lg font-medium transition-all flex items-center gap-1 cursor-pointer ${
-                  userMode === 'expert'
-                    ? 'bg-[#9B83FF]/25 border border-[#9B83FF]/60 text-[#E8F2FF]'
-                    : 'text-[#A8BCD5] hover:text-white'
-                }`}
-              >
-                <span>🔬</span>
-                <span>Chuyên gia</span>
-              </button>
+                <option value="ALL" className="bg-[#0B1930] text-[#E8F2FF]">Tất cả lớp</option>
+                <option value="grade6" className="bg-[#0B1930] text-[#E8F2FF]">Lớp 6</option>
+                <option value="grade7" className="bg-[#0B1930] text-[#E8F2FF]">Lớp 7</option>
+                <option value="grade8" className="bg-[#0B1930] text-[#E8F2FF]">Lớp 8</option>
+                <option value="grade9" className="bg-[#0B1930] text-[#E8F2FF]">Lớp 9</option>
+              </select>
             </div>
 
-            {/* BỘ LỌC KHỐI LỚP */}
-            <div className="hidden lg:flex rounded-xl bg-[#0B1930] p-0.5 border border-[rgba(130,180,230,0.18)] text-[11px]">
-              {(['ALL', 'grade6', 'grade7', 'grade8', 'grade9'] as const).map(gr => (
-                <button
-                  key={gr}
-                  onClick={() => setSelectedGrade(gr)}
-                  className={`px-1.5 py-1 rounded-lg transition-all text-[10.5px] cursor-pointer ${
-                    selectedGrade === gr
-                      ? 'bg-[#4D8DFF] text-white font-semibold shadow-xs'
-                      : 'text-[#A8BCD5] hover:text-white'
-                  }`}
-                >
-                  {gr === 'ALL' ? 'Tất cả' : gr === 'grade6' ? 'K6' : gr === 'grade7' ? 'K7' : gr === 'grade8' ? 'K8' : 'K9'}
-                </button>
-              ))}
-            </div>
-
-            {/* CHẾ ĐỘ ĐỒ HỌA (HIỆU NĂNG / CÂN BẰNG / ĐIỆN ẢNH) */}
-            <div
-              className="hidden xl:flex rounded-xl bg-[#0B1930] p-0.5 border border-[rgba(130,180,230,0.18)] text-[10.5px]"
-              title="Chế độ chất lượng đồ họa vũ trụ"
-            >
-              {(
-                [
-                  { id: 'performance', label: '⚡ Mượt' },
-                  { id: 'balanced', label: '⚖️ Cân bằng' },
-                  { id: 'cinematic', label: '✨ Điện ảnh' },
-                ] as const
-              ).map(q => (
-                <button
-                  key={q.id}
-                  type="button"
-                  onClick={() => setQualityMode(q.id)}
-                  className={`px-1.5 py-1 rounded-lg transition-all cursor-pointer ${
-                    qualityMode === q.id
-                      ? 'bg-[#10223D] border border-[#41D9F5]/50 text-[#41D9F5] font-semibold'
-                      : 'text-[#A8BCD5] hover:text-white'
-                  }`}
-                >
-                  {q.label}
-                </button>
-              ))}
-            </div>
-
-            {/* BẬT MINI GAME THỬ THÁCH NỐI MẠCH */}
+            {/* 3. DUAL-MODE HỌC SINH / CHUYÊN GIA (TOGGLE 1-CLICK) */}
             <button
+              type="button"
+              onClick={() => setUserMode(prev => (prev === 'student' ? 'expert' : 'student'))}
+              className={`px-2 py-1 rounded-lg border text-[11px] font-medium flex items-center gap-1 transition-all cursor-pointer ${
+                userMode === 'student'
+                  ? 'bg-[#48D6A0]/20 border-[#48D6A0]/50 text-[#48D6A0]'
+                  : 'bg-[#9B83FF]/20 border-[#9B83FF]/50 text-[#C4B5FD]'
+              }`}
+              title={`Đang ở chế độ ${userMode === 'student' ? 'Học sinh (đơn giản, dễ hiểu)' : 'Chuyên gia (đầy đủ thuật ngữ, thông số)'}. Nhấp để chuyển đổi.`}
+            >
+              <span>{userMode === 'student' ? '🎒' : '🔬'}</span>
+              <span className="hidden md:inline">{userMode === 'student' ? 'Học sinh' : 'Chuyên gia'}</span>
+            </button>
+
+            {/* 4. MINI GAME THỬ THÁCH NỐI MẠCH */}
+            <button
+              type="button"
               onClick={() => {
                 setChallengeMode(prev => !prev);
                 setChallengeFeedback(null);
               }}
-              className={`px-2.5 py-1 rounded-xl text-[11px] font-semibold border transition-all flex items-center gap-1 cursor-pointer ${
+              className={`px-2 py-1 rounded-lg text-[11px] font-semibold border transition-all flex items-center gap-1 cursor-pointer ${
                 challengeMode
-                  ? 'bg-[#FFB85C]/20 border-[#FFB85C] text-[#FFB85C] shadow-[0_0_12px_rgba(255,184,92,0.25)]'
+                  ? 'bg-[#FFB85C]/20 border-[#FFB85C] text-[#FFB85C] shadow-xs'
                   : 'bg-[#0B1930] border-[rgba(130,180,230,0.2)] text-[#A8BCD5] hover:text-white'
               }`}
+              title="Chế độ trò chơi thử thách kiến thức liên kết thiết bị"
             >
               <span>🎮</span>
-              <span className="hidden sm:inline">{challengeMode ? `Thử thách: ${challengeScore}đ` : 'Thử thách'}</span>
+              <span className="hidden md:inline">{challengeMode ? `${challengeScore}đ` : 'Thử thách'}</span>
             </button>
 
-            {/* Nút Phóng to toàn màn hình / Thu nhỏ lại */}
+            {/* 5. NÚT PHÓNG TO TOÀN MÀN HÌNH / THU NHỎ (ICON NHỎ) */}
             <button
               type="button"
               onClick={handleToggleFullScreen}
               aria-label={isFullScreen ? 'Thu nhỏ bản đồ lại' : 'Phóng to bản đồ toàn màn hình'}
               title={isFullScreen ? 'Thu nhỏ bản đồ về khung cửa sổ' : 'Phóng to bản đồ toàn màn hình'}
-              className={`px-2.5 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1.5 border transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0 ${
+              className={`w-7 h-7 rounded-lg font-bold text-xs flex items-center justify-center border transition-all hover:scale-105 active:scale-95 cursor-pointer ${
                 isFullScreen
-                  ? 'bg-[#41D9F5]/20 hover:bg-[#41D9F5]/30 border-[#41D9F5] text-[#41D9F5] shadow-[0_0_14px_rgba(65,217,245,0.3)]'
+                  ? 'bg-[#41D9F5]/20 border-[#41D9F5] text-[#41D9F5] shadow-xs'
                   : 'bg-[#10223D] hover:bg-[#163056] border-[#41D9F5]/45 text-[#E8F2FF]'
               }`}
             >
-              <span className="text-sm leading-none">{isFullScreen ? '🗗' : '⛶'}</span>
-              <span>{isFullScreen ? 'Thu lại' : 'Toàn màn hình'}</span>
+              <span>{isFullScreen ? '🗗' : '⛶'}</span>
             </button>
 
-            {/* Nút đóng hệ thống mạng lưới nổi bật */}
+            {/* 6. NÚT ĐÓNG MẠNG LƯỚI TINH GỌN */}
             <button
               type="button"
               onClick={onClose}
               aria-label="Đóng hệ thống mạng lưới thiết bị"
               title="Đóng sơ đồ mạng lưới để quay lại bàn thí nghiệm 3D (Phím Esc)"
-              className="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 border border-rose-400 text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_0_16px_rgba(244,63,94,0.4)] transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
+              className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-500 border border-rose-400 text-white font-bold text-xs flex items-center gap-1 shadow-sm transition-all hover:scale-105 active:scale-95 cursor-pointer shrink-0"
             >
-              <span className="text-sm leading-none">✕</span>
-              <span>Đóng mạng lưới</span>
+              <span className="text-xs leading-none">✕</span>
+              <span>Đóng</span>
             </button>
           </div>
         </div>

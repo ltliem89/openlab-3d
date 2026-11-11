@@ -29,6 +29,7 @@ interface EquipmentPreviewPanelProps {
   assetsMap: Map<string, AssetDefinition>;
   isSidebarCollapsed: boolean;
   isDarkMode?: boolean;
+  readOnlySpecs?: boolean;
   onAddAssetToTable: (assetId: string) => void;
   onInspectAssetDetail?: (asset: AssetDefinition, initialEditMode?: boolean) => void;
   onOpenHtmlUpdaterForAsset?: (asset: AssetDefinition) => void;
@@ -39,6 +40,7 @@ export const EquipmentPreviewPanel: React.FC<EquipmentPreviewPanelProps> = ({
   assetsMap,
   isSidebarCollapsed,
   isDarkMode = true,
+  readOnlySpecs = false,
   onAddAssetToTable,
   onInspectAssetDetail,
   onOpenHtmlUpdaterForAsset,
@@ -259,12 +261,12 @@ export const EquipmentPreviewPanel: React.FC<EquipmentPreviewPanelProps> = ({
               {onInspectAssetDetail && (
                 <button
                   type="button"
-                  onClick={() => onInspectAssetDetail(asset, true)}
+                  onClick={() => onInspectAssetDetail(asset, !readOnlySpecs)}
                   className="px-2 py-1 rounded-[6px] bg-sky-500/25 hover:bg-sky-500/45 border border-sky-300/80 text-sky-100 text-[11px] font-extrabold flex items-center gap-1 cursor-pointer"
-                  title="Sửa thông số kỹ thuật"
+                  title={readOnlySpecs ? 'Xem thông số kỹ thuật chi tiết' : 'Sửa thông số kỹ thuật'}
                 >
                   <Wrench className="w-3 h-3 shrink-0" />
-                  <span>Thông số</span>
+                  <span>{readOnlySpecs ? 'Xem thông số' : 'Thông số'}</span>
                 </button>
               )}
 

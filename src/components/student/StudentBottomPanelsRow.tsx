@@ -11,7 +11,6 @@ import {
   Check,
   ArrowRight,
   Eye,
-  HelpCircle,
   RotateCcw,
   RotateCw,
   Download,
@@ -138,13 +137,7 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
 
   const isDetailedMode =
     showDetailedGuides !== undefined ? showDetailedGuides : localDetailedGuides;
-  const handleToggleDetailed = () => {
-    if (onToggleDetailedGuides) {
-      onToggleDetailedGuides();
-    } else {
-      setLocalDetailedGuides((v) => !v);
-    }
-  };
+
 
   const isSI = unitSystem === 'SI';
   const isMgL = unitSystem === 'MG_L';
@@ -629,44 +622,30 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
               <button
                 type="button"
                 onClick={() => setUnitSystem('CGS')}
-                className={`px-1.5 sm:px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
+                className={`px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
                   unitSystem === 'CGS'
-                    ? 'bg-[#1D63E8] text-white'
+                    ? 'bg-[#1D63E8] text-white font-black shadow-xs'
                     : isDarkMode
                       ? 'text-slate-300 hover:text-white'
                       : 'text-[#4B6280] hover:text-[#123059]'
                 }`}
-                title="Hệ đơn vị thực hành: g, cm³ (mL), g/cm³"
+                title="Chuẩn thực hành KHTN THCS: g/cm³ (g, mL)"
               >
-                <span>g · mL</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setUnitSystem('MG_L')}
-                className={`px-1.5 sm:px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
-                  unitSystem === 'MG_L'
-                    ? 'bg-[#1D63E8] text-white'
-                    : isDarkMode
-                      ? 'text-slate-300 hover:text-white'
-                      : 'text-[#4B6280] hover:text-[#123059]'
-                }`}
-                title="Chuyển đổi đơn vị: miligam (mg), lít (L), g/L"
-              >
-                <span>mg · L</span>
+                <span>g/cm³</span>
               </button>
               <button
                 type="button"
                 onClick={() => setUnitSystem('SI')}
-                className={`px-1.5 sm:px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
+                className={`px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer whitespace-nowrap ${
                   unitSystem === 'SI'
-                    ? 'bg-[#1D63E8] text-white'
+                    ? 'bg-[#1D63E8] text-white font-black shadow-xs'
                     : isDarkMode
                       ? 'text-slate-300 hover:text-white'
                       : 'text-[#4B6280] hover:text-[#123059]'
                 }`}
-                title="Hệ đơn vị SI chuẩn: kg, L (dm³), kg/m³"
+                title="Chuẩn Hệ đo lường quốc tế SI: kg/m³ (kg, m³)"
               >
-                <span>kg/m³ · L</span>
+                <span>kg/m³ (SI)</span>
               </button>
             </div>
           ) : (
@@ -698,27 +677,7 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
             <span>Xuất dữ liệu</span>
           </button>
 
-          {/* Nút bật/tắt chế độ Giải thích chi tiết & Hướng dẫn trên đầu dụng cụ */}
-          <button
-            type="button"
-            onClick={handleToggleDetailed}
-            className={`h-7 px-2 rounded-[7px] text-[12px] font-extrabold flex items-center gap-1 border transition-colors cursor-pointer ${
-              isDetailedMode
-                ? 'bg-amber-500/25 border-amber-400 text-amber-300 shadow-xs'
-                : isDarkMode
-                  ? 'bg-white/5 hover:bg-white/15 border-white/15 text-slate-300'
-                  : 'bg-white hover:bg-[#DCE8F8] border-[#C4D5E8] text-[#123059]'
-            }`}
-            title={
-              isDetailedMode
-                ? 'Đang BẬT giải thích chữ & hướng dẫn trên từng dụng cụ (Nhấn để về chế độ Ký hiệu gọn)'
-                : 'Bật hiển thị chữ giải thích chi tiết & hướng dẫn trên đầu từng dụng cụ'
-            }
-            aria-pressed={isDetailedMode}
-          >
-            <HelpCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-            {isDetailedMode && <span className="hidden sm:inline">Giải thích</span>}
-          </button>
+
 
           {/* Nút Phóng to toàn màn hình / Thu nhỏ lại */}
           <button
