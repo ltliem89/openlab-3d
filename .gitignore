@@ -8,3 +8,4 @@ coverage/
 !.env.example
 pipeline_output/
 prompt_*.txt
+.vercel
