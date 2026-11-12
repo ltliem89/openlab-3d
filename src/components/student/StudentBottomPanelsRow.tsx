@@ -20,6 +20,7 @@ import {
 import { StudentGuidedStepNumber } from './StudentGuidedStepPanel';
 import { ExperimentDefinition } from '../../domain/types';
 import { MathFormula, RichMathText } from '../common/MathFormula';
+import { chronoCausalSandbox } from '../../domain/ChronoCausalSandbox';
 
 export type MeasurementUnitSystem = 'CGS' | 'MG_L' | 'SI';
 export type StudentBottomTabId =
@@ -86,6 +87,54 @@ const MOBILE_PRACTICE_STEPS: Array<{
     shortDesc: 'Kiểm tra bảng số liệu và sai số.',
   },
 ];
+
+function parseUncertaintyFromNote(note: string): number | null {
+  const pmMatch = note.match(/±\s*([0-9]+(?:[.,][0-9]+)?)/);
+  if (pmMatch) {
+    const parsed = Number(pmMatch[1].replace(',', '.'));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+  const dcnnMatch = note.match(/ĐCNN:\s*([0-9]+(?:[.,][0-9]+)?)/);
+  if (dcnnMatch) {
+    const parsed = Number(dcnnMatch[1].replace(',', '.'));
+    return Number.isFinite(parsed) && parsed > 0 ? parsed / 2 : null;
+  }
+  return null;
+}
+
+const ErrorBarIndicator: React.FC<{
+  value: number;
+  uncertainty: number;
+  unit: string;
+  isDarkMode: boolean;
+}> = ({ value, uncertainty, unit, isDarkMode }) => {
+  if (!Number.isFinite(value) || !Number.isFinite(uncertainty) || uncertainty <= 0) return null;
+  const relPct = value !== 0 ? Math.min(45, Math.max(8, (uncertainty / Math.abs(value)) * 100)) : 20;
+  const halfBar = Math.min(24, Math.max(7, (relPct / 45) * 24));
+  const x1 = 32 - halfBar;
+  const x2 = 32 + halfBar;
+  const decimals = uncertainty < 0.1 ? 2 : uncertainty < 1 ? 2 : 1;
+  const minVal = (value - uncertainty).toFixed(decimals);
+  const maxVal = (value + uncertainty).toFixed(decimals);
+
+  return (
+    <span
+      className={`inline-flex items-center px-1.5 py-0.5 rounded-[5px] border font-mono text-[10.5px] font-bold shrink-0 ${
+        isDarkMode
+          ? 'bg-emerald-950/60 border-emerald-500/45 text-emerald-300'
+          : 'bg-emerald-50 border-emerald-600/35 text-emerald-800'
+      }`}
+      title={`Dải sai số đo lường (Error Bar): [${minVal} .. ${maxVal}] ${unit} (±${uncertainty.toFixed(decimals)} ${unit})`}
+    >
+      <svg className="w-12 h-3.5 stroke-current stroke-[1.8]" viewBox="0 0 64 14" aria-hidden="true">
+        <line x1={x1} y1="7" x2={x2} y2="7" />
+        <line x1={x1} y1="3" x2={x1} y2="11" />
+        <line x1={x2} y1="3" x2={x2} y2="11" />
+        <circle cx="32" cy="7" r="2.3" className="fill-current" />
+      </svg>
+    </span>
+  );
+};
 
 export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
   measuredMassG,
@@ -661,6 +710,26 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
             </div>
           )}
 
+          {/* Nút Tua ngược thời gian ChronoCausal 5s */}
+          <button
+            type="button"
+            onClick={() => {
+              (typeof window !== 'undefined' && window.chronoCausalSandbox
+                ? window.chronoCausalSandbox
+                : chronoCausalSandbox).rewindSeconds(5);
+            }}
+            className={`h-7 px-2 rounded-[7px] text-[12px] font-extrabold flex items-center gap-1 border transition-colors cursor-pointer shrink-0 ${
+              isDarkMode
+                ? 'bg-amber-500/15 hover:bg-amber-500/25 border-amber-400/45 text-amber-300 shadow-xs'
+                : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800 shadow-xs'
+            }`}
+            title="Tua ngược 5 giây để xem lại lỗi thao tác (ChronoCausal Rewind · Đệm 60s)"
+            aria-label="Tua ngược 5 giây"
+          >
+            <RotateCcw className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden md:inline">Tua 5s</span>
+          </button>
+
           {/* Nút Xuất dữ liệu CSV */}
           <button
             type="button"
@@ -921,7 +990,22 @@ export const StudentBottomPanelsRow: React.FC<StudentBottomPanelsRowProps> = ({
                             isDarkMode ? 'text-slate-300' : 'text-[#4B6280]'
                           }`}
                         >
-                          {r.leastCountNote}
+                          <div className="inline-flex items-center justify-end gap-2">
+                            <span>{r.leastCountNote}</span>
+                            {r.isReady && (() => {
+                              const numVal = Number(String(r.value).replace(',', '.'));
+                              const unc = parseUncertaintyFromNote(r.leastCountNote);
+                              if (!Number.isFinite(numVal) || unc === null) return null;
+                              return (
+                                <ErrorBarIndicator
+                                  value={numVal}
+                                  uncertainty={unc}
+                                  unit={r.unit}
+                                  isDarkMode={isDarkMode}
+                                />
+                              );
+                            })()}
+                          </div>
                         </td>
                       </tr>
                     ))}

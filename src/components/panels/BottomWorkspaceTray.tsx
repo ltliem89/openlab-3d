@@ -7,6 +7,7 @@ import {
   SceneInstance,
 } from '../../domain/types';
 import { MathFormula, RichMathText } from '../common/MathFormula';
+import { chronoCausalSandbox } from '../../domain/ChronoCausalSandbox';
 import {
   ChevronDown,
   ChevronUp,
@@ -19,6 +20,7 @@ import {
   PlusCircle,
   Scale,
   ArrowLeftRight,
+  RotateCcw,
 } from 'lucide-react';
 
 export type BottomTrayTabId = 'procedure' | 'results' | 'environments';
@@ -280,6 +282,23 @@ export const BottomWorkspaceTray: React.FC<BottomWorkspaceTrayProps> = ({
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
+          {/* Nút tua ngược thời gian ChronoCausal (Đệm vòng 60s / 3600 frames) */}
+          <div className="flex items-center gap-1.5 bg-slate-900/90 border border-slate-700 px-2 py-1 rounded-lg">
+            <button 
+              type="button"
+              onClick={() => {
+                (typeof window !== 'undefined' && window.chronoCausalSandbox
+                  ? window.chronoCausalSandbox
+                  : chronoCausalSandbox).rewindSeconds(5);
+              }}
+              className="p-1 text-slate-300 hover:text-amber-400 hover:bg-slate-800 rounded transition cursor-pointer"
+              title="Tua ngược 5 giây để xem lại lỗi thao tác (ChronoCausal Rewind)"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+            <span className="text-[11px] font-mono text-slate-400">Đệm quay lui 60s</span>
+          </div>
+
           {/* Scientific Measurement Unit Toggle Button (g/mL <-> mg/L) */}
           <button
             type="button"

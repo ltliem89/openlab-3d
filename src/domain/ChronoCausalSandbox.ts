@@ -117,6 +117,37 @@ export class ChronoCausalSandbox {
   }
 
   /**
+   * Tua ngược thời gian theo số giây yêu cầu (ChronoCausal Rewind)
+   */
+  public rewindSeconds(seconds: number = 5): SimulationStateSnapshot | null {
+    const framesToRewind = Math.max(1, Math.round(seconds * 60));
+    let lastSnap: SimulationStateSnapshot | null = null;
+    const steps = Math.min(framesToRewind, Math.max(1, this._isFull - 1));
+    for (let i = 0; i < steps; i++) {
+      const snap = this.stepBackward();
+      if (snap) lastSnap = snap;
+    }
+    // Đồng bộ với ChronoCausalRingBuffer trong Solver Registry nếu có
+    try {
+      if (typeof window !== 'undefined' && (window as any).scientificSolverRegistry) {
+        const ring = (window as any).scientificSolverRegistry.getChronoRingBuffer();
+        const pastSnap = ring.scrubBackward(seconds);
+        if (pastSnap) {
+          ring.forkBranchAt(pastSnap.simulationTimeSec);
+        } else {
+          ring.isRewinding = false;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('openlab:chrono-rewind', { detail: { seconds, snapshot: lastSnap } }));
+    }
+    return lastSnap;
+  }
+
+  /**
    * Thiết lập trọng trường đối thực (Counterfactual Sandbox)
    */
   public setCelestialGravity(preset: CelestialBodyGravity): number {
@@ -145,3 +176,13 @@ export class ChronoCausalSandbox {
 }
 
 export const chronoCausalSandbox = new ChronoCausalSandbox();
+
+declare global {
+  interface Window {
+    chronoCausalSandbox?: ChronoCausalSandbox;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  (window as any).chronoCausalSandbox = chronoCausalSandbox;
+}

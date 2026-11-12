@@ -55,8 +55,10 @@ import { NeuralDeviceNetworkModal } from './components/modals/NeuralDeviceNetwor
 import {
   SocraticTutorModal,
   MicroMacroLensModal,
+  SaveProjectModal,
+  OpenProjectModal,
 } from './components/modals';
-import { cognitiveNeuralEngine } from './domain/CognitiveNeuralEngine';
+import { projectStorage, SavedProject } from './domain/projectStorage';
 import { neuralConnectionEngine } from './domain/neuralConnectionEngine';
 import {
   EquipmentPreviewPanel,
@@ -104,6 +106,9 @@ export default function App() {
   const [showNeuralNetworkModal, setShowNeuralNetworkModal] = useState<boolean>(false);
   const [neuralModalTargetDeviceId, setNeuralModalTargetDeviceId] = useState<string | null>(null);
   const [showMicroMacroModal, setShowMicroMacroModal] = useState<boolean>(false);
+  const [showSaveProjectModal, setShowSaveProjectModal] = useState<boolean>(false);
+  const [showOpenProjectModal, setShowOpenProjectModal] = useState<boolean>(false);
+  const [savedProjectsCount, setSavedProjectsCount] = useState<number>(() => projectStorage.getCount());
 
   useEffect(() => {
     const handleOpenMic = () => setShowMicroscopeModal(true);
@@ -415,24 +420,28 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  // Lắng nghe các sự kiện Mạng nơ-ron nhận thức 3 tầng (Vi mô, Kịch bản Vàng)
+  // Lắng nghe sự kiện Tua ngược thời gian ChronoCausal (Improvement #7)
+  useEffect(() => {
+    const handleChronoRewind = (e: Event) => {
+      const customEvt = e as CustomEvent<{ seconds?: number; snapshot?: any }>;
+      const secs = customEvt.detail?.seconds ?? 5;
+      notify(`Đã tua ngược ${secs} giây mô phỏng (ChronoCausal Rewind).`, 'success');
+    };
+    window.addEventListener('openlab:chrono-rewind', handleChronoRewind);
+    return () => window.removeEventListener('openlab:chrono-rewind', handleChronoRewind);
+  }, [notify]);
+
+  // Lắng nghe các sự kiện Mạng nơ-ron nhận thức 3 tầng (Lăng kính Vi mô)
   useEffect(() => {
     const handleOpenLens = () => setShowMicroMacroModal(true);
-    const handleRunGoldenDemo = () => {
-      cognitiveNeuralEngine.triggerGoldenViSEFDemo();
-      notify('🎉 Eureka! Đã kích hoạt Kịch bản Vàng ViSEF: Khối lượng riêng ($\\rho = \\frac{m}{V} = 2.70\\,\\text{g/cm}^3$)', 'success');
-    };
-
     window.addEventListener('openlab:open-micro-macro-lens', handleOpenLens);
-    window.addEventListener('openlab:run-golden-demo', handleRunGoldenDemo);
 
     return () => {
       window.removeEventListener('openlab:open-micro-macro-lens', handleOpenLens);
-      window.removeEventListener('openlab:run-golden-demo', handleRunGoldenDemo);
     };
-  }, [notify]);
+  }, []);
 
-  // Phím tắt Alt + N (Trợ lý Nơ-ron) & Alt + G / Ctrl + Shift + G (Demo Vàng ViSEF)
+  // Phím tắt toàn cục: Alt + N (Trợ lý Nơ-ron), Ctrl + S (Lưu dự án), Ctrl + O (Mở dự án)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -448,17 +457,28 @@ export default function App() {
             : '🧠 Trợ lý Nơ-ron: ĐÃ TẮT (Chế độ tự do / Đánh giá thi)',
           next ? 'success' : 'info',
         );
-      } else if (
-        (e.altKey && (e.key === 'g' || e.key === 'G')) ||
-        (e.ctrlKey && e.shiftKey && (e.key === 'g' || e.key === 'G'))
-      ) {
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
-        cognitiveNeuralEngine.triggerGoldenViSEFDemo();
-        notify('🎉 Eureka! Đã kích hoạt Kịch bản Vàng ViSEF (Alt + G): Khối lượng riêng ($\\rho = \\frac{m}{V} = 2.70\\,\\text{g/cm}^3$)', 'success');
+        setShowSaveProjectModal(true);
+      } else if ((e.ctrlKey || e.metaKey) && (e.key === 'o' || e.key === 'O')) {
+        e.preventDefault();
+        setShowOpenProjectModal(true);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [notify]);
+
+  const handleLoadSavedProject = useCallback((proj: SavedProject) => {
+    setScene(proj.scene);
+    setSelectedInstanceId(null);
+    if (proj.measurements) {
+      if (proj.measurements.measuredMassG !== undefined) setMeasuredMassG(proj.measurements.measuredMassG);
+      if (proj.measurements.initialVolumeCm3 !== undefined) setInitialVolumeCm3(proj.measurements.initialVolumeCm3);
+      if (proj.measurements.finalVolumeCm3 !== undefined) setFinalVolumeCm3(proj.measurements.finalVolumeCm3);
+      if (proj.measurements.studentGuidedStep !== undefined) setStudentGuidedStep(proj.measurements.studentGuidedStep as any);
+    }
+    notify(`Đã khôi phục bài thực hành: "${proj.name}" (${proj.deviceCount} dụng cụ)`, 'success');
   }, [notify]);
 
   // Toggle Fullscreen for 3D Experiment Viewport (combines workspace expansion + browser fullscreen if permitted)
@@ -5142,10 +5162,9 @@ export default function App() {
           setShowNeuralNetworkModal(true);
         }}
         onOpenMicroMacroLens={() => setShowMicroMacroModal(true)}
-        onRunGoldenDemo={() => {
-          cognitiveNeuralEngine.triggerGoldenViSEFDemo();
-          notify('🎉 Eureka! Đã kích hoạt Kịch bản Vàng ViSEF: Khối lượng riêng ($\\rho = \\frac{m}{V} = 2.70\\,\\text{g/cm}^3$)', 'success');
-        }}
+        onOpenSaveProject={() => setShowSaveProjectModal(true)}
+        onOpenProjectList={() => setShowOpenProjectModal(true)}
+        savedProjectsCount={savedProjectsCount}
         onToggleDarkMode={() => setIsDarkMode((v) => !v)}
         onToggleLibraryPanel={handleToggleLibrarySidebar}
         onToggleGuidePanel={handleToggleStudentGuide}
@@ -5677,6 +5696,32 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* Save & Open Project Modals (Kiểu 1) */}
+      <SaveProjectModal
+        isOpen={showSaveProjectModal}
+        onClose={() => setShowSaveProjectModal(false)}
+        scene={scene}
+        measurements={{
+          measuredMassG,
+          initialVolumeCm3,
+          finalVolumeCm3,
+          studentGuidedStep,
+        }}
+        onSaveSuccess={(saved) => {
+          setSavedProjectsCount(projectStorage.getCount());
+          notify(`Đã lưu bài thực hành "${saved.name}" thành công!`, 'success');
+        }}
+        isDarkMode={isDarkMode}
+      />
+
+      <OpenProjectModal
+        isOpen={showOpenProjectModal}
+        onClose={() => setShowOpenProjectModal(false)}
+        onLoadProject={handleLoadSavedProject}
+        onProjectsCountChange={(cnt) => setSavedProjectsCount(cnt)}
+        isDarkMode={isDarkMode}
+      />
 
       {/* Student Help Modal */}
       {showStudentHelpModal && (

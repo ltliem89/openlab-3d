@@ -2141,19 +2141,6 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
   const [neuralCausalInferences, setNeuralCausalInferences] = useState(() =>
     neuralConnectionEngine.computeCausalInferences(),
   );
-  const [projectedArcBadges, setProjectedArcBadges] = useState<
-    Array<{
-      id: string;
-      x: number;
-      y: number;
-      icon: string;
-      symbolText: string;
-      detailText: string;
-      colorHex: string;
-      targetInstanceId: string;
-    }>
-  >([]);
-  const [hoveredArcId, setHoveredArcId] = useState<string | null>(null);
 
   useEffect(() => {
     return neuralConnectionEngine.subscribeToBus((sigs, infs) => {
@@ -3123,126 +3110,6 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           Math.abs(a.y - b.y) >= 2
         ) {
           return nextLabels;
-        }
-      }
-      return prev;
-    });
-
-    // Chiếu tọa độ đỉnh vòm các dây Nơ-ron đang kết nối sang không gian 2D (Micro-Arc Badges không che khuất)
-    const nextArcBadges: Array<{
-      id: string;
-      x: number;
-      y: number;
-      icon: string;
-      symbolText: string;
-      detailText: string;
-      colorHex: string;
-      targetInstanceId: string;
-    }> = [];
-
-    const activeSelId = selectedInstanceIdRef.current;
-    const isGuideActive = Boolean(neuralConnectionEngine.isGuideEnabled);
-    if (activeSelId && isGuideActive) {
-      const selInst = instancesRef.current.find((i) => i.instanceId === activeSelId);
-      const selObj = instanceObjectsRef.current.get(activeSelId);
-      if (selInst && selObj && selInst.visible) {
-        const candidates = neuralConnectionEngine.getCompatibleCandidates(
-          selInst,
-          instancesRef.current,
-          assetsMapRef.current,
-        );
-        const selAsset = assetsMapRef.current.get(selInst.assetId);
-        const isSelectedBalance =
-          selInst.assetId === 'OL3D-EQP-BAL-0001' ||
-          selAsset?.geometry.proceduralArchetype === 'electronic-balance' ||
-                    selInst.assetId.toLowerCase().includes('bal');
-
-        candidates.slice(0, 12).forEach((cand) => {
-          const targetObj = instanceObjectsRef.current.get(cand.targetInstance.instanceId);
-          if (!targetObj) return;
-          const p1 = new THREE.Vector3(selObj.position.x, selObj.position.y + 0.08, selObj.position.z);
-          const p2 = new THREE.Vector3(targetObj.position.x, targetObj.position.y + 0.08, targetObj.position.z);
-          const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-          const dist = p1.distanceTo(p2);
-          mid.y += Math.min(0.35, Math.max(0.12, dist * 0.35));
-
-          _projVec.copy(mid).project(camera);
-          if (_projVec.z < -1 || _projVec.z > 1) return;
-          const sx = Math.round((_projVec.x * 0.5 + 0.5) * width);
-          const sy = Math.round((-_projVec.y * 0.5 + 0.5) * height);
-          if (sx < 20 || sx > width - 20 || sy < 20 || sy > height - 20) return;
-
-          // Mã hóa ký hiệu & màu theo phân môn khoa học & phân định luồng Nơ-ron:
-          let icon = '🔗';
-          let symbolText = 'Liên kết';
-          let colorHex = '#34D399';
-          const kind = cand.link.kind;
-          const isIncomingToBalance = isSelectedBalance && cand.link.direction !== 'output';
-          const isIncomingMechFluid = cand.link.direction === 'input' && (
-            kind === 'mechanical_support' ||
-            kind === 'mechanical_hook' ||
-            kind === 'mechanical_clamp' ||
-            kind === 'fluid_spout' ||
-            kind === 'fluid_receptacle' ||
-            kind === 'submersion' ||
-            kind === 'buoyancy_force'
-          );
-
-          if (isIncomingToBalance || isIncomingMechFluid) {
-            // Khi chọn cây cân: các đường chạy từ vật nặng, ống đong, cốc... VÀO đĩa cân là màu tím neon (#A855F7)
-            icon = isSelectedBalance ? '⚖️' : (kind === 'submersion' || kind === 'fluid_spout' || kind === 'fluid_receptacle' ? '💧' : '⚖️');
-            symbolText = isSelectedBalance ? 'Vào đĩa cân (m)' : 'Nhận vào';
-            colorHex = '#A855F7'; // Tím neon cho luồng nhận vào (Dendrite)
-          } else if (kind === 'electrical_terminal' || kind === 'electrical_interlock' || kind === 'electromagnetic_induction') {
-            icon = '⚡';
-            symbolText = 'U, I';
-            colorHex = '#FACC15';
-          } else if (kind === 'fluid_spout' || kind === 'fluid_receptacle' || kind === 'submersion' || kind === 'buoyancy_force') {
-            icon = '💧';
-            symbolText = 'ΔV, Fₐ';
-            colorHex = '#38BDF8';
-          } else if (kind === 'thermal_exchange') {
-            icon = '🔥';
-            symbolText = 'T °C';
-            colorHex = '#FB923C';
-          } else if (kind === 'optical_alignment' || kind === 'optical_refraction' || kind === 'optical_carrier') {
-            icon = '🔆';
-            symbolText = 'Tia sáng';
-            colorHex = '#E879F9';
-          } else if (cand.link.direction === 'output') {
-            icon = '🔵';
-            symbolText = (kind === 'mechanical_support' || kind === 'mechanical_hook' || kind === 'mechanical_clamp') ? 'm, P (ra)' : 'Tác động ra';
-            colorHex = '#00BCEB'; // Xanh dương neon cho dòng tác động ra (Axon)
-          } else if (kind === 'mechanical_support' || kind === 'mechanical_hook' || kind === 'mechanical_clamp') {
-            icon = '⚖️';
-            symbolText = 'm, P';
-            colorHex = '#34D399';
-          }
-
-          nextArcBadges.push({
-            id: `${activeSelId}-${cand.targetInstance.instanceId}`,
-            x: sx,
-            y: sy,
-            icon,
-            symbolText,
-            detailText: `${cand.link.actionVerbVi} · ${cand.link.physicalLawVi}`,
-            colorHex,
-            targetInstanceId: cand.targetInstance.instanceId,
-          });
-        });
-      }
-    }
-
-    setProjectedArcBadges((prev) => {
-      if (prev.length !== nextArcBadges.length) return nextArcBadges;
-      for (let i = 0; i < prev.length; i++) {
-        if (
-          prev[i].id !== nextArcBadges[i].id ||
-          prev[i].symbolText !== nextArcBadges[i].symbolText ||
-          Math.abs(prev[i].x - nextArcBadges[i].x) >= 2 ||
-          Math.abs(prev[i].y - nextArcBadges[i].y) >= 2
-        ) {
-          return nextArcBadges;
         }
       }
       return prev;
@@ -9643,7 +9510,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     neuralConnectionEngine.syncSceneSignals(instances, assetsMap);
     epistemicHologramRenderer.updateHolograms(
       cognitiveNeuralEngine.getActiveVariableTags(),
-      isNeuralGuideEnabled ?? cognitiveNeuralEngine.isEpistemicLayerEnabled,
+      cognitiveNeuralEngine.isEpistemicLayerEnabled,
     );
 
     updateProjectedOverlays();
@@ -11049,35 +10916,6 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                   </span>
                 )}
               </button>
-            );
-          })}
-
-        {/* MICRO-ARC BADGES: Huy hiệu viên thuốc siêu mỏng trên đỉnh vòm sợi dây Nơ-ron (Không che khuất mô phỏng) */}
-        {viewMode === 'lab-scene' &&
-          Boolean(isNeuralGuideEnabled ?? neuralConnectionEngine.isGuideEnabled) &&
-          projectedArcBadges.map((arc) => {
-            const isHovered = hoveredArcId === arc.id;
-            return (
-              <div
-                key={arc.id}
-                onMouseEnter={() => setHoveredArcId(arc.id)}
-                onMouseLeave={() => setHoveredArcId(null)}
-                onClick={() => onSelectInstance(arc.targetInstanceId)}
-                style={{
-                  transform: `translate3d(${arc.x}px, ${arc.y}px, 0) translate(-50%, -50%)`,
-                  borderColor: arc.colorHex,
-                }}
-                className="absolute top-0 left-0 z-20 pointer-events-auto cursor-pointer px-2 py-0.5 rounded-full bg-[#050B18]/80 backdrop-blur-md border text-white shadow-[0_2px_10px_rgba(0,0,0,0.5)] flex items-center gap-1 transition-all duration-150 hover:scale-105 whitespace-nowrap"
-                title={arc.detailText}
-              >
-                <span className="text-[10.5px] leading-none">{arc.icon}</span>
-                <span
-                  style={{ color: arc.colorHex }}
-                  className="text-[10px] font-mono font-extrabold tracking-tight"
-                >
-                  {isHovered ? arc.detailText : arc.symbolText}
-                </span>
-              </div>
             );
           })}
 

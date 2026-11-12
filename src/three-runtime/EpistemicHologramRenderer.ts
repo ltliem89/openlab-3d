@@ -216,8 +216,19 @@ export class EpistemicHologramRenderer {
 
   /**
    * Cập nhật danh sách các thẻ Hologram trong Scene Three.js
+   * (Tính năng bảng 3D chữ nhật nổi trên đầu thiết bị đã được loại bỏ hoàn toàn theo yêu cầu)
    */
   public updateHolograms(tags: EpistemicVariableTag[], isEnabled: boolean): void {
+    // 1. Dọn dẹp triệt để bất kỳ billboard sprite nổi trên đầu nào nếu còn tồn tại
+    if (this._billboardsMap.size > 0) {
+      for (const [id, sprite] of this._billboardsMap.entries()) {
+        this._group.remove(sprite);
+        if (sprite.material.map) sprite.material.map.dispose();
+        sprite.material.dispose();
+      }
+      this._billboardsMap.clear();
+    }
+
     if (!isEnabled) {
       this._group.visible = false;
       return;
@@ -229,46 +240,6 @@ export class EpistemicHologramRenderer {
     for (const tag of tags) {
       if (!tag.isActive) continue;
       currentIds.add(tag.id);
-
-      let sprite = this._billboardsMap.get(tag.id);
-      const isSelected = this._selectedTagId === tag.id;
-
-      if (!sprite) {
-        const canvas = this._createHologramCanvas(tag, isSelected);
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-
-        const material = new THREE.SpriteMaterial({
-          map: texture,
-          transparent: true,
-          opacity: 0.96,
-          depthTest: false,
-        });
-
-        sprite = new THREE.Sprite(material);
-        sprite.name = `epistemic_billboard_${tag.id}`;
-        // Kích thước thế giới thực: rộng 0.24m, cao 0.12m
-        sprite.scale.set(0.24, 0.12, 1.0);
-        sprite.userData = { tagId: tag.id, tag };
-
-        this._group.add(sprite);
-        this._billboardsMap.set(tag.id, sprite);
-      } else {
-        // Cập nhật lại texture khi giá trị thay đổi
-        const canvas = this._createHologramCanvas(tag, isSelected);
-        if (sprite.material.map) {
-          sprite.material.map.dispose();
-        }
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        sprite.material.map = texture;
-        sprite.material.needsUpdate = true;
-      }
-
-      // Đặt tọa độ thế giới
-      sprite.position.set(tag.worldPositionM[0], tag.worldPositionM[1], tag.worldPositionM[2]);
 
       // Cập nhật Vành Trường Biểu Diễn Toán Học Đồng Quy trên mặt bàn
       let ringGroup = this._fluxRingsMap.get(tag.id);
@@ -301,16 +272,6 @@ export class EpistemicHologramRenderer {
       ringGroup.position.set(tag.worldPositionM[0], 0.003, tag.worldPositionM[2]);
     }
 
-    // Xóa các thẻ cũ không còn active
-    for (const [id, sprite] of this._billboardsMap.entries()) {
-      if (!currentIds.has(id)) {
-        this._group.remove(sprite);
-        if (sprite.material.map) sprite.material.map.dispose();
-        sprite.material.dispose();
-        this._billboardsMap.delete(id);
-      }
-    }
-
     for (const [id, ringGroup] of this._fluxRingsMap.entries()) {
       if (!currentIds.has(id)) {
         this._group.remove(ringGroup);
@@ -331,32 +292,6 @@ export class EpistemicHologramRenderer {
    * Xử lý click/raycast vào Thẻ Hologram 3D để hợp nhất 2 biến số
    */
   public handlePointerRaycast(raycaster: THREE.Raycaster): boolean {
-    const sprites = Array.from(this._billboardsMap.values());
-    const intersects = raycaster.intersectObjects(sprites, false);
-
-    if (intersects.length > 0) {
-      const clickedSprite = intersects[0].object as THREE.Sprite;
-      const tagId = clickedSprite.userData?.tagId;
-
-      if (!tagId) return false;
-
-      if (!this._selectedTagId) {
-        // Chọn biến số đầu tiên
-        this._selectedTagId = tagId;
-      } else if (this._selectedTagId === tagId) {
-        // Hủy chọn nếu click lại chính nó
-        this._selectedTagId = null;
-      } else {
-        // Hợp nhất biến số 1 và biến số 2!
-        const varA = this._selectedTagId;
-        const varB = tagId;
-        this._selectedTagId = null;
-
-        cognitiveNeuralEngine.fuseVariables(varA, varB);
-      }
-      return true;
-    }
-
     return false;
   }
 

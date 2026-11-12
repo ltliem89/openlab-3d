@@ -35,7 +35,7 @@ export interface SocraticDialogState {
 }
 
 export class CognitiveNeuralEngine {
-  private _isEpistemicLayerEnabled: boolean = true;
+  private _isEpistemicLayerEnabled: boolean = false;
   private _variableTags: Map<string, EpistemicVariableTag> = new Map();
   private _laws: Map<string, EpistemicLawDefinition> = new Map();
   private _discoveredLawsHistory: EurekaEventDetail[] = [];
@@ -52,9 +52,11 @@ export class CognitiveNeuralEngine {
       const stored = localStorage.getItem('openlab_epistemic_layer_enabled');
       if (stored !== null) {
         this._isEpistemicLayerEnabled = stored === 'true';
+      } else {
+        this._isEpistemicLayerEnabled = false;
       }
     } catch {
-      this._isEpistemicLayerEnabled = true;
+      this._isEpistemicLayerEnabled = false;
     }
   }
 

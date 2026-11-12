@@ -102,10 +102,12 @@ export class CircuitSolver {
 
         const totalResistanceOhms = Math.max(1e-4, lampResistanceOhms + internalResistanceOhms + wireResistanceOhms);
         const rawCurrentA = voltageSettingV / totalResistanceOhms;
-        // Bảo vệ quá dòng (OCP 3.0 A) khi chập mạch / ngắn mạch
-        const maxCurrentOCP = 3.0;
+        // Bảo vệ quá dòng (OCP 25.0 A mặc định hoặc tùy chỉnh theo state.ocpThresholdAmps)
+        // Cho phép dòng điện tuân thủ chính xác Định luật Ohm toàn mạch U = E - I*r (đạt 19.67 A khi đoản mạch r=0.6 Ohm)
+        const maxCurrentOCP = Number(state.ocpThresholdAmps ?? 25.0);
+        const enforceOCP = state.enforceOCP !== false;
         if (rawCurrentA > maxCurrentOCP) {
-          currentAmperes = maxCurrentOCP;
+          currentAmperes = enforceOCP ? maxCurrentOCP : rawCurrentA;
           warnings.push('OVERCURRENT_PROTECTION_TRIPPED');
           reasonVi = `CẢNH BÁO QUÁ DÒNG (OCP > ${maxCurrentOCP.toFixed(1)} A): Mạch tự ngắt bảo vệ đoản mạch!`;
         } else {
@@ -115,7 +117,7 @@ export class CircuitSolver {
         const voltageSagVolts = Math.max(0.0, voltageSettingV - voltageAtLampV);
         lampPowerWatts = Math.max(0.0, voltageAtLampV * currentAmperes);
 
-        if (rawCurrentA <= maxCurrentOCP) {
+        if (rawCurrentA <= maxCurrentOCP || !enforceOCP) {
           if (voltageAtLampV < LAMP_IGNITION_THRESHOLD_VOLTAGE_V) {
             isLampLit = false;
             relativeIllumination = 0.0;

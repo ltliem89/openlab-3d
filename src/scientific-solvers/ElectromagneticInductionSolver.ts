@@ -39,8 +39,8 @@ export class ElectromagneticInductionSolver {
     const coilTurnsN = Number(state.coilTurns ?? 500);
 
     // Độ biến thiên từ thông theo vị trí kPhi = dPhi/dz (Wb/m) và dPhi/dt = kPhi * v
-    // Cho phép tùy biến gradient thực tế qua dipole hoặc giá trị mặc định 2.0e-3 Wb/m
-    const dPhiDz = Number(state.fluxGradientWbPerM ?? 2.0e-3);
+    // Mặc định 8.0e-3 Wb/m để đảm bảo suất điện động cảm ứng vượt ngưỡng kích sáng điốt LED 1.65V tại v = 0.5 m/s (E = -N * dPhi/dt = 2.0 V)
+    const dPhiDz = Number(state.fluxGradientWbPerM ?? 8.0e-3);
     const fluxDerivativeWbPerS = magnetVelocityMps * dPhiDz;
     const inducedEmfVolts = -coilTurnsN * fluxDerivativeWbPerS;
     const coilResistanceOhms = Math.max(0.1, Number(state.coilResistanceOhms ?? 2.4));

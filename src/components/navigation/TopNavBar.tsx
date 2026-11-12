@@ -25,6 +25,8 @@ import {
   AlertTriangle,
   ZoomIn,
   Award,
+  Save,
+  FolderOpen,
 } from 'lucide-react';
 import { StudentGuidedStepNumber } from '../student/StudentGuidedStepPanel';
 import { RichMathText } from '../common/MathFormula';
@@ -82,7 +84,9 @@ interface TopNavBarProps {
   onClearRecentSearches?: () => void;
   onQuickAddSelectedAsset: () => void;
   onOpenMicroMacroLens?: () => void;
-  onRunGoldenDemo?: () => void;
+  onOpenSaveProject?: () => void;
+  onOpenProjectList?: () => void;
+  savedProjectsCount?: number;
   notificationCount: number;
   recentLogs: Array<{ id: string; text: string; time: string }>;
 }
@@ -146,7 +150,9 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onClearRecentSearches,
   onQuickAddSelectedAsset,
   onOpenMicroMacroLens,
-  onRunGoldenDemo,
+  onOpenSaveProject,
+  onOpenProjectList,
+  savedProjectsCount = 0,
   notificationCount,
   recentLogs,
 }) => {
@@ -310,8 +316,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       ref={searchContainerRef}
       className={`relative ${
         compactMode
-          ? 'w-[148px] sm:w-[196px] xl:w-[170px] 2xl:w-[236px] shrink-0'
-          : 'w-full max-w-xs'
+          ? 'w-[120px] sm:w-[140px] xl:w-[155px] 2xl:w-[220px] shrink-0'
+          : 'w-[145px] xl:w-[160px] 2xl:w-[240px] shrink-0'
       }`}
     >
       <Search className="w-4 h-4 text-[#7DD3FC] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -551,8 +557,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             : 'bg-[#071326] border-[#41D9F5]/30'
         }`}
       >
-        {/* Left: Compact Logo OpenLab 3D + Top Quick Equipment Search Bar */}
-        <div className="flex items-center gap-2.5 min-w-0 shrink-0">
+        {/* Left: Compact Logo OpenLab 3D + Kiểu 1: Lưu/Mở Dự án + Top Quick Equipment Search Bar */}
+        <div className="flex items-center gap-2 min-w-0 shrink-0">
           <button
             type="button"
             onClick={() => onSelectStudentScreen('lab-room')}
@@ -566,11 +572,38 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               <span className="text-[17px] sm:text-[19px] leading-none font-extrabold tracking-tight text-[#E8F2FF] truncate">
                 OpenLab <span className="text-[#41D9F5]">3D</span>
               </span>
-              <span className="hidden 2xl:inline text-[11.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#0B1930] border border-[#41D9F5]/35 text-[#A8BCD5]">
-                COSMOS · KHTN 9
-              </span>
             </div>
           </button>
+
+          {/* Kiểu 1: Cặp nút Lưu và Mở dự án (thay thế vị trí chữ COSMOS · KHTN 9) */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => onOpenSaveProject?.()}
+              className="h-7 px-2 rounded-[6px] bg-[#10223D] hover:bg-[#1E6BFF] border border-[#48D6A0]/55 hover:border-[#48D6A0] text-[#48D6A0] hover:text-white text-[12px] font-bold flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+              title="Lưu dự án hiện tại (Ctrl + S)"
+              aria-label="Lưu dự án"
+            >
+              <Save className="w-3.5 h-3.5 shrink-0" />
+              <span className="hidden sm:inline">Lưu</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onOpenProjectList?.()}
+              className="h-7 px-2 rounded-[6px] bg-[#10223D] hover:bg-[#163056] border border-[#41D9F5]/45 hover:border-[#41D9F5] text-[#E8F2FF] text-[12px] font-bold flex items-center gap-1 cursor-pointer transition-all shadow-xs"
+              title="Mở dự án đã lưu (Ctrl + O)"
+              aria-label="Mở dự án"
+            >
+              <FolderOpen className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
+              <span className="hidden sm:inline">Mở</span>
+              {savedProjectsCount > 0 && (
+                <span className="text-[10px] px-1 py-0.5 rounded-full bg-[#4D8DFF]/30 text-[#41D9F5] font-mono leading-none">
+                  {savedProjectsCount}
+                </span>
+              )}
+            </button>
+          </div>
 
           {/* Top Search Bar with 5 Recent Searches (Visible on sm+ in Student Mode) */}
           <div className="hidden sm:block">
@@ -602,7 +635,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             </span>
             <span
               title={resolvedStepTitle.replace(/\$/g, '')}
-              className="hidden xl:inline-block max-w-[165px] 2xl:max-w-[245px] truncate text-[#E8F2FF] font-semibold text-[11.5px] border-l border-[#41D9F5]/25 pl-1.5 whitespace-nowrap align-bottom"
+              className="hidden min-[1420px]:inline-block max-w-[140px] 2xl:max-w-[245px] truncate text-[#E8F2FF] font-semibold text-[11.5px] border-l border-[#41D9F5]/25 pl-1.5 whitespace-nowrap align-bottom"
             >
               <RichMathText text={resolvedStepTitle} />
             </span>
@@ -880,7 +913,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               aria-label="Trợ lý Nơ-ron"
             >
               <span className="text-sm">🧠</span>
-              <span className="hidden lg:inline">
+              <span className="hidden xl:inline 2xl:hidden">
+                {isNeuralGuideEnabled ? 'Nơ-ron' : 'Tắt'}
+              </span>
+              <span className="hidden 2xl:inline">
                 {isNeuralGuideEnabled ? 'Nơ-ron: BẬT' : 'Nơ-ron: TẮT'}
               </span>
             </button>
@@ -898,10 +934,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             aria-label="Lăng kính Vi mô"
           >
             <ZoomIn className="w-3.5 h-3.5 shrink-0 text-[#38BDF8]" />
-            <span className="hidden xl:inline">Vi mô</span>
+            <span className="hidden 2xl:inline">Vi mô</span>
           </button>
-
-          {/* Kịch bản Vàng ViSEF: Alt + G hoặc phím tắt nhanh */}
 
           {/* Nút Mở Sơ đồ Nơ-ron Toàn cảnh (Planetary Cosmos Map) */}
           {onOpenNeuralModal && (
@@ -913,7 +947,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               aria-label="Sơ đồ Nơ-ron"
             >
               <span className="text-sm">🪐</span>
-              <span className="hidden xl:inline text-[#41D9F5]">Sơ đồ Nơ-ron</span>
+              <span className="hidden 2xl:inline text-[#41D9F5]">Sơ đồ Nơ-ron</span>
             </button>
           )}
 
@@ -1018,22 +1052,52 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
   // TEACHER / ADMIN MODE HEADER — Planetary Cosmos Admin Deck
   return (
-    <header className="h-[60px] px-5 bg-[#050B18] border-b border-[#41D9F5]/25 flex items-center justify-between gap-5 shrink-0 z-30 shadow-[0_6px_24px_rgba(3,8,20,0.45)]">
-      <button
-        type="button"
-        onClick={() => onSelectSection('lab-workspace')}
-        className="flex items-center gap-2.5 text-left whitespace-nowrap shrink-0 focus:outline-none cursor-pointer"
-      >
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#4D8DFF] to-[#0B1930] border border-[#41D9F5] flex items-center justify-center text-white shadow-[0_0_14px_rgba(65,217,245,0.28)]">
-          <Box className="w-5 h-5 text-[#41D9F5]" />
-        </div>
-        <span className="text-[20px] font-extrabold tracking-tight text-[#E8F2FF]">
-          OpenLab 3D <span className="text-[13px] font-semibold text-[#41D9F5]">Quản trị</span>
-        </span>
-      </button>
+    <header className="h-[60px] px-3 2xl:px-5 bg-[#050B18] border-b border-[#41D9F5]/25 flex items-center justify-between gap-2.5 2xl:gap-5 shrink-0 z-30 shadow-[0_6px_24px_rgba(3,8,20,0.45)] overflow-x-hidden">
+      <div className="flex items-center gap-2 2xl:gap-3 shrink-0">
+        <button
+          type="button"
+          onClick={() => onSelectSection('lab-workspace')}
+          className="flex items-center gap-2 text-left whitespace-nowrap shrink-0 focus:outline-none cursor-pointer"
+        >
+          <div className="w-8 h-8 2xl:w-9 2xl:h-9 rounded-lg bg-gradient-to-br from-[#4D8DFF] to-[#0B1930] border border-[#41D9F5] flex items-center justify-center text-white shadow-[0_0_14px_rgba(65,217,245,0.28)]">
+            <Box className="w-4 h-4 2xl:w-5 2xl:h-5 text-[#41D9F5]" />
+          </div>
+          <span className="text-[18px] 2xl:text-[20px] font-extrabold tracking-tight text-[#E8F2FF]">
+            OpenLab 3D <span className="hidden 2xl:inline text-[13px] font-semibold text-[#41D9F5]">Quản trị</span>
+          </span>
+        </button>
 
-      <div className="flex items-center gap-5 flex-1 justify-center min-w-0">
-        <nav className="hidden xl:flex items-center gap-5 text-[15px] font-bold">
+        <div className="flex items-center gap-1 ml-0.5 2xl:ml-1">
+          <button
+            type="button"
+            onClick={() => onOpenSaveProject?.()}
+            className="h-7 px-2 2xl:px-2.5 rounded-[6px] bg-[#10223D] hover:bg-[#1E6BFF] border border-[#48D6A0]/55 text-[#48D6A0] hover:text-white text-[12px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+            title="Lưu dự án hiện tại (Ctrl + S)"
+            aria-label="Lưu dự án"
+          >
+            <Save className="w-3.5 h-3.5 shrink-0" />
+            <span>Lưu</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenProjectList?.()}
+            className="h-7 px-2 2xl:px-2.5 rounded-[6px] bg-[#10223D] hover:bg-[#163056] border border-[#41D9F5]/45 text-[#E8F2FF] text-[12px] font-bold flex items-center gap-1 cursor-pointer transition-all"
+            title="Mở dự án đã lưu (Ctrl + O)"
+            aria-label="Mở dự án"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
+            <span>Mở</span>
+            {savedProjectsCount > 0 && (
+              <span className="text-[10px] px-1 py-0.5 rounded-full bg-[#4D8DFF]/30 text-[#41D9F5] font-mono leading-none">
+                {savedProjectsCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 2xl:gap-5 flex-1 justify-center min-w-0">
+        <nav className="hidden xl:flex items-center gap-3 2xl:gap-5 text-[13px] 2xl:text-[15px] font-bold">
           {TEACHER_NAV_ITEMS.map((item) => {
             const isActive = activeSection === item.id;
             return (
@@ -1057,23 +1121,24 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         {renderTopSearchBarWithRecent(false)}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-1.5 2xl:gap-2 shrink-0">
         {onOpenNeuralModal && (
           <button
             type="button"
             onClick={onOpenNeuralModal}
-            className="px-3.5 py-2 rounded-lg bg-gradient-to-r from-[#4D8DFF] to-[#9B83FF] hover:brightness-110 border border-[#41D9F5]/50 text-[14px] font-extrabold text-white flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer"
+            className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2 rounded-lg bg-gradient-to-r from-[#4D8DFF] to-[#9B83FF] hover:brightness-110 border border-[#41D9F5]/50 text-[13px] 2xl:text-[14px] font-extrabold text-white flex items-center gap-1 2xl:gap-1.5 transition-all whitespace-nowrap cursor-pointer"
             title="Mở Bản đồ Mạng Nơ-ron Quan hệ Thiết bị"
           >
             <span>🪐</span>
-            <span>Mạng Nơ-ron</span>
+            <span className="2xl:hidden">Nơ-ron</span>
+            <span className="hidden 2xl:inline">Mạng Nơ-ron</span>
           </button>
         )}
 
         <button
           type="button"
           onClick={() => onChangeUserRole('student')}
-          className="px-3.5 py-2 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-[14px] font-extrabold text-white flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer"
+          className="px-2.5 2xl:px-3.5 py-1.5 2xl:py-2 rounded-lg bg-[#22C55E] hover:bg-[#16A34A] text-[13px] 2xl:text-[14px] font-extrabold text-white flex items-center gap-1 2xl:gap-1.5 transition-colors whitespace-nowrap cursor-pointer"
         >
           <GraduationCap className="w-4 h-4" />
           <span>Học sinh</span>
@@ -1083,7 +1148,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <button
             type="button"
             onClick={() => setShowNotifPopover((v) => !v)}
-            className="px-3 py-2 rounded-lg bg-[#133F7E] hover:bg-[#1952A3] border border-[#275AA3] text-[14px] text-white font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap cursor-pointer"
+            className="px-2.5 2xl:px-3 py-1.5 2xl:py-2 rounded-lg bg-[#133F7E] hover:bg-[#1952A3] border border-[#275AA3] text-[13px] 2xl:text-[14px] text-white font-bold flex items-center gap-1 2xl:gap-1.5 transition-colors whitespace-nowrap cursor-pointer"
           >
             <Bell className="w-4 h-4 text-[#00BCEB]" />
             <span className="font-mono tabular-nums">{notificationCount}</span>

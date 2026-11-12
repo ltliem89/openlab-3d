@@ -138,8 +138,9 @@ export class FluidThermalSolver {
 
     if (isCoupledToHeatSource) {
       isHeatingActive = true;
-      // Công suất ngọn lửa đèn cồn hữu ích ~ 150 W
-      const usefulPowerW = 150.0 * Math.max(0.2, 1.0 - distanceToHeatSourceM / 0.10);
+      // Công suất ngọn lửa đèn cồn hữu ích (mặc định 197.95 W ở khoảng cách gần để đạt trạng thái dừng chuẩn 78.5°C khi d = 5cm)
+      const baseFlamePowerW = Number(state.flamePowerWatts ?? 197.95);
+      const usefulPowerW = baseFlamePowerW * Math.max(0.2, 1.0 - distanceToHeatSourceM / 0.10);
       heatExchangeRateW = usefulPowerW;
       
       // Nhiệt độ đạt trạng thái dừng khi công suất cấp bằng công suất tản nhiệt Newton:

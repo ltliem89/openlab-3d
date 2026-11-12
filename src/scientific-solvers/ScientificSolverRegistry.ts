@@ -75,8 +75,8 @@ export class ScientificSolverRegistry {
       arch.includes('frosted-f') ||
       arch.includes('screen')
     ) {
-      // optical-power-supply là nguồn điện DC cho đèn quang học, nhưng ở chế độ điện học -> CircuitSolver
-      if (arch.includes('power-supply')) {
+      // optical-power-supply & optical-lamp là nguồn DC và phụ tải bóng đèn thuộc miền Điện học -> CircuitSolver
+      if (arch.includes('power-supply') || arch.includes('lamp')) {
         return CircuitSolver.solve(input);
       }
       return OpticsSolver.solve(input);
@@ -189,3 +189,7 @@ export class ScientificSolverRegistry {
 }
 
 export const scientificSolverRegistry = ScientificSolverRegistry.getInstance();
+
+if (typeof window !== 'undefined') {
+  (window as any).scientificSolverRegistry = scientificSolverRegistry;
+}
