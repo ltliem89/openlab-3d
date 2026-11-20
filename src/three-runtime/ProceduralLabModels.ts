@@ -2464,21 +2464,21 @@ export interface FluidPhysicalProfile {
 export const FLUID_PROFILES: Record<FluidKind, FluidPhysicalProfile> = {
   'clean-water': {
     kind: 'clean-water',
-    nameVi: 'Nước sạch tinh khiết (PBR Quang học pha lê & Hấp thụ sâu)',
+    nameVi: 'Nước sạch tinh khiết (Xanh lơ nhạt quang học chuẩn PBR)',
     ior: 1.333,
-    transmission: 0.92,         // Độ truyền quang cao chuẩn pha lê của nước tinh khiết (92% trong suốt)
-    roughness: 0.008,          // Mặt nước bóng láng phẳng mịn
+    transmission: 0.78,         // Cân bằng quang học: trong suốt xuyên thấu nhưng ánh sắc xanh lơ rõ rệt, không bị bạc màu
+    roughness: 0.010,          // Mặt nước bóng láng phẳng mịn
     metalness: 0.0,
     thickness: 0.08,           // Chiều dày quang học cho Three.js
-    attenuationDistance: 0.18,  // Beer-Lambert: Lớp mỏng (<2cm) trong vắt, lớp dày (>8cm) ánh sắc xanh lơ sâu lắng
-    attenuationColor: 0x0ea5e9, // Sắc xanh lơ đại dương tự nhiên khi ánh sáng đi qua chiều dày khối nước (Ảnh 1 & 2)
-    baseColor: 0xf0fdfa,        // Màu gốc trong suốt phớt ngọc cực nhẹ (99% clear), không bị đục xanh siro
+    attenuationDistance: 0.085, // Beer-Lambert: Lớp mỏng ánh xanh lơ nhẹ, khối dày sâu thẳm đậm đà tự nhiên
+    attenuationColor: 0x0284c7, // Sắc xanh đại dương dịu mát khi ánh sáng đi qua chiều dày khối nước
+    baseColor: 0x38bdf8,        // Sắc xanh lơ ngọc tươi sáng, nhận diện rõ ràng thể tích nước trong bình
     specularIntensity: 1.0,
     clearcoat: 1.0,
     clearcoatRoughness: 0.01,
-    opacity: 0.92,              // Độ trong suốt tự nhiên, nhìn thấu vật thể phía sau
-    meniscusColor: 0x0284c7,    // Vùng hội tụ đáy mặt khum
-    meniscusHighlight: 0xffffff, // Tia sáng phản xạ toàn phần trên gờ tiếp xúc thủy tinh
+    opacity: 0.88,              // Nhìn thấu suốt vật thể phía sau đồng thời thấy rõ mực nước
+    meniscusColor: 0x0284c7,    // Vùng hội tụ đáy mặt khum ánh xanh rõ nét
+    meniscusHighlight: 0xf0f9ff, // Điểm sáng phản chiếu ánh sáng phòng trên gờ tiếp xúc
     capillaryHeightFactor: 1.15,
   },
   'copper-sulfate': {
@@ -2794,7 +2794,7 @@ export function addConcaveMeniscusAndRipples(
       color: profile.meniscusHighlight,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.60,
       depthWrite: false,
     }),
   );
@@ -2807,10 +2807,10 @@ export function addConcaveMeniscusAndRipples(
   const rippleRing = new THREE.Mesh(
     new THREE.RingGeometry(radius * 0.16, radius * 0.28, 36, 1).rotateX(-Math.PI / 2),
     new THREE.MeshBasicMaterial({
-      color: profile.baseColor,
+      color: profile.meniscusColor,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.18,
+      opacity: 0.28,
       depthWrite: false,
     }),
   );
