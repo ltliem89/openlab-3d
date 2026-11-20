@@ -3320,9 +3320,9 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
 
     const pourOuterMat = new THREE.MeshPhysicalMaterial({
       color: 0x0284c7, // Xanh lơ đậm đà rõ nét chuẩn PBR, nhận diện tức thì có/không có nước
-      attenuationColor: new THREE.Color(0x0369a1),
-      attenuationDistance: 0.038,
-      transmission: 0.52,
+      attenuationColor: new THREE.Color(0x004e89),
+      attenuationDistance: 0.022,
+      transmission: 0.46,
       roughness: 0.010,
       metalness: 0.0,
       ior: 1.333,
@@ -3330,7 +3330,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       clearcoat: 1.0,
       clearcoatRoughness: 0.01,
       transparent: true,
-      opacity: 0.94,
+      opacity: 0.96,
       depthWrite: false,
     });
     // Dòng nước co thắt khí động học: phần đỉnh dày 3.6mm, phần đuôi thon nhỏ 1.8mm do gia tốc trọng trường

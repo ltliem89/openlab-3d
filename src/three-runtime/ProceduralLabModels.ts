@@ -2464,22 +2464,22 @@ export interface FluidPhysicalProfile {
 export const FLUID_PROFILES: Record<FluidKind, FluidPhysicalProfile> = {
   'clean-water': {
     kind: 'clean-water',
-    nameVi: 'Nước sạch tinh khiết (Xanh lơ đậm quang học chuẩn PBR)',
+    nameVi: 'Nước sạch tinh khiết (Xanh lam đại dương đậm đà chuẩn PBR)',
     ior: 1.333,
-    transmission: 0.52,         // Cân bằng quang học tối ưu: 52% truyền quang xuyên thấu, 48% phản xạ màu xanh lơ đậm rõ rệt, phân biệt tức thì có/không có nước
+    transmission: 0.46,         // Cân bằng quang học tối ưu: 46% truyền sáng xuyên thấu, 54% phản xạ màu xanh lam đậm rõ rệt, phân biệt tức thì có/không có nước
     roughness: 0.010,          // Mặt nước bóng láng phẳng mịn
     metalness: 0.0,
     thickness: 0.08,           // Chiều dày quang học cho Three.js
-    attenuationDistance: 0.038, // Beer-Lambert: Lớp mỏng ánh xanh biếc, khối dày sâu thẳm đậm đà tự nhiên
-    attenuationColor: 0x0369a1, // Sắc xanh đại dương sâu lắng khi ánh sáng đi qua chiều dày khối nước
-    baseColor: 0x0284c7,        // Sắc xanh lơ đại dương đậm đà, nhận diện rõ ràng tuyệt đối thể tích nước trong bình
+    attenuationDistance: 0.022, // Beer-Lambert sâu sắc: Lớp mỏng (<1cm) xanh lam ngọc, khối dày (>3cm) xanh thẳm đậm đà
+    attenuationColor: 0x004e89, // Sắc xanh đại dương sâu thẳm hấp thụ ánh sáng bàn gỗ
+    baseColor: 0x0284c7,        // Sắc xanh lơ đại dương đậm đà, nhận diện tức thì thể tích chất lỏng
     specularIntensity: 1.0,
     clearcoat: 1.0,
     clearcoatRoughness: 0.01,
-    opacity: 0.94,              // Nhìn thấu suốt vật thể phía sau đồng thời thấy rõ mực nước
-    meniscusColor: 0x0369a1,    // Vùng hội tụ đáy mặt khum ánh xanh rõ nét
-    meniscusHighlight: 0xffffff, // Điểm sáng phản chiếu ánh sáng phòng trên gờ tiếp xúc
-    capillaryHeightFactor: 1.25,
+    opacity: 0.96,              // Nhìn thấu suốt vật thể phía sau đồng thời thấy rõ tuyệt đối mực nước
+    meniscusColor: 0x004e89,    // Vùng hội tụ đáy mặt khum ánh xanh thẳm rõ nét
+    meniscusHighlight: 0x7dd3fc, // Đường ngấn nước phản chiếu ánh sáng lấp lánh trên gờ tiếp xúc
+    capillaryHeightFactor: 1.30,
   },
   'copper-sulfate': {
     kind: 'copper-sulfate',
@@ -2794,7 +2794,7 @@ export function addConcaveMeniscusAndRipples(
       color: profile.meniscusHighlight,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.75,
+      opacity: 0.88,
       depthWrite: false,
     }),
   );
@@ -2810,7 +2810,7 @@ export function addConcaveMeniscusAndRipples(
       color: profile.meniscusColor,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.40,
       depthWrite: false,
     }),
   );

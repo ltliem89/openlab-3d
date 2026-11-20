@@ -119,9 +119,9 @@ const t01Passed =
 
 assertTest(
   'T01',
-  'Quang học Beer-Lambert: n = 1.333, T = 0.52 (xanh lơ đậm đà rõ nét phân biệt có/không có nước), không phát sáng emissive neon',
+  'Quang học Beer-Lambert: n = 1.333, T = 0.46 (xanh lam đại dương đậm đà phân biệt rõ rệt có/không có nước), không phát sáng emissive neon',
   t01Passed,
-  'ior=1.333, 0.45 <= transmission <= 0.95, emissive=0x000000, attenuationColor=0x0369a1',
+  'ior=1.333, 0.45 <= transmission <= 0.95, emissive=0x000000, attenuationColor=0x004e89',
   `ior=${waterMat.ior}, transmission=${waterMat.transmission}, emissive=0x${waterMat.emissive?.getHexString()}`,
   'I = I_0 \\cdot e^{-\\alpha \\cdot d}',
 );
