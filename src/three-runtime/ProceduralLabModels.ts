@@ -3817,16 +3817,30 @@ export function buildProceduralEquipmentGroup(
       liquidGroup.position.y = elevY + 0.006;
       root.add(liquidGroup);
 
-      // 7. Parabolic Gravity-Curved Water Jet (`spout_stream` arcing from spout tip (0.086, 0.125, 0) into catch beaker)
-      // Strictly hidden (`visible = false`) unless actively overflowing!
+      // 7. Parabolic Gravity-Curved Water Jet (`spout_stream` arcing from spout tip (0.086, 0.107, 0) into catch beaker)
+      // Quỹ đạo ném xiên xuống chuẩn quy luật trọng lực Newton: x(t) = x0 + v0x*t, y(t) = y0 + v0y*t - 0.5*g*t^2
       const streamGroup = new THREE.Group();
       streamGroup.name = 'spout_stream';
-      const jetCurve = new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0.085, elevY + 0.067, 0),
-        new THREE.Vector3(0.100, elevY + 0.048, 0),
-        new THREE.Vector3(0.112, elevY + 0.012, 0),
-        new THREE.Vector3(0.122, 0.024, 0),
-      ]);
+      const x0Spout = 0.086;
+      const y0Spout = elevY + 0.067;
+      const v0Spout = 0.24;
+      const thetaRad = (32 * Math.PI) / 180;
+      const v0xSpout = v0Spout * Math.cos(thetaRad);
+      const v0ySpout = -v0Spout * Math.sin(thetaRad);
+      const gJet = 9.80665;
+      const yCatchSurface = 0.024;
+      const dyJet = Math.max(0.015, y0Spout - yCatchSurface);
+      const tJetEnd = (-v0ySpout + Math.sqrt(v0ySpout * v0ySpout + 2 * gJet * dyJet)) / gJet;
+
+      const jetPts: THREE.Vector3[] = [];
+      const jetSteps = 16;
+      for (let s = 0; s <= jetSteps; s++) {
+        const tj = (s / jetSteps) * tJetEnd;
+        const xj = x0Spout + v0xSpout * tj;
+        const yj = Math.max(yCatchSurface, y0Spout + v0ySpout * tj - 0.5 * gJet * tj * tj);
+        jetPts.push(new THREE.Vector3(xj, yj, 0));
+      }
+      const jetCurve = new THREE.CatmullRomCurve3(jetPts);
       const streamOuter = new THREE.Mesh(
         new THREE.TubeGeometry(jetCurve, 28, 0.0028, 14, false),
         createStreamMaterial(0x0284c7, 0.90),
@@ -3848,15 +3862,17 @@ export function buildProceduralEquipmentGroup(
       streamCore.renderOrder = 6;
       streamGroup.add(streamCore);
 
-      // 5 Cascading water droplets along the parabolic trajectory
+      // 5 Cascading water droplets accelerating quadratically under gravity: s = tau^1.8
       const dropMat = createStreamMaterial(0x7dd3fc, 0.92);
       const dropGeo = new THREE.SphereGeometry(0.0026, 12, 12);
       for (let d = 0; d < 5; d++) {
         const drop = new THREE.Mesh(dropGeo, dropMat);
         drop.name = `droplet_${d}`;
-        const pt = jetCurve.getPoint(d / 5);
+        const tau = d / 4;
+        const sDrop = Math.pow(tau, 1.8);
+        const pt = jetCurve.getPoint(sDrop);
         drop.position.copy(pt);
-        drop.scale.set(0.85, 1.35, 0.85);
+        drop.scale.set(0.85, 1.35 + 0.6 * sDrop, 0.85);
         drop.renderOrder = 6;
         streamGroup.add(drop);
       }
@@ -6520,12 +6536,12 @@ export function buildProceduralEquipmentGroup(
       root.add(liquidGroup);
 
       // 7. Multi-Layer Laminar Water Stream from Elevated Valve Nozzle (`spout_stream` from y = 0.250 m down into receiving vessel)
-      // Strictly hidden (`visible = false`) unless valve is actively open!
+      // Co thắt khí động học chuẩn phương trình liên tục rơi tự do dưới trọng lực: r_đỉnh = 3.6mm, r_đáy = 1.8mm (tỉ lệ 0.50)
       const streamGroup = new THREE.Group();
       streamGroup.name = 'spout_stream';
       const streamLen = 0.212;
       const streamMesh = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.0028, 0.0040, streamLen, 18),
+        new THREE.CylinderGeometry(0.0036, 0.0018, streamLen, 18),
         createStreamMaterial(0x0284c7, 0.90),
       );
       streamMesh.name = 'stream_outer';
@@ -6534,7 +6550,7 @@ export function buildProceduralEquipmentGroup(
       streamGroup.add(streamMesh);
 
       const streamCore = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.0014, 0.0020, streamLen, 12),
+        new THREE.CylinderGeometry(0.0016, 0.0008, streamLen, 12),
         new THREE.MeshBasicMaterial({
           color: 0xe0f2fe,
           transparent: true,
@@ -6552,7 +6568,9 @@ export function buildProceduralEquipmentGroup(
       for (let d = 0; d < 6; d++) {
         const drop = new THREE.Mesh(dispDropGeo, dispDropMat);
         drop.name = `droplet_${d}`;
-        drop.position.set(0.095, standElevationY - 0.024 - d * 0.034, 0);
+        const tau = d / 5;
+        const dropDist = Math.pow(tau, 1.8) * 0.19;
+        drop.position.set(0.095, standElevationY - 0.016 - dropDist, 0);
         drop.scale.set(0.85, 1.45, 0.85);
         drop.renderOrder = 6;
         streamGroup.add(drop);

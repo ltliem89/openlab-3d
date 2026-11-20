@@ -737,6 +737,88 @@ function computeExactPourPosition(
 }
 
 /**
+ * Tạo hình học dòng nước thuôn nhỏ khí động học (Aerodynamic Necking Mesh)
+ * tuân thủ chặt chẽ định luật bảo toàn khối lượng và phương trình liên tục A(y)*v(y) = const.
+ * Bán kính dòng nước giảm từ r_top (tại miệng rót) xuống r_bottom (tại điểm tiếp xúc mặt thoáng).
+ */
+function createTaperedStreamGeometry(
+  curvePoints: THREE.Vector3[],
+  radiusTop: number,
+  radiusBottom: number,
+  radialSegments = 14,
+): THREE.BufferGeometry {
+  const numRings = curvePoints.length;
+  const numVerts = numRings * radialSegments;
+  const positions = new Float32Array(numVerts * 3);
+  const normals = new Float32Array(numVerts * 3);
+  const uvs = new Float32Array(numVerts * 2);
+  const indices: number[] = [];
+
+  for (let i = 0; i < numRings; i++) {
+    const s = i / (numRings - 1);
+    const p = curvePoints[i];
+    // Co thắt khí động học theo căn bậc hai gia tốc trọng trường: r(s) = lerp(rTop, rBottom, sqrt(s))
+    const r = THREE.MathUtils.lerp(radiusTop, radiusBottom, Math.sqrt(s));
+
+    // Vector tiếp tuyến (tangent)
+    const T = new THREE.Vector3();
+    if (i === 0) {
+      T.subVectors(curvePoints[1], curvePoints[0]).normalize();
+    } else if (i === numRings - 1) {
+      T.subVectors(curvePoints[numRings - 1], curvePoints[numRings - 2]).normalize();
+    } else {
+      T.subVectors(curvePoints[i + 1], curvePoints[i - 1]).normalize();
+    }
+
+    // Pháp tuyến và phó pháp tuyến (Frenet frame ổn định)
+    const up = Math.abs(T.y) > 0.94 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+    const N = new THREE.Vector3().crossVectors(T, up).normalize();
+    const B = new THREE.Vector3().crossVectors(T, N).normalize();
+
+    for (let j = 0; j < radialSegments; j++) {
+      const phi = (j / radialSegments) * Math.PI * 2;
+      const cosPhi = Math.cos(phi);
+      const sinPhi = Math.sin(phi);
+      const norm = new THREE.Vector3()
+        .addScaledVector(N, cosPhi)
+        .addScaledVector(B, sinPhi);
+      const vert = new THREE.Vector3().copy(p).addScaledVector(norm, r);
+
+      const vIdx = i * radialSegments + j;
+      positions[vIdx * 3] = vert.x;
+      positions[vIdx * 3 + 1] = vert.y;
+      positions[vIdx * 3 + 2] = vert.z;
+
+      normals[vIdx * 3] = norm.x;
+      normals[vIdx * 3 + 1] = norm.y;
+      normals[vIdx * 3 + 2] = norm.z;
+
+      uvs[vIdx * 2] = j / radialSegments;
+      uvs[vIdx * 2 + 1] = s;
+    }
+  }
+
+  for (let i = 0; i < numRings - 1; i++) {
+    for (let j = 0; j < radialSegments; j++) {
+      const nextJ = (j + 1) % radialSegments;
+      const a = i * radialSegments + j;
+      const b = (i + 1) * radialSegments + j;
+      const c = (i + 1) * radialSegments + nextJ;
+      const d = i * radialSegments + nextJ;
+      indices.push(a, b, d);
+      indices.push(b, c, d);
+    }
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  geo.setIndex(indices);
+  return geo;
+}
+
+/**
  * Mô phỏng đường cong dòng chảy chất lỏng chính xác theo quỹ đạo trọng lực Trái Đất (Ballistic Gravity Parabola)
  * và cơ chế phân rã tia thành giọt (Rayleigh-Plateau dripping instability):
  * - Gia tốc trọng trường g = 9.80665 m/s²
@@ -759,40 +841,48 @@ function renderGravitationalFluidStream(params: {
   streamGrp.position.set(0, 0, 0);
 
   const g = 9.80665; // m/s²
-  const v0y = 0.14;  // Vận tốc ban đầu hướng xuống khi nước tràn qua miệng vòi (m/s)
-
   const dy = Math.max(0.012, spoutPos.y - targetSurfaceY);
-  // t_flight giải từ phương trình chuyển động rơi tự do: 0.5 * g * t^2 + v0y * t - dy = 0
-  const tFlight = Math.max(0.06, (-v0y + Math.sqrt(v0y * v0y + 2 * g * dy)) / g);
+  const dx = targetPos.x - spoutPos.x;
+  const dz = targetPos.z - spoutPos.z;
 
-  // Xây dựng 16 điểm Catmull-Rom cong chính xác theo gia tốc trọng trường
+  const v0y = 0.12;  // Vận tốc ban đầu hướng xuống khi nước tràn qua miệng vòi (m/s)
+  // Thời gian bay theo phương trình rơi tự do: y = y0 - v0y*t - 0.5*g*t^2
+  const tFlight = Math.max(0.06, (-v0y + Math.sqrt(v0y * v0y + 2 * g * dy)) / g);
+  const v0x = dx / tFlight;
+  const v0z = dz / tFlight;
+
+  // Xây dựng 20 điểm Catmull-Rom cong chính xác theo gia tốc trọng trường Newton
   const curvePoints: THREE.Vector3[] = [];
-  const steps = 16;
+  const steps = 20;
   for (let i = 0; i <= steps; i++) {
     const s = i / steps;
     const t = s * tFlight;
-    const px = THREE.MathUtils.lerp(spoutPos.x, targetPos.x, s);
-    const pz = THREE.MathUtils.lerp(spoutPos.z, targetPos.z, s);
-    const fallDist = v0y * t + 0.5 * g * t * t;
-    const py = Math.max(targetSurfaceY, spoutPos.y - fallDist);
+    const px = spoutPos.x + v0x * t;
+    const pz = spoutPos.z + v0z * t;
+    const py = Math.max(targetSurfaceY, spoutPos.y - v0y * t - 0.5 * g * t * t);
     curvePoints.push(new THREE.Vector3(px, py, pz));
   }
-  const gravityCurve = new THREE.CatmullRomCurve3(curvePoints);
 
   const outerM = streamGrp.getObjectByName('pour_outer') as THREE.Mesh | undefined;
   const coreM = streamGrp.getObjectByName('pour_core') as THREE.Mesh | undefined;
 
   const isDripMode = Boolean(isDrippingOnly) || flowRateMlPerSec < 16;
-  const pulse = 0.88 + 0.16 * Math.sin(now * 0.035);
+  const pulse = 0.90 + 0.14 * Math.sin(now * 0.035);
 
   if (isDripMode) {
     if (outerM) outerM.visible = false;
     if (coreM) coreM.visible = false;
   } else {
+    // Khí động học dòng rót: r_đỉnh = 3.6mm, r_đáy = 1.8mm (tỉ lệ thuôn 0.50 đúng chuẩn T06)
     if (outerM) {
       outerM.visible = true;
       outerM.geometry.dispose();
-      outerM.geometry = new THREE.TubeGeometry(gravityCurve, 20, 0.0022 * pulse, 10, false);
+      outerM.geometry = createTaperedStreamGeometry(
+        curvePoints,
+        0.0036 * pulse,
+        0.0018 * pulse,
+        14,
+      );
       outerM.position.set(0, 0, 0);
       outerM.rotation.set(0, 0, 0);
       outerM.scale.set(1, 1, 1);
@@ -800,14 +890,19 @@ function renderGravitationalFluidStream(params: {
     if (coreM) {
       coreM.visible = true;
       coreM.geometry.dispose();
-      coreM.geometry = new THREE.TubeGeometry(gravityCurve, 20, 0.0010 * pulse, 6, false);
+      coreM.geometry = createTaperedStreamGeometry(
+        curvePoints,
+        0.0016 * pulse,
+        0.0008 * pulse,
+        10,
+      );
       coreM.position.set(0, 0, 0);
       coreM.rotation.set(0, 0, 0);
       coreM.scale.set(1, 1, 1);
     }
   }
 
-  // Cập nhật 12 giọt nước rơi dọc theo đường cong trọng lực
+  // Cập nhật 12 giọt nước rơi nhanh dần đều theo gia tốc trọng trường: s = tau^1.8
   const totalDrops = 12;
   const dropSpeed = isDripMode ? 0.0028 : 0.0048;
   for (let d = 0; d < totalDrops; d++) {
@@ -819,11 +914,14 @@ function renderGravitationalFluidStream(params: {
       }
       drop.visible = true;
       const countUsed = isDripMode ? 6 : totalDrops;
-      const sDrop = ((now * dropSpeed + d / countUsed) % 1);
-      const pt = gravityCurve.getPoint(sDrop);
+      const tau = ((now * dropSpeed + d / countUsed) % 1);
+      const sDrop = Math.pow(tau, 1.8);
+      const stepIdx = Math.min(steps - 2, Math.floor(sDrop * (steps - 1)));
+      const frac = (sDrop * (steps - 1)) - stepIdx;
+      const pt = new THREE.Vector3().lerpVectors(curvePoints[stepIdx], curvePoints[stepIdx + 1], frac);
       drop.position.copy(pt);
-      const stretch = isDripMode ? 1.55 + sDrop * 0.95 : 1.15 + sDrop * 0.55;
-      const rScale = isDripMode ? 1.12 : 0.82;
+      const stretch = isDripMode ? 1.45 + sDrop * 1.15 : 1.15 + sDrop * 0.75;
+      const rScale = (isDripMode ? 1.05 : 0.78) * (1 - 0.42 * sDrop);
       drop.scale.set(rScale * pulse, rScale * pulse * stretch, rScale * pulse);
     }
   }
@@ -4190,16 +4288,17 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 if (!drop) continue;
                 const t = ((now * 0.0040 + d / 6) % 1);
                 if (arch === 'overflow-can') {
-                  // Parabolic trajectory from spout tip (0.085, 0.125, 0) to catch beaker (0.122, 0.024, 0)
+                  // Quỹ đạo ném xiên và rơi nhanh dần đều theo gia tốc trọng trường: y = y0 - tau^1.8 * dy
+                  const tau = Math.pow(t, 1.8);
                   drop.position.set(
-                    0.085 + t * 0.037,
-                    0.125 - t * t * 0.101,
+                    0.086 + t * 0.022,
+                    0.107 - tau * 0.083,
                     0,
                   );
                 } else if (arch === 'water-dispenser') {
-                  drop.position.set(0.095, 0.248 - t * dynamicStreamLen, 0);
+                  drop.position.set(0.095, 0.248 - Math.pow(t, 1.8) * dynamicStreamLen, 0);
                 } else if (arch === 'separatory-funnel') {
-                  drop.position.set(0, 0.086 - t * 0.066, 0);
+                  drop.position.set(0, 0.086 - Math.pow(t, 1.8) * 0.066, 0);
                 }
               }
               for (let r = 0; r < 2; r++) {
