@@ -3319,18 +3319,18 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     pouringStreamGroup.visible = false;
 
     const pourOuterMat = new THREE.MeshPhysicalMaterial({
-      color: 0x7dd3fc, // Xanh nhạt ngọc lam trong suốt
-      attenuationColor: new THREE.Color(0x0284c7),
-      attenuationDistance: 0.08,
-      transmission: 0.62,
-      roughness: 0.012,
-      metalness: 0.01,
+      color: 0xf0fdfa, // Nước tinh khiết trong suốt pha lê chuẩn PBR
+      attenuationColor: new THREE.Color(0x0ea5e9),
+      attenuationDistance: 0.16,
+      transmission: 0.92,
+      roughness: 0.008,
+      metalness: 0.0,
       ior: 1.333,
       reflectivity: 0.98,
       clearcoat: 1.0,
       clearcoatRoughness: 0.01,
       transparent: true,
-      opacity: 0.88,
+      opacity: 0.92,
       depthWrite: false,
     });
     // Dòng nước co thắt khí động học: phần đỉnh dày 3.6mm, phần đuôi thon nhỏ 1.8mm do gia tốc trọng trường

@@ -2464,21 +2464,21 @@ export interface FluidPhysicalProfile {
 export const FLUID_PROFILES: Record<FluidKind, FluidPhysicalProfile> = {
   'clean-water': {
     kind: 'clean-water',
-    nameVi: 'Nước sạch tinh khiết (Xanh nhạt thủy tinh)',
+    nameVi: 'Nước sạch tinh khiết (PBR Quang học pha lê & Hấp thụ sâu)',
     ior: 1.333,
-    transmission: 0.52,         // Cân bằng quang học: vừa trong suốt vừa hiển thị rõ sắc xanh nhạt và các đường gạch ngang mỏng qua thành thủy tinh
-    roughness: 0.012,          // Mặt nước bóng láng
+    transmission: 0.92,         // Độ truyền quang cao chuẩn pha lê của nước tinh khiết (92% trong suốt)
+    roughness: 0.008,          // Mặt nước bóng láng phẳng mịn
     metalness: 0.0,
-    thickness: 0.08,
-    attenuationDistance: 0.06,  // Hấp thụ Beer-Lambert sâu lắng: góc mỏng ánh xanh lơ dịu, khối dày có chiều sâu đậm đà
-    attenuationColor: 0x0284c7, // Xanh đại dương dịu mát chuẩn quang học khi ánh sáng đi qua chiều dày khối nước
-    baseColor: 0x38bdf8,        // Màu xanh lơ nhạt tươi mát, nổi bật rõ ràng qua vỏ thủy tinh
+    thickness: 0.08,           // Chiều dày quang học cho Three.js
+    attenuationDistance: 0.18,  // Beer-Lambert: Lớp mỏng (<2cm) trong vắt, lớp dày (>8cm) ánh sắc xanh lơ sâu lắng
+    attenuationColor: 0x0ea5e9, // Sắc xanh lơ đại dương tự nhiên khi ánh sáng đi qua chiều dày khối nước (Ảnh 1 & 2)
+    baseColor: 0xf0fdfa,        // Màu gốc trong suốt phớt ngọc cực nhẹ (99% clear), không bị đục xanh siro
     specularIntensity: 1.0,
     clearcoat: 1.0,
     clearcoatRoughness: 0.01,
-    opacity: 0.86,              // Độ mờ trong suốt hoàn hảo: vừa thấy xuyên qua vừa nhận diện rõ từng đường gạch ngang và mực nước tới đâu
-    meniscusColor: 0x0284c7,    // Viền căng bờ mặt mao dẫn ánh xanh rõ nét
-    meniscusHighlight: 0xf0f9ff, // Điểm sáng phản chiếu ánh sáng phòng
+    opacity: 0.92,              // Độ trong suốt tự nhiên, nhìn thấu vật thể phía sau
+    meniscusColor: 0x0284c7,    // Vùng hội tụ đáy mặt khum
+    meniscusHighlight: 0xffffff, // Tia sáng phản xạ toàn phần trên gờ tiếp xúc thủy tinh
     capillaryHeightFactor: 1.15,
   },
   'copper-sulfate': {
@@ -2541,6 +2541,78 @@ export const FLUID_PROFILES: Record<FluidKind, FluidPhysicalProfile> = {
 };
 
 let cachedWaterInternalGraduationTex: THREE.CanvasTexture | null = null;
+let cachedWaterNormalMap: THREE.CanvasTexture | null = null;
+
+export function getWaterWaveletNormalMap(): THREE.CanvasTexture {
+  if (cachedWaterNormalMap) return cachedWaterNormalMap;
+
+  if (typeof document === 'undefined') {
+    const dummy = new THREE.CanvasTexture({} as any);
+    return dummy;
+  }
+
+  const size = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx || typeof (ctx as any).createImageData !== 'function') {
+    const dummy = new THREE.CanvasTexture({} as any);
+    cachedWaterNormalMap = dummy;
+    return dummy;
+  }
+  const imgData = ctx.createImageData(size, size);
+  const data = imgData.data;
+
+  // 4-octave capillary wavelet superposition (Phổ vi sóng mao dẫn biển & mặt nước phòng thí nghiệm)
+  const heights = new Float32Array(size * size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const u = (x / size) * Math.PI * 2;
+      const v = (y / size) * Math.PI * 2;
+
+      const w1 = Math.sin(u * 4 + v * 3);
+      const w2 = Math.cos(u * 7 - v * 5) * 0.45;
+      const w3 = Math.sin(u * 12 + v * 10) * 0.22;
+      const w4 = Math.cos(u * 19 - v * 16) * 0.10;
+
+      heights[y * size + x] = (w1 + w2 + w3 + w4) / 1.77;
+    }
+  }
+
+  // Bộ lọc Sobel tính vector pháp tuyến bề mặt [Nx, Ny, Nz] -> chuẩn hóa RGB [0..255]
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const xLeft = (x - 1 + size) % size;
+      const xRight = (x + 1) % size;
+      const yUp = (y - 1 + size) % size;
+      const yDown = (y + 1) % size;
+
+      const dX = (heights[y * size + xRight] - heights[y * size + xLeft]) * 2.2;
+      const dY = (heights[yDown * size + x] - heights[yUp * size + x]) * 2.2;
+      const dZ = 1.0;
+
+      const len = Math.hypot(dX, dY, dZ);
+      const nx = -dX / len;
+      const ny = -dY / len;
+      const nz = dZ / len;
+
+      const idx = (y * size + x) * 4;
+      data[idx] = Math.round((nx * 0.5 + 0.5) * 255);     // R
+      data[idx + 1] = Math.round((ny * 0.5 + 0.5) * 255); // G
+      data[idx + 2] = Math.round((nz * 0.5 + 0.5) * 255); // B
+      data[idx + 3] = 255;                                // A
+    }
+  }
+
+  ctx.putImageData(imgData, 0, 0);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 2);
+  cachedWaterNormalMap = tex;
+  return tex;
+}
 
 export function getWaterInternalGraduationTexture(): THREE.CanvasTexture {
   if (cachedWaterInternalGraduationTex) return cachedWaterInternalGraduationTex;
@@ -2550,51 +2622,13 @@ export function getWaterInternalGraduationTexture(): THREE.CanvasTexture {
   canvas.height = 512;
   const ctx = canvas.getContext('2d')!;
 
-  // 1. Nền dung dịch nước xanh ngọc nhạt có độ chuyển sắc quang học
+  // 1. Nền dung dịch nước trong suốt có độ chuyển sắc quang học
   const grad = ctx.createLinearGradient(0, 0, 0, 512);
-  grad.addColorStop(0.0, 'rgba(186, 230, 253, 0.40)'); // Đỉnh mặt thoáng xanh lơ nhạt
-  grad.addColorStop(0.25, 'rgba(125, 211, 252, 0.50)');
-  grad.addColorStop(0.70, 'rgba(56, 189, 248, 0.60)');
-  grad.addColorStop(1.0, 'rgba(2, 132, 199, 0.72)');  // Đáy sâu xanh ngọc đậm hơn
+  grad.addColorStop(0.0, 'rgba(240, 253, 250, 0.10)');
+  grad.addColorStop(0.50, 'rgba(186, 230, 253, 0.20)');
+  grad.addColorStop(1.0, 'rgba(14, 165, 233, 0.35)');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, 256, 512);
-
-  // 2. Các đường gạch nhỏ nhỏ ngang mỏng tinh tế (fine horizontal sub-surface meniscus ribs)
-  // Giúp học sinh và giáo viên nhìn từ mọi hướng đều thấy ngay lượng nước tới đâu và hình dáng khối nước
-  for (let y = 8; y < 512; y += 16) {
-    const isMajor = y % 32 === 0;
-
-    // Đường viền sáng phản xạ ánh sáng trên gờ
-    ctx.strokeStyle = isMajor ? 'rgba(240, 249, 255, 0.90)' : 'rgba(224, 242, 254, 0.45)';
-    ctx.lineWidth = isMajor ? 1.5 : 0.8;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(256, y);
-    ctx.stroke();
-
-    // Đường gạch xanh ngọc phân định cao độ chất lỏng
-    ctx.strokeStyle = isMajor ? 'rgba(2, 132, 199, 0.80)' : 'rgba(14, 165, 233, 0.45)';
-    ctx.lineWidth = isMajor ? 1.2 : 0.6;
-    ctx.beginPath();
-    ctx.moveTo(0, y + 1);
-    ctx.lineTo(256, y + 1);
-    ctx.stroke();
-  }
-
-  // 3. Vạch mặt khum đỉnh (Top Meniscus Boundary) siêu sắc nét
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.98)';
-  ctx.lineWidth = 3.2;
-  ctx.beginPath();
-  ctx.moveTo(0, 2);
-  ctx.lineTo(256, 2);
-  ctx.stroke();
-
-  ctx.strokeStyle = 'rgba(56, 189, 248, 0.92)';
-  ctx.lineWidth = 2.0;
-  ctx.beginPath();
-  ctx.moveTo(0, 5);
-  ctx.lineTo(256, 5);
-  ctx.stroke();
 
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -2619,9 +2653,12 @@ export function createWaterMaterial(
     }
   }
 
+  const normalMap = profile.kind === 'clean-water' ? getWaterWaveletNormalMap() : null;
+
   const mat = new THREE.MeshPhysicalMaterial({
     color: profile.baseColor,
-    map: profile.kind === 'clean-water' ? getWaterInternalGraduationTexture() : null,
+    normalMap,
+    normalScale: new THREE.Vector2(0.045, 0.045),
     attenuationColor: new THREE.Color(profile.attenuationColor),
     attenuationDistance: profile.attenuationDistance,
     transmission: profile.transmission,
@@ -2643,7 +2680,7 @@ export function createWaterMaterial(
 
 export function createStreamMaterial(
   fluidKindOrColor: FluidKind | number = 'clean-water',
-  opacity = 0.88,
+  opacity = 0.90,
 ): THREE.MeshPhysicalMaterial {
   let profile: FluidPhysicalProfile = FLUID_PROFILES['clean-water'];
   if (typeof fluidKindOrColor === 'string' && FLUID_PROFILES[fluidKindOrColor]) {
@@ -2655,11 +2692,11 @@ export function createStreamMaterial(
       : profile.attenuationColor;
 
   return new THREE.MeshPhysicalMaterial({
-    color: 0x7dd3fc,
+    color: profile.baseColor,
     attenuationColor: new THREE.Color(colorVal),
-    attenuationDistance: 0.08,
-    transmission: 0.60,
-    roughness: 0.012,
+    attenuationDistance: 0.16,
+    transmission: profile.transmission,
+    roughness: 0.008,
     metalness: 0.0,
     ior: 1.333,
     specularIntensity: 1.0,
@@ -2701,17 +2738,19 @@ export function addConcaveMeniscusAndRipples(
     capGeo,
     new THREE.MeshPhysicalMaterial({
       color: profile.baseColor,
+      normalMap: getWaterWaveletNormalMap(),
+      normalScale: new THREE.Vector2(0.06, 0.06),
       attenuationColor: new THREE.Color(profile.attenuationColor),
-      attenuationDistance: profile.attenuationDistance * 1.2,
-      transmission: 0.70,
-      roughness: 0.01,
+      attenuationDistance: profile.attenuationDistance * 1.5,
+      transmission: profile.transmission,
+      roughness: 0.008,
       metalness: 0.0,
       ior: profile.ior,
       clearcoat: 1.0,
       clearcoatRoughness: 0.01,
       specularIntensity: 1.0,
       transparent: true,
-      opacity: 0.88,
+      opacity: profile.opacity,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
@@ -2727,13 +2766,13 @@ export function addConcaveMeniscusAndRipples(
     Math.max(0.0018, radius * 0.095 * profile.capillaryHeightFactor),
   );
   const meniscusWall = new THREE.Mesh(
-    new THREE.CylinderGeometry(radius * 1.001, radius * 0.968, meniscusWallH, 48, 1, true),
+    new THREE.CylinderGeometry(radius * 1.001, radius * 0.978, meniscusWallH, 48, 1, true),
     new THREE.MeshPhysicalMaterial({
       color: profile.baseColor,
       attenuationColor: new THREE.Color(profile.attenuationColor),
       attenuationDistance: profile.attenuationDistance,
-      transmission: 0.65,
-      roughness: 0.015,
+      transmission: 0.88,
+      roughness: 0.012,
       ior: profile.ior,
       clearcoat: 1.0,
       clearcoatRoughness: 0.01,
@@ -2748,65 +2787,35 @@ export function addConcaveMeniscusAndRipples(
   meniscusWall.renderOrder = 3;
   liquidGroup.add(meniscusWall);
 
-  // 3. Crisp outer meniscus contact ring highlight (capillary wetting edge)
+  // 3. Crisp outer meniscus contact ring highlight (capillary wetting edge - razor thin & bright)
   const meniscusRing = new THREE.Mesh(
-    new THREE.RingGeometry(radius * 0.78, radius * 1.002, 48, 2).rotateX(-Math.PI / 2),
+    new THREE.RingGeometry(radius * 0.975, radius * 1.001, 48, 1).rotateX(-Math.PI / 2),
     new THREE.MeshBasicMaterial({
       color: profile.meniscusHighlight,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.95,
+      opacity: 0.45,
       depthWrite: false,
     }),
   );
   meniscusRing.name = 'meniscus_ring';
-  meniscusRing.position.y = waterHeight + 0.0005;
-  meniscusRing.renderOrder = 3;
+  meniscusRing.position.y = waterHeight + hcCapillaryM + 0.0002;
+  meniscusRing.renderOrder = 4;
   liquidGroup.add(meniscusRing);
 
-  // 4. Inner concentric surface ripple ring (shimmers during pouring/dispensing)
+  // 4. Subtle inner concentric surface ripple ring (shimmers during pouring/dispensing)
   const rippleRing = new THREE.Mesh(
-    new THREE.RingGeometry(radius * 0.22, radius * 0.42, 36, 2).rotateX(-Math.PI / 2),
+    new THREE.RingGeometry(radius * 0.16, radius * 0.28, 36, 1).rotateX(-Math.PI / 2),
     new THREE.MeshBasicMaterial({
-      color: profile.meniscusColor,
+      color: profile.baseColor,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.60,
+      opacity: 0.18,
       depthWrite: false,
     }),
   );
   rippleRing.name = 'surface_ripple';
-  rippleRing.position.y = waterHeight + 0.0006;
-  rippleRing.renderOrder = 3;
-  liquidGroup.add(rippleRing);
-
-  // 5. Thêm các đường gạch nhỏ nhỏ ngang mỏng 3D bên trong khối nước (Internal Horizontal Depth Lines)
-  // Phân tầng mực nước sắc nét từ đáy lên đến mặt thoáng, giúp nhìn từ bất kỳ góc độ nào
-  // cũng nhận biết chính xác lượng nước tới đâu và thể tích khối nước bên trong vỏ thủy tinh
-  if (waterHeight >= 0.012) {
-    const ringStepH = Math.max(0.007, Math.min(0.014, waterHeight / 4.5));
-    const numInternalRings = Math.floor(waterHeight / ringStepH);
-    for (let k = 1; k <= numInternalRings; k++) {
-      const ringY = k * ringStepH;
-      if (ringY < waterHeight - 0.0025) {
-        const internalRing = new THREE.Mesh(
-          new THREE.RingGeometry(radius * 0.91, radius * 0.992, 48).rotateX(-Math.PI / 2),
-          new THREE.MeshBasicMaterial({
-            color: profile.meniscusColor,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.60,
-            depthWrite: false,
-          }),
-        );
-        internalRing.name = `internal_depth_ring_${k}`;
-        internalRing.position.y = ringY;
-        internalRing.renderOrder = 3;
-        liquidGroup.add(internalRing);
-      }
-    }
-  }
-  rippleRing.position.y = waterHeight + 0.0006;
+  rippleRing.position.y = waterHeight + 0.0004;
   rippleRing.renderOrder = 3;
   liquidGroup.add(rippleRing);
 }
@@ -3146,6 +3155,26 @@ export function syncHydrostaticLiquidToGravity(
       child.geometry.computeVertexNormals();
     }
   });
+
+  // Animated living capillary surface shimmering glints & caustic light modulation (Photos 1 & 2)
+  if (timeMs > 0) {
+    const surfCap = liquidGroup.getObjectByName('surface_cap') as THREE.Mesh | undefined;
+    if (surfCap && surfCap.material instanceof THREE.MeshPhysicalMaterial && surfCap.material.normalMap) {
+      surfCap.material.normalMap.offset.x = (timeMs * 0.000035) % 1;
+      surfCap.material.normalMap.offset.y = (timeMs * 0.000025) % 1;
+    }
+
+    if (causticsMesh) {
+      causticsMesh.visible = true;
+      const causticMat = causticsMesh.material as THREE.MeshBasicMaterial;
+      if (causticMat) {
+        const depthFactor = THREE.MathUtils.clamp(waterEdgeHeightM / (maxH * 0.75), 0.25, 1.0);
+        const waveShimmer = 1.0 + Math.sin(timeMs * 0.004) * 0.12 * Math.min(1.0, waveAmp * 500 + 0.2);
+        causticMat.opacity = Math.min(0.85, 0.52 * depthFactor * waveShimmer);
+        causticsMesh.rotation.z = (timeMs * 0.00015) % (Math.PI * 2);
+      }
+    }
+  }
 
   return {
     pourThresholdRad,
