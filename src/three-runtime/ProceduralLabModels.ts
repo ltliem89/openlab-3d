@@ -2694,7 +2694,7 @@ export function createStreamMaterial(
   return new THREE.MeshPhysicalMaterial({
     color: profile.baseColor,
     attenuationColor: new THREE.Color(colorVal),
-    attenuationDistance: 0.16,
+    attenuationDistance: profile.attenuationDistance,
     transmission: profile.transmission,
     roughness: 0.008,
     metalness: 0.0,
@@ -3800,7 +3800,7 @@ export function buildProceduralEquipmentGroup(
 
       // Water inside the angled spout tube (`spout_water` — strictly hidden when idle; ONLY visible during active overflow!)
       const spoutWaterGeo = new THREE.CylinderGeometry(0.0033, 0.0041, 0.054, 18);
-      const spoutWaterMat = createStreamMaterial(0x0ea5e9, 0.88);
+      const spoutWaterMat = createStreamMaterial(0x38bdf8, 0.88);
       const spoutWater = new THREE.Mesh(spoutWaterGeo, spoutWaterMat);
       spoutWater.name = 'spout_water';
       spoutWater.position.set(0.063, elevY + 0.0815, 0);
