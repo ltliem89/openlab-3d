@@ -2406,30 +2406,21 @@ function buildOpticalRiderSaddle(
 
 
 function createGlassMaterial(isSoftwareGl: boolean): THREE.MeshPhysicalMaterial {
-  if (isSoftwareGl) {
-    return new THREE.MeshPhysicalMaterial({
-      color: 0xe0f2fe,
-      roughness: 0.1,
-      metalness: 0.05,
-      transparent: true,
-      opacity: 0.35,
-      depthWrite: false,
-      side: THREE.DoubleSide,
-    });
-  }
+  // PBR Borosilicate Glass (Thủy tinh phòng thí nghiệm Borosilicate 3.3 chuẩn quang học)
+  // Sử dụng Alpha-blending vật lý PBR (opacity = 0.26) thay vì transmission đơn tầng để:
+  // 1. Tuyệt đối KHÔNG xóa mờ hay che lấp chất lỏng (nước) nằm bên trong lòng bình.
+  // 2. Tương thích hoàn hảo với mọi WebGL render pipeline, bảo toàn trọn vẹn màu nước xanh bên trong.
+  // 3. Phản chiếu vệt sáng phòng thí nghiệm (clearcoat = 1.0, specular = 1.0) bóng láng chân thực.
   return new THREE.MeshPhysicalMaterial({
     color: 0xf0f9ff,
-    roughness: 0.02,
+    roughness: 0.03,
     metalness: 0.02,
-    transmission: 0.92,
-    ior: 1.52,
-    thickness: 0.045,
-    specularIntensity: 1.0,
-    specularColor: 0xffffff,
     clearcoat: 1.0,
     clearcoatRoughness: 0.02,
+    specularIntensity: 1.0,
+    specularColor: 0xffffff,
     transparent: true,
-    opacity: 1.0,
+    opacity: 0.26,
     depthWrite: false,
     side: THREE.DoubleSide,
   });
@@ -2757,7 +2748,7 @@ export function addConcaveMeniscusAndRipples(
   );
   surfaceCap.name = 'surface_cap';
   surfaceCap.position.y = waterHeight + 0.0002;
-  surfaceCap.renderOrder = 3;
+  surfaceCap.renderOrder = 4;
   liquidGroup.add(surfaceCap);
 
   // 2. 3D Concave Capillary Meniscus Wall (visible from side view for reading bottom of meniscus!)
@@ -2784,7 +2775,7 @@ export function addConcaveMeniscusAndRipples(
   );
   meniscusWall.name = 'meniscus_wall';
   meniscusWall.position.y = waterHeight + meniscusWallH * 0.5;
-  meniscusWall.renderOrder = 3;
+  meniscusWall.renderOrder = 4;
   liquidGroup.add(meniscusWall);
 
   // 3. Crisp outer meniscus contact ring highlight (capillary wetting edge - razor thin & bright)
@@ -2800,7 +2791,7 @@ export function addConcaveMeniscusAndRipples(
   );
   meniscusRing.name = 'meniscus_ring';
   meniscusRing.position.y = waterHeight + hcCapillaryM + 0.0002;
-  meniscusRing.renderOrder = 4;
+  meniscusRing.renderOrder = 5;
   liquidGroup.add(meniscusRing);
 
   // 4. Subtle inner concentric surface ripple ring (shimmers during pouring/dispensing)
@@ -2816,7 +2807,7 @@ export function addConcaveMeniscusAndRipples(
   );
   rippleRing.name = 'surface_ripple';
   rippleRing.position.y = waterHeight + 0.0004;
-  rippleRing.renderOrder = 3;
+  rippleRing.renderOrder = 4;
   liquidGroup.add(rippleRing);
 }
 
@@ -3537,7 +3528,7 @@ export function buildProceduralEquipmentGroup(
       waterGeo.translate(0, waterHeight / 2, 0);
       const waterMesh = new THREE.Mesh(waterGeo, waterMat);
       waterMesh.name = 'liquid_body';
-      waterMesh.renderOrder = 2;
+      waterMesh.renderOrder = 3;
       liquidGroup.add(waterMesh);
 
       addConcaveMeniscusAndRipples(liquidGroup, 0.0156, waterHeight, 'clean-water');
@@ -3609,7 +3600,7 @@ export function buildProceduralEquipmentGroup(
       const liquidMat = createWaterMaterial('clean-water');
       const liquidMesh = new THREE.Mesh(liquidGeo, liquidMat);
       liquidMesh.name = 'liquid_body';
-      liquidMesh.renderOrder = 2;
+      liquidMesh.renderOrder = 3;
       liquidGroup.add(liquidMesh);
 
       addConcaveMeniscusAndRipples(liquidGroup, 0.0338, 0.038, 'clean-water');
@@ -3818,7 +3809,7 @@ export function buildProceduralEquipmentGroup(
       const waterMat = createWaterMaterial('clean-water');
       const waterMesh = new THREE.Mesh(waterGeo, waterMat);
       waterMesh.name = 'liquid_body';
-      waterMesh.renderOrder = 2;
+      waterMesh.renderOrder = 3;
       liquidGroup.add(waterMesh);
 
       addConcaveMeniscusAndRipples(liquidGroup, 0.0384, waterHeight, 'clean-water');
@@ -4524,7 +4515,7 @@ export function buildProceduralEquipmentGroup(
       const solMat = createWaterMaterial('copper-sulfate');
       const solMesh = new THREE.Mesh(solGeo, solMat);
       solMesh.name = 'liquid_body';
-      solMesh.renderOrder = 2;
+      solMesh.renderOrder = 3;
       liquidGroup.add(solMesh);
       addConcaveMeniscusAndRipples(liquidGroup, 0.031, 0.036, 'copper-sulfate');
       liquidGroup.position.y = 0.003;
@@ -6520,7 +6511,7 @@ export function buildProceduralEquipmentGroup(
       waterGeo.translate(0, waterHeight / 2, 0);
       const waterMat = createWaterMaterial('clean-water');
       const waterMesh = new THREE.Mesh(waterGeo, waterMat);
-      waterMesh.renderOrder = 2;
+      waterMesh.renderOrder = 3;
       liquidGroup.add(waterMesh);
 
       addConcaveMeniscusAndRipples(liquidGroup, 0.050, waterHeight, 'clean-water');

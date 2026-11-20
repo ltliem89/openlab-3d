@@ -1877,35 +1877,33 @@ export function buildStandardLabRoomV2(
     const shelfCenterZ = shelfBackZ + shelfD / 2; // -0.450 m
     const tierDeckLocalYs = [0.135]; // Duy nhất 1 tầng nâng cao (13.5 cm trên mặt bàn)
 
-    // 1. Tấm kính sau lưng kệ: Kính mờ chân thật (Frosted Glass), đã tăng độ trong suốt lên 50%
+    // 1. Tấm kính sau lưng kệ: Kính mờ chân thật (Frosted Glass), trong suốt tinh tế
     const backFrostedGlassMat = new THREE.MeshPhysicalMaterial({
       color: 0xc7e4f8,
       emissive: 0x0284c7,
       emissiveIntensity: 0.025,
       roughness: 0.32,        // Độ nhám bề mặt tạo hiệu ứng kính mờ (frosted)
       metalness: 0.02,
-      transmission: 0.85,     // Độ truyền sáng cao giúp nhìn xuyên rõ ràng
-      ior: 1.45,              // Chiết suất quang học kính
+      clearcoat: 0.8,
       reflectivity: 0.45,     // Phản xạ mờ chân thật
       transparent: true,
-      opacity: 0.21,          // Tăng độ trong suốt 50% (giảm opacity từ 0.42 xuống 0.21)
+      opacity: 0.16,          // Trong suốt thanh thoát, không che mất các dụng cụ trên kệ
       depthWrite: false,      // Giúp hòa trộn alpha mượt mà với không gian phía sau
       side: THREE.DoubleSide,
     });
     backFrostedGlassMat.name = 'display_zone_back_glass_mat';
 
-    // 2. Vật liệu kính mờ cho 2 vách kính bên hông kệ (giữ nguyên hiệu ứng 3D như cũ)
+    // 2. Vật liệu kính mờ cho 2 vách kính bên hông kệ
     const sideGlassMat = new THREE.MeshPhysicalMaterial({
       color: 0xbae6fd,
       emissive: 0x0284c7,
-      emissiveIntensity: 0.10,
+      emissiveIntensity: 0.05,
       roughness: 0.22,
       metalness: 0.04,
-      transmission: 0.65,
-      ior: 1.46,
+      clearcoat: 0.9,
       reflectivity: 0.80,
       transparent: true,
-      opacity: 0.26,
+      opacity: 0.18,
       depthWrite: false,
       side: THREE.DoubleSide,
     });
