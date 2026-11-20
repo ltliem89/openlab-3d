@@ -16,6 +16,11 @@ let cachedContactShadowTex: THREE.CanvasTexture | null = null;
 
 function getContactShadowTexture(): THREE.CanvasTexture {
   if (cachedContactShadowTex) return cachedContactShadowTex;
+  if (typeof document === 'undefined') {
+    const tex = new THREE.CanvasTexture({} as any);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
   const canvas = document.createElement('canvas');
   canvas.width = 128;
   canvas.height = 128;
@@ -48,6 +53,101 @@ function addContactShadow(group: THREE.Group, radiusX: number, radiusZ: number):
   shadowMesh.position.y = 0.0015;
   shadowMesh.name = 'contact_shadow';
   group.add(shadowMesh);
+}
+
+let cachedWaterCausticsTex: THREE.CanvasTexture | null = null;
+
+export function getWaterCausticsTexture(): THREE.CanvasTexture {
+  if (cachedWaterCausticsTex) return cachedWaterCausticsTex;
+  if (typeof document === 'undefined') {
+    const tex = new THREE.CanvasTexture({} as any);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const ctx = canvas.getContext('2d')!;
+
+  ctx.clearRect(0, 0, 256, 256);
+
+  // 1. Ambient soft cyan caustic pool
+  const baseGrad = ctx.createRadialGradient(128, 128, 8, 128, 128, 115);
+  baseGrad.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
+  baseGrad.addColorStop(0.55, 'rgba(14, 165, 233, 0.22)');
+  baseGrad.addColorStop(0.88, 'rgba(6, 182, 212, 0.06)');
+  baseGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = baseGrad;
+  ctx.beginPath();
+  ctx.arc(128, 128, 120, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. Refractive focal rim ring (curved bottom glass cylinder lens effect)
+  ctx.strokeStyle = 'rgba(224, 242, 254, 0.70)';
+  ctx.lineWidth = 4.5;
+  ctx.beginPath();
+  ctx.arc(128, 128, 92, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // 3. Multi-harmonic caustic wave interference ribbons (Beer-Lambert & Wave Curvature)
+  ctx.lineWidth = 3.0;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+  const ribbonAngles = [0, 0.78, 1.57, 2.35, 3.14, 3.92, 4.71, 5.49];
+  for (let i = 0; i < ribbonAngles.length; i++) {
+    const a = ribbonAngles[i];
+    const r1 = 35 + ((i * 17) % 30);
+    const r2 = 75 + ((i * 23) % 25);
+    const x1 = 128 + Math.cos(a) * r1;
+    const y1 = 128 + Math.sin(a) * r1;
+    const x2 = 128 + Math.cos(a + 1.2) * r2;
+    const y2 = 128 + Math.sin(a + 1.2) * r2;
+    const cx = 128 + Math.cos(a + 0.6) * (r1 + r2) * 0.58;
+    const cy = 128 + Math.sin(a + 0.6) * (r1 + r2) * 0.58;
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    if (typeof (ctx as any).quadraticCurveTo === 'function') {
+      ctx.quadraticCurveTo(cx, cy, x2, y2);
+    } else {
+      ctx.lineTo(x2, y2);
+    }
+    ctx.stroke();
+  }
+
+  // 4. Intense central constructive interference nodes (Caustic hotspots)
+  const focalGrad = ctx.createRadialGradient(116, 122, 2, 116, 122, 28);
+  focalGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+  focalGrad.addColorStop(0.4, 'rgba(186, 230, 253, 0.65)');
+  focalGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+  ctx.fillStyle = focalGrad;
+  ctx.beginPath();
+  ctx.arc(116, 122, 28, 0, Math.PI * 2);
+  ctx.fill();
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  cachedWaterCausticsTex = tex;
+  return tex;
+}
+
+export function addVesselCausticsProjector(group: THREE.Group, radius: number): THREE.Mesh {
+  const geo = new THREE.PlaneGeometry(radius * 2.8, radius * 2.8);
+  geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshBasicMaterial({
+    map: getWaterCausticsTexture(),
+    transparent: true,
+    opacity: 0.55,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+  const causticsMesh = new THREE.Mesh(geo, mat);
+  causticsMesh.name = 'vessel_caustics';
+  causticsMesh.position.y = 0.0018; // Above table and above contact shadow (0.0015)
+  group.add(causticsMesh);
+  return causticsMesh;
 }
 
 export function createLcdDisplayTexture(textValue: string, unit = 'g'): THREE.CanvasTexture {
@@ -2841,8 +2941,13 @@ export function syncHydrostaticLiquidToGravity(
   const rMean = (rTop + rBot) * 0.5;
   const isConical = Boolean(liquidGroup.userData.isConicalFlask);
 
+  const causticsMesh = instanceRoot.getObjectByName('vessel_caustics') as THREE.Mesh | undefined;
+
   if (scaleY <= 0.015) {
     liquidGroup.visible = false;
+    if (causticsMesh) {
+      causticsMesh.visible = false;
+    }
     return {
       pourThresholdRad: 1.2,
       maxRetainedScaleY: 0,
@@ -2905,6 +3010,20 @@ export function syncHydrostaticLiquidToGravity(
   const kx = -Math.tan(clampedZ);
   const kz = Math.tan(clampedX);
   const kMag = Math.hypot(kx, kz);
+
+  // Dynamic Caustics Synchronization
+  if (causticsMesh) {
+    causticsMesh.visible = true;
+    const causticsMat = causticsMesh.material as THREE.MeshBasicMaterial;
+    if (causticsMat && 'opacity' in causticsMat) {
+      const baseAlpha = THREE.MathUtils.clamp(scaleY * 0.52, 0.18, 0.68);
+      const sloshPulse = 1.0 + Math.sin(timeMs * 0.0055) * 0.16 + Math.abs(effectiveSlosh) * 0.40;
+      causticsMat.opacity = Math.min(0.85, baseAlpha * sloshPulse);
+    }
+    causticsMesh.rotation.y = timeMs * 0.0003 + effectiveSlosh * 0.35;
+    causticsMesh.position.x = kx * 0.005;
+    causticsMesh.position.z = kz * 0.005;
+  }
 
   const uprightH = THREE.MathUtils.clamp(baseH * scaleY, 0.001, maxH);
 
@@ -3319,6 +3438,7 @@ export function buildProceduralEquipmentGroup(
 
     case 'graduated-cylinder': {
       addContactShadow(root, 0.042, 0.042);
+      addVesselCausticsProjector(root, 0.032);
       const bodyGroup = new THREE.Group();
       bodyGroup.name = 'body';
 
@@ -3401,6 +3521,7 @@ export function buildProceduralEquipmentGroup(
 
     case 'beaker-250': {
       addContactShadow(root, 0.048, 0.048);
+      addVesselCausticsProjector(root, 0.038);
       const bodyGroup = new THREE.Group();
       bodyGroup.name = 'body';
       const glassMat = createGlassMaterial(isSoftwareGl);
@@ -3490,6 +3611,7 @@ export function buildProceduralEquipmentGroup(
         bubble.userData = {
           phase: i * 0.42,
           speed: 0.7 + (i % 4) * 0.25,
+          bRadius,
           baseX: Math.cos(angle) * radius,
           baseZ: Math.sin(angle) * radius,
         };
@@ -3526,6 +3648,7 @@ export function buildProceduralEquipmentGroup(
 
     case 'overflow-can': {
       addContactShadow(root, 0.058, 0.058);
+      addVesselCausticsProjector(root, 0.042);
       const bodyGroup = new THREE.Group();
       bodyGroup.name = 'body';
       const glassMat = createGlassMaterial(isSoftwareGl);
@@ -4332,6 +4455,7 @@ export function buildProceduralEquipmentGroup(
 
     case 'erlenmeyer-flask': {
       addContactShadow(root, 0.05, 0.05);
+      addVesselCausticsProjector(root, 0.045);
       const bodyGroup = new THREE.Group();
       bodyGroup.name = 'body';
       const glassMat = createGlassMaterial(isSoftwareGl);
@@ -5211,6 +5335,7 @@ export function buildProceduralEquipmentGroup(
 
     case 'porcelain-dish': {
       addContactShadow(root, 0.052, 0.052);
+      addVesselCausticsProjector(root, 0.042);
       const bodyGroup = new THREE.Group();
       bodyGroup.name = 'body';
 
@@ -5434,6 +5559,7 @@ export function buildProceduralEquipmentGroup(
 
     case 'distillation-flask': {
       addContactShadow(root, 0.065, 0.065);
+      addVesselCausticsProjector(root, 0.040);
       const bodyGroup = new THREE.Group();
       bodyGroup.name = 'body';
       const glassMat = createGlassMaterial(isSoftwareGl);
@@ -8333,10 +8459,20 @@ export function applyInstanceStateToObject3D(
           const b = boilingFx.getObjectByName(`bubble_${i}`);
           if (b) {
             b.visible = i < Math.ceil(intensity * 18);
+            const bRadius = (b.userData.bRadius as number) || (0.0012 + (i % 3) * 0.0007);
             const speed = (b.userData.speed as number) || 0.8;
             const phase = (b.userData.phase as number) || 0;
-            const cycle = ((nowS * speed * (0.6 + intensity * 0.8) + phase) % 1.0);
+            // Stokes Buoyant Law: ascent velocity scales with square of bubble radius (v ~ r^2)
+            const stokesFactor = Math.pow(bRadius / 0.0015, 2);
+            const effectiveSpeed = speed * (0.6 + intensity * 0.8) * stokesFactor;
+            const cycle = ((nowS * effectiveSpeed + phase) % 1.0);
             b.position.y = 0.003 + cycle * 0.036;
+            // Lateral wobble (micro-sinusoidal drift before surface pinch-off/pop)
+            const baseX = (b.userData.baseX as number) || 0;
+            const baseZ = (b.userData.baseZ as number) || 0;
+            const wobbleAmp = 0.0012 * (1.0 - cycle * 0.4);
+            b.position.x = baseX + Math.sin(nowS * 5.2 + phase * 2.8) * wobbleAmp;
+            b.position.z = baseZ + Math.cos(nowS * 4.6 + phase * 2.5) * wobbleAmp;
             const s = 0.5 + cycle * 0.9;
             b.scale.set(s, s, s);
           }

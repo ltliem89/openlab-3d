@@ -10,11 +10,12 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test:fluid": "tsx scripts/verify-fluid-simulation-realism.ts",
+    "test:micro": "tsx scripts/verify-fluid-micro-realism.ts",
     "test:continuous": "tsx scripts/verify-continuous-physics-core.ts",
     "squad:line": "tsx scripts/squad-production-line.ts",
     "squad:benchmarks": "tsx scripts/verify-hermes-5-benchmarks.ts",
     "squad:pipeline": "powershell -ExecutionPolicy Bypass -File scripts/run-continuous-physics-squad-pipeline.ps1",
-    "test": "tsx scripts/verify-fluid-simulation-realism.ts && tsx scripts/verify-full-system-integration.ts && tsx scripts/verify-continuous-physics-core.ts"
+    "test": "tsx scripts/verify-fluid-simulation-realism.ts && tsx scripts/verify-fluid-micro-realism.ts && tsx scripts/verify-full-system-integration.ts && tsx scripts/verify-continuous-physics-core.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

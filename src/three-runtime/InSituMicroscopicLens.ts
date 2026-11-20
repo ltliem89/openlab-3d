@@ -28,6 +28,7 @@ export class InSituMicroscopicLens {
   private readonly _particleCount: number = 80;
   private _dummy: THREE.Object3D = new THREE.Object3D();
   private _labelSprite: THREE.Sprite | null = null;
+  private _reticleMesh: THREE.Mesh | null = null;
 
   constructor() {
     this._group = new THREE.Group();
@@ -123,6 +124,72 @@ export class InSituMicroscopicLens {
     const auraMesh = new THREE.Mesh(auraGeom, auraMat);
     auraMesh.rotation.x = Math.PI / 2;
     this._group.add(auraMesh);
+
+    // 5. Thước ngắm thị sai mặt khum (Optical Meniscus Tangent Reticle)
+    const reticleGeom = new THREE.PlaneGeometry(0.20, 0.20);
+    reticleGeom.rotateX(-Math.PI / 2);
+    const reticleMat = new THREE.MeshBasicMaterial({
+      map: this._createReticleTexture(),
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      side: THREE.DoubleSide,
+      color: 0x10b981,
+    });
+    this._reticleMesh = new THREE.Mesh(reticleGeom, reticleMat);
+    this._reticleMesh.name = 'meniscus_reticle';
+    this._reticleMesh.position.y = 0.001;
+    this._group.add(this._reticleMesh);
+  }
+
+  private _createReticleTexture(): THREE.CanvasTexture {
+    if (typeof document === 'undefined') {
+      const tex = new THREE.CanvasTexture({} as any);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d')!;
+
+    ctx.clearRect(0, 0, 256, 256);
+
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
+
+    // Outer alignment circle
+    ctx.beginPath();
+    ctx.arc(128, 128, 90, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Central crosshair
+    ctx.beginPath();
+    ctx.moveTo(38, 128);
+    ctx.lineTo(218, 128); // Horizontal meniscus tangent line
+    ctx.moveTo(128, 38);
+    ctx.lineTo(128, 218); // Vertical axis
+    ctx.stroke();
+
+    // Millimeter tick marks along vertical axis
+    for (let y = 58; y <= 198; y += 14) {
+      ctx.beginPath();
+      const tickW = y === 128 ? 24 : 10;
+      ctx.moveTo(128 - tickW, y);
+      ctx.lineTo(128 + tickW, y);
+      ctx.stroke();
+    }
+
+    // Inner tangent guidance circle
+    ctx.lineWidth = 1.0;
+    ctx.beginPath();
+    ctx.arc(128, 128, 36, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
   }
 
   /**
@@ -194,18 +261,27 @@ export class InSituMicroscopicLens {
    * Tạo nhãn định danh khoa học gắn ngay trên đầu thấu kính
    */
   private _buildHeaderLabel(): void {
+    if (typeof document === 'undefined') return;
     const canvas = document.createElement('canvas');
     canvas.width = 512;
     canvas.height = 128;
     const ctx = canvas.getContext('2d')!;
 
     ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
-    ctx.roundRect(10, 10, 492, 108, 16);
+    if (typeof (ctx as any).roundRect === 'function') {
+      (ctx as any).roundRect(10, 10, 492, 108, 16);
+    } else {
+      ctx.rect(10, 10, 492, 108);
+    }
     ctx.fill();
 
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 3;
-    ctx.roundRect(10, 10, 492, 108, 16);
+    if (typeof (ctx as any).roundRect === 'function') {
+      (ctx as any).roundRect(10, 10, 492, 108, 16);
+    } else {
+      ctx.rect(10, 10, 492, 108);
+    }
     ctx.stroke();
 
     ctx.fillStyle = '#38bdf8';
@@ -233,12 +309,20 @@ export class InSituMicroscopicLens {
     const ctx = canvas.getContext('2d')!;
 
     ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
-    ctx.roundRect(10, 10, 492, 108, 16);
+    if (typeof (ctx as any).roundRect === 'function') {
+      (ctx as any).roundRect(10, 10, 492, 108, 16);
+    } else {
+      ctx.rect(10, 10, 492, 108);
+    }
     ctx.fill();
 
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 3;
-    ctx.roundRect(10, 10, 492, 108, 16);
+    if (typeof (ctx as any).roundRect === 'function') {
+      (ctx as any).roundRect(10, 10, 492, 108, 16);
+    } else {
+      ctx.rect(10, 10, 492, 108);
+    }
     ctx.stroke();
 
     ctx.fillStyle = '#38bdf8';
@@ -302,25 +386,71 @@ export class InSituMicroscopicLens {
   }
 
   /**
+   * Tính toán sai số thể tích do thị sai góc nhìn (Parallax Error):
+   * Delta V = pi * R^3 * tan(theta) (đổi ra mL)
+   */
+  public getParallaxVolumeErrorMl(radiusM: number = 0.0156, tiltAngleDeg: number): number {
+    const rad = Math.abs(tiltAngleDeg) * (Math.PI / 180);
+    return Math.PI * Math.pow(radiusM, 3) * Math.tan(rad) * 1e6;
+  }
+
+  /**
+   * Cập nhật căn chỉnh thước ngắm quang học và cảnh báo thị sai góc nhìn (Parallax Warning)
+   */
+  public updateCameraAlignment(cameraLookDir: THREE.Vector3, cylinderRadiusM: number = 0.0156): {
+    hasParallaxWarning: boolean;
+    tiltAngleDeg: number;
+    deltaVMl: number;
+    adviceVi: string;
+  } {
+    const dotVertical = Math.abs(cameraLookDir.y);
+    const tiltAngleDeg = Math.asin(Math.min(1.0, dotVertical)) * (180 / Math.PI);
+    const deltaVMl = this.getParallaxVolumeErrorMl(cylinderRadiusM, tiltAngleDeg);
+    const hasParallaxWarning = tiltAngleDeg > 1.5;
+
+    if (this._reticleMesh && this._reticleMesh.material instanceof THREE.MeshBasicMaterial) {
+      if (!hasParallaxWarning) {
+        this._reticleMesh.material.color.setHex(0x10b981); // Chuẩn ISO GUM: Xanh lục bảo ngọc
+      } else if (tiltAngleDeg > 5.0) {
+        this._reticleMesh.material.color.setHex(0xef4444); // Lệch nặng: Đỏ
+      } else {
+        this._reticleMesh.material.color.setHex(0xf59e0b); // Lệch nhẹ: Hổ phách
+      }
+    }
+
+    let adviceVi = 'Góc nhìn chuẩn ISO GUM: Tiếp tuyến đáy mặt khum (Sai số thị sai < 0.05 mL)';
+    if (hasParallaxWarning) {
+      adviceVi = cameraLookDir.y > 0
+        ? `Thị sai nhìn chúc xuống ${tiltAngleDeg.toFixed(1)}°: Làm mặt khum đáy lệch trên, sai số +${deltaVMl.toFixed(2)} mL! Hãy hạ tầm mắt ngang bằng đáy mặt khum!`
+        : `Thị sai nhìn ngước lên ${tiltAngleDeg.toFixed(1)}°: Làm mặt khum đáy lệch dưới, sai số -${deltaVMl.toFixed(2)} mL! Hãy nâng tầm mắt ngang bằng đáy mặt khum!`;
+    }
+
+    return { hasParallaxWarning, tiltAngleDeg, deltaVMl, adviceVi };
+  }
+
+  /**
    * Tính toán và phát hiện sai số thị sai góc nhìn (Parallax Error)
    * khi quan sát mặt khum ống đong từ góc nghiêng
    */
-  public checkParallaxAngle(cameraLookDir: THREE.Vector3): { hasParallaxWarning: boolean; tiltAngleDeg: number; adviceVi: string } {
-    const dotVertical = Math.abs(cameraLookDir.y);
-    const tiltAngleDeg = Math.asin(Math.min(1.0, dotVertical)) * (180 / Math.PI);
-    const hasParallaxWarning = tiltAngleDeg > 12.0;
-
-    let adviceVi = 'Tầm mắt chuẩn ngang đáy mặt khum (Chuẩn ISO GUM)';
-    if (hasParallaxWarning) {
-      adviceVi = cameraLookDir.y > 0
-        ? `Thị sai: Góc ngắm xiên trên ${tiltAngleDeg.toFixed(1)}° làm số đo dâng cao giả tạo! Hãy hạ tầm mắt ngang bằng đáy mặt khum!`
-        : `Thị sai: Góc ngắm xiên dưới ${tiltAngleDeg.toFixed(1)}° làm số đo sụt giảm giả tạo! Hãy nâng tầm mắt ngang bằng đáy mặt khum!`;
-    }
-
-    return { hasParallaxWarning, tiltAngleDeg, adviceVi };
+  public checkParallaxAngle(cameraLookDir: THREE.Vector3, cylinderRadiusM: number = 0.0156): {
+    hasParallaxWarning: boolean;
+    tiltAngleDeg: number;
+    deltaVMl: number;
+    adviceVi: string;
+  } {
+    return this.updateCameraAlignment(cameraLookDir, cylinderRadiusM);
   }
 
   public dispose(): void {
+    if (this._reticleMesh) {
+      this._reticleMesh.geometry.dispose();
+      if (this._reticleMesh.material instanceof THREE.Material) {
+        if ('map' in this._reticleMesh.material && (this._reticleMesh.material as any).map) {
+          (this._reticleMesh.material as any).map.dispose();
+        }
+        this._reticleMesh.material.dispose();
+      }
+    }
     if (this._particleMesh) {
       this._particleMesh.geometry.dispose();
       (this._particleMesh.material as THREE.Material).dispose();

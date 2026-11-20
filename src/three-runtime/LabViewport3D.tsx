@@ -259,6 +259,21 @@ interface HoveredEquipmentTooltip {
   y: number;
 }
 
+function formatCompactMeasuredValue(rawBadge?: string): string | null {
+  if (!rawBadge) return null;
+  const trimmed = rawBadge.trim();
+  if (!trimmed || trimmed === 'KHU TRƯNG BÀY') return null;
+
+  // Trích xuất gọn chỉ giá trị số và đơn vị đo, loại bỏ các diễn giải dài dòng trong ngoặc
+  let clean = trimmed
+    .replace(/\s*\((Thăng bằng|Nghiêng trái|Nghiêng phải|h₁\s*=\s*h₂\s*=\s*h₃)\)/gi, '')
+    .replace(/\s*\(\d+\+[\d\.]+\)/g, '')
+    .replace(/\bml\b/g, 'mL')
+    .trim();
+
+  return clean || null;
+}
+
 function computeLiveEquipmentReadout(
   inst: SceneInstance,
   asset: AssetDefinition,
@@ -1905,6 +1920,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
   onNotifyRef.current = onNotify;
   const onContinuousPourRef = useRef(onContinuousPourTransfer);
   onContinuousPourRef.current = onContinuousPourTransfer;
+  const onToggleLabelsRef = useRef(onToggleLabels);
+  onToggleLabelsRef.current = onToggleLabels;
 
   const triggerDispenseVisualAnimation = useCallback(
     (targetInstanceId: string, volumeMl: number, mode: 'add' | 'set') => {
@@ -2052,6 +2069,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             }
           }
         }
+      } else if (e.key === 'l' || e.key === 'L') {
+        onToggleLabelsRef.current?.();
       }
     };
     window.addEventListener('keydown', handleLensKey);
@@ -3041,7 +3060,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
       const bboxH = asset.geometry.boundingBoxM.height;
       _projVec.set(
         obj.position.x,
-        obj.position.y + bboxH + 0.032,
+        obj.position.y + bboxH + 0.055,
         obj.position.z,
       );
       _projVec.project(camera);
@@ -3767,24 +3786,68 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         if (ds.isDragging && ds.instanceId) {
           const draggedObj = instanceObjectsRef.current.get(ds.instanceId);
           if (draggedObj) {
+            const draggedInst = instancesRef.current.find((i) => i.instanceId === ds.instanceId);
+            const draggedAsset = draggedInst ? assetsMapRef.current.get(draggedInst.assetId) : undefined;
+            const draggedArch = draggedAsset?.geometry.proceduralArchetype;
+            const customDraggedMod = draggedAsset ? htmlEquipmentModuleRegistry.getModule(draggedAsset.assetId) : null;
+
+            // Physical virtual mass calculation: equipment tare mass + contained fluid mass (F = m * a)
+            let massKg = 0.15; // default 150g
+            if (draggedInst) {
+              const state = draggedInst.instanceState;
+              const assetId = draggedInst.assetId;
+              if (assetId.includes('scale') || assetId.includes('balance') || draggedArch === 'electronic-balance') {
+                massKg = 0.75;
+              } else if (draggedArch === 'overflow-can') {
+                massKg = 0.28;
+              } else if (draggedArch === 'beaker-250' || draggedArch === 'erlenmeyer-flask') {
+                massKg = 0.12;
+              } else if (draggedArch === 'graduated-cylinder') {
+                massKg = 0.14;
+              } else if (draggedArch === 'porcelain-dish') {
+                massKg = 0.08;
+              } else if (draggedArch === 'water-dispenser') {
+                massKg = 1.20;
+              } else if (assetId.includes('iron') || assetId.includes('copper') || assetId.includes('brass') || assetId.includes('aluminum')) {
+                massKg = (state.massG ?? 150) / 1000;
+              } else if (assetId.includes('ruler') || assetId.includes('dropper') || assetId.includes('spoon')) {
+                massKg = 0.025;
+              }
+              if (typeof state.volumeMl === 'number' && state.volumeMl > 0) {
+                massKg += state.volumeMl * 0.001;
+              }
+            }
+
+            // Virtual mass inertia damping lambda: tau ~ sqrt(m), dampLambda ~ 1/tau
+            const dampLambdaXZ = THREE.MathUtils.clamp(
+              32.0 / Math.sqrt(massKg * 5.0 + 0.15),
+              14.0,
+              65.0,
+            );
+            const dampLambdaY = THREE.MathUtils.clamp(
+              24.0 / Math.sqrt(massKg * 4.0 + 0.20),
+              12.0,
+              48.0,
+            );
+
             const prevX = draggedObj.position.x;
             const prevZ = draggedObj.position.z;
             const nextX = THREE.MathUtils.damp(
               draggedObj.position.x,
               ds.targetPos.x,
-              95,
+              dampLambdaXZ,
               dt,
             );
             const nextY = THREE.MathUtils.damp(
               draggedObj.position.y,
               ds.targetPos.y,
-              42,
+              dampLambdaY,
               dt,
             );
             const nextZ = THREE.MathUtils.damp(
               draggedObj.position.z,
               ds.targetPos.z,
-              95,
+              dampLambdaXZ,
               dt,
             );
 
@@ -3792,10 +3855,6 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             const vz = (nextZ - prevZ) / Math.max(0.004, dt);
             draggedObj.position.set(nextX, nextY, nextZ);
 
-            const draggedInst = instancesRef.current.find((i) => i.instanceId === ds.instanceId);
-            const draggedAsset = draggedInst ? assetsMapRef.current.get(draggedInst.assetId) : undefined;
-            const draggedArch = draggedAsset?.geometry.proceduralArchetype;
-            const customDraggedMod = draggedAsset ? htmlEquipmentModuleRegistry.getModule(draggedAsset.assetId) : null;
             const isLiquidContainer =
               (draggedArch === 'graduated-cylinder' ||
                 draggedArch === 'beaker-250' ||
@@ -4999,6 +5058,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         // Animate Epistemic Holograms and Eureka Particles
         epistemicHologramRenderer.animate(0.016);
         inSituMicroscopicLens.animate(0.016);
+        if (inSituMicroscopicLens.isActive) {
+          const camDir = camera.getWorldDirection(new THREE.Vector3());
+          inSituMicroscopicLens.updateCameraAlignment(camDir);
+        }
 
         // Continuous Multi-Physics Coupling Bus RK4 Step (120 Hz Continuous Physics & Chrono-Causal Recording)
         scientificSolverRegistry.stepContinuousMultiPhysics(dt);
@@ -6923,11 +6986,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
               BENCH_SURFACE_Y + carryY,
               dock.pos[2],
             );
-            // Cập nhật trực tiếp X & Z của vật thể ngay trong sự kiện chuột để bám sát con trỏ chuột 1:1 không trễ nhịp
-            if (draggedObj) {
-              draggedObj.position.x = dock.pos[0];
-              draggedObj.position.z = dock.pos[2];
-            }
+            // Vị trí vật thể được dẫn hướng mượt mà qua bộ giảm chấn quán tính khối lượng ảo (Virtual Mass Inertia Damping F = m*a)
             const prevHoverSlot = ds.hoverSlot;
             const prevHoverTarget = ds.hoverTargetInstanceId;
             ds.hoverTargetInstanceId = dock.targetInstanceId;
@@ -9950,6 +10009,34 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
               )}
             </button>
 
+            {/* Nút Trong Suốt: Bật / Tắt Nhãn Chú Thích Thông Minh trên Mobile */}
+            <button
+              type="button"
+              onClick={() => {
+                onToggleLabels();
+                labSoundEngine.play('ui-toggle', 0.8);
+              }}
+              className={`h-9 px-2.5 rounded-[9px] backdrop-blur-md border text-[11.5px] font-extrabold flex items-center gap-1 shadow-[0_4px_14px_rgba(0,0,0,0.28)] cursor-pointer transition-colors ${
+                showLabels
+                  ? 'bg-emerald-950/45 border-emerald-400/80 text-[#5EEAD4]'
+                  : 'bg-[#081528]/18 hover:bg-[#081528]/35 border-white/35 text-slate-300'
+              }`}
+              title={
+                showLabels
+                  ? 'Số đo thông minh: Đang BẬT (Rà chuột để xem số đo — Chạm để tắt)'
+                  : 'Số đo thông minh: Đang TẮT (Chạm để bật)'
+              }
+              aria-label="Bật hoặc tắt số đo thiết bị"
+              aria-pressed={showLabels}
+            >
+              <Tag
+                className={`w-4 h-4 ${
+                  showLabels ? 'text-[#5EEAD4]' : 'text-slate-400'
+                } drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
+              />
+              <span>{showLabels ? 'Số đo' : 'Tắt'}</span>
+            </button>
+
             {/* Nút Bật/Tắt chú thích trên từng dụng cụ (?) */}
             <button
               type="button"
@@ -10207,6 +10294,39 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                 <span>Mặc định</span>
               </button>
 
+              {/* Nút Trong Suốt: Bật / Tắt Số Đo Thông Minh */}
+              <button
+                type="button"
+                onClick={() => {
+                  onToggleLabels();
+                  labSoundEngine.play('ui-toggle', 0.8);
+                  onNotify(
+                    showLabels
+                      ? 'Đã TẮT số đo thiết bị (Không gian 3D hoàn toàn sạch sẽ, không che khuất).'
+                      : 'Đã BẬT số đo thông minh (Rà chuột tới thiết bị để xem giá trị đo — Phím L).',
+                    'info',
+                  );
+                }}
+                className={`h-7 px-2.5 rounded-[7px] backdrop-blur-md border text-[11px] font-bold flex items-center gap-1.5 shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-all cursor-pointer ${
+                  showLabels
+                    ? 'bg-emerald-950/45 hover:bg-emerald-900/65 border-emerald-400/80 text-[#5EEAD4]'
+                    : 'bg-[#081528]/25 hover:bg-[#081528]/45 border-white/30 text-slate-300'
+                }`}
+                title={
+                  showLabels
+                    ? 'Số đo thông minh: ĐANG BẬT (Rà chuột tới mới hiển thị giá trị & đơn vị — Phím tắt: L)'
+                    : 'Số đo thông minh: ĐANG TẮT (Nhấn để bật hiển thị khi rà chuột — Phím tắt: L)'
+                }
+                aria-pressed={showLabels}
+              >
+                <Tag
+                  className={`w-3.5 h-3.5 ${
+                    showLabels ? 'text-[#5EEAD4]' : 'text-slate-400'
+                  } drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
+                />
+                <span>{showLabels ? 'Số đo: Rà chuột' : 'Số đo: Tắt'}</span>
+              </button>
+
               {/* 2. Bật / Tắt chú thích tên trên đầu từng dụng cụ (?) */}
               <button
                 type="button"
@@ -10298,6 +10418,39 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                   >
                     <RotateCcw className="w-3.5 h-3.5 text-cyan-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
                     <span>Mặc định (Toàn bàn)</span>
+                  </button>
+
+                  {/* Nút Trong Suốt: Bật / Tắt Số Đo Thông Minh */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleLabels();
+                      labSoundEngine.play('ui-toggle', 0.8);
+                      onNotify(
+                        showLabels
+                          ? 'Đã TẮT số đo thiết bị (Không gian 3D hoàn toàn sạch sẽ, không che khuất).'
+                          : 'Đã BẬT số đo thông minh (Rà chuột tới thiết bị để xem giá trị đo — Phím L).',
+                        'info',
+                      );
+                    }}
+                    className={`h-7 px-2.5 rounded-[7px] backdrop-blur-md border text-[11px] font-bold flex items-center gap-1.5 shadow-[0_4px_14px_rgba(0,0,0,0.28)] transition-all cursor-pointer ${
+                      showLabels
+                        ? 'bg-emerald-950/45 hover:bg-emerald-900/65 border-emerald-400/80 text-[#5EEAD4]'
+                        : 'bg-[#081528]/25 hover:bg-[#081528]/45 border-white/30 text-slate-300'
+                    }`}
+                    title={
+                      showLabels
+                        ? 'Số đo thông minh: ĐANG BẬT (Rà chuột tới mới hiển thị giá trị & đơn vị — Phím tắt: L)'
+                        : 'Số đo thông minh: ĐANG TẮT (Nhấn để bật hiển thị khi rà chuột — Phím tắt: L)'
+                    }
+                    aria-pressed={showLabels}
+                  >
+                    <Tag
+                      className={`w-3.5 h-3.5 ${
+                        showLabels ? 'text-[#5EEAD4]' : 'text-slate-400'
+                      } drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]`}
+                    />
+                    <span>{showLabels ? 'Số đo: Rà chuột' : 'Số đo: Tắt'}</span>
                   </button>
 
                   {/* Cụm nút Tăng / Giảm cỡ chữ số đo trên dụng cụ (A- | % | A+) */}
@@ -10692,10 +10845,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           </div>
         )}
 
-        {/* Thanh chú thích / thông số thu gọn nằm sát đáy khung mô phỏng khi rê chuột (Không che giữa màn hình 3D) */}
-        {hoveredEquipment &&
-          (isDetailedGuideOn ||
-            hoveredEquipment.readoutBadge === 'KHU TRƯNG BÀY') &&
+        {/* Thanh chú thích / thông số thu gọn nằm sát đáy khung mô phỏng khi rê chuột (Chỉ hiện khi mở hướng dẫn chi tiết ?) */}
+        {showLabels &&
+          isDetailedGuideOn &&
+          hoveredEquipment &&
           !dragStateRef.current.isDragging &&
           viewMode === 'lab-scene' && (
             <div
@@ -10843,79 +10996,47 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           </div>
         )}
 
-        {/* Projected 3D Equipment Badges: Luôn hiển thị gọn 1 dòng (Pill) để không bao giờ che khuất các dụng cụ khác trên bàn */}
+        {/* Projected 3D Equipment Badges: Chỉ hiển thị giá trị đo & đơn vị gọn nhỏ, nền trong suốt, lơ lửng không che thiết bị */}
         {showLabels &&
           viewMode === 'lab-scene' &&
           projectedLabels.map((lbl) => {
+            const isHovered = hoveredEquipment?.instanceId === lbl.instanceId;
+            const isDraggingThis = dragStateRef.current.instanceId === lbl.instanceId;
+
+            // Rà chuột tới, đang được chọn, hoặc đang kéo mới hiển thị
+            if (!lbl.isSelected && !isHovered && !isDraggingThis) {
+              return null;
+            }
+
+            // Chỉ hiển thị giá trị đo được và đơn vị tương ứng (gọn nhỏ, không che dụng cụ)
+            const compactValue = formatCompactMeasuredValue(lbl.readoutBadge);
+            if (!compactValue) {
+              return null;
+            }
+
             const numPx = Math.round(
-              (lbl.isSelected ? 13.5 : 12.5) * readoutFontScale,
+              (lbl.isSelected ? 12.5 : 11.5) * readoutFontScale,
             );
-            const symPx = Math.round(12.5 * readoutFontScale);
-            const titlePx = Math.round(11.5 * readoutFontScale);
+
             return (
-              <button
+              <div
                 key={lbl.instanceId}
-                type="button"
-                onClick={() => {
-                  labSoundEngine.play('ui-toggle', 0.65);
-                  onSelectInstance(lbl.instanceId);
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onSelectInstance(lbl.instanceId);
-                  const hitAsset = assetsMap.get(lbl.assetId);
-                  if (hitAsset) {
-                    labSoundEngine.play('ui-toggle', 0.85);
-                    setViewportContextMenu({
-                      instanceId: lbl.instanceId,
-                      asset: hitAsset,
-                      customLabel: lbl.title,
-                      x: Math.min(e.clientX, window.innerWidth - 265),
-                      y: Math.min(e.clientY, window.innerHeight - 230),
-                    });
-                  }
-                }}
                 style={{
                   transform: `translate3d(${lbl.x}px, ${lbl.y}px, 0) translate(-50%, -100%)`,
                 }}
-                title={`${lbl.title}${lbl.readoutBadge ? ` · ${lbl.readoutBadge}` : ''} — ${lbl.interactionHint}`}
-                className={`absolute top-0 left-0 z-10 transition-all pointer-events-auto cursor-pointer backdrop-blur-[2px] border px-2 py-0.5 rounded-full flex items-center gap-1 whitespace-nowrap ${
+                className={`absolute top-0 left-0 z-20 pointer-events-none select-none transition-all duration-150 backdrop-blur-[2px] px-1.5 py-0.5 rounded-[5px] border flex items-center justify-center whitespace-nowrap shadow-xs animate-in fade-in zoom-in-95 ${
                   lbl.isSelected
-                    ? 'bg-sky-950/30 border-[1.5px] border-cyan-400 text-white shadow-[0_2px_8px_rgba(56,189,248,0.35)]'
-                    : isDetailedGuideOn
-                      ? 'bg-slate-950/20 border-amber-300/50 text-amber-100 shadow-xs hover:bg-slate-950/40'
-                      : 'bg-slate-950/15 hover:bg-slate-950/35 border border-white/20 text-white shadow-xs'
+                    ? 'bg-cyan-950/25 border-cyan-400/70 text-cyan-200 shadow-[0_2px_8px_rgba(6,182,212,0.25)]'
+                    : 'bg-black/20 border-white/20 text-[#5EEAD4] shadow-[0_2px_6px_rgba(0,0,0,0.35)]'
                 }`}
               >
                 <span
-                  style={{ fontSize: `${symPx}px` }}
-                  className="leading-none"
-                  aria-hidden="true"
+                  style={{ fontSize: `${numPx}px`, lineHeight: 1.15 }}
+                  className="font-mono font-black tabular-nums tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
                 >
-                  {lbl.symbol}
+                  {compactValue}
                 </span>
-                {isDetailedGuideOn && (
-                  <span
-                    style={{ fontSize: `${titlePx}px` }}
-                    className="font-extrabold text-amber-200 truncate max-w-[130px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.95)]"
-                  >
-                    {lbl.title}
-                  </span>
-                )}
-                {lbl.readoutBadge && (
-                  <span
-                    style={{ fontSize: `${numPx}px`, lineHeight: 1.1 }}
-                    className={`font-mono font-black tabular-nums tracking-tight drop-shadow-[0_1px_2px_rgba(0,0,0,0.98)] ${
-                      lbl.isDigitalScale
-                        ? 'text-[#5EEAD4]'
-                        : 'text-[#7DD3FC]'
-                    }`}
-                  >
-                    {lbl.readoutBadge}
-                  </span>
-                )}
-              </button>
+              </div>
             );
           })}
 
