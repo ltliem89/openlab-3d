@@ -2464,22 +2464,22 @@ export interface FluidPhysicalProfile {
 export const FLUID_PROFILES: Record<FluidKind, FluidPhysicalProfile> = {
   'clean-water': {
     kind: 'clean-water',
-    nameVi: 'Nước sạch tinh khiết (Xanh lơ nhạt quang học chuẩn PBR)',
+    nameVi: 'Nước sạch tinh khiết (Xanh lơ đậm quang học chuẩn PBR)',
     ior: 1.333,
-    transmission: 0.78,         // Cân bằng quang học: trong suốt xuyên thấu nhưng ánh sắc xanh lơ rõ rệt, không bị bạc màu
+    transmission: 0.52,         // Cân bằng quang học tối ưu: 52% truyền quang xuyên thấu, 48% phản xạ màu xanh lơ đậm rõ rệt, phân biệt tức thì có/không có nước
     roughness: 0.010,          // Mặt nước bóng láng phẳng mịn
     metalness: 0.0,
     thickness: 0.08,           // Chiều dày quang học cho Three.js
-    attenuationDistance: 0.085, // Beer-Lambert: Lớp mỏng ánh xanh lơ nhẹ, khối dày sâu thẳm đậm đà tự nhiên
-    attenuationColor: 0x0284c7, // Sắc xanh đại dương dịu mát khi ánh sáng đi qua chiều dày khối nước
-    baseColor: 0x38bdf8,        // Sắc xanh lơ ngọc tươi sáng, nhận diện rõ ràng thể tích nước trong bình
+    attenuationDistance: 0.038, // Beer-Lambert: Lớp mỏng ánh xanh biếc, khối dày sâu thẳm đậm đà tự nhiên
+    attenuationColor: 0x0369a1, // Sắc xanh đại dương sâu lắng khi ánh sáng đi qua chiều dày khối nước
+    baseColor: 0x0284c7,        // Sắc xanh lơ đại dương đậm đà, nhận diện rõ ràng tuyệt đối thể tích nước trong bình
     specularIntensity: 1.0,
     clearcoat: 1.0,
     clearcoatRoughness: 0.01,
-    opacity: 0.88,              // Nhìn thấu suốt vật thể phía sau đồng thời thấy rõ mực nước
-    meniscusColor: 0x0284c7,    // Vùng hội tụ đáy mặt khum ánh xanh rõ nét
-    meniscusHighlight: 0xf0f9ff, // Điểm sáng phản chiếu ánh sáng phòng trên gờ tiếp xúc
-    capillaryHeightFactor: 1.15,
+    opacity: 0.94,              // Nhìn thấu suốt vật thể phía sau đồng thời thấy rõ mực nước
+    meniscusColor: 0x0369a1,    // Vùng hội tụ đáy mặt khum ánh xanh rõ nét
+    meniscusHighlight: 0xffffff, // Điểm sáng phản chiếu ánh sáng phòng trên gờ tiếp xúc
+    capillaryHeightFactor: 1.25,
   },
   'copper-sulfate': {
     kind: 'copper-sulfate',
@@ -2771,13 +2771,13 @@ export function addConcaveMeniscusAndRipples(
       color: profile.baseColor,
       attenuationColor: new THREE.Color(profile.attenuationColor),
       attenuationDistance: profile.attenuationDistance,
-      transmission: 0.88,
+      transmission: profile.transmission,
       roughness: 0.012,
       ior: profile.ior,
       clearcoat: 1.0,
       clearcoatRoughness: 0.01,
       transparent: true,
-      opacity: 0.88,
+      opacity: profile.opacity,
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
@@ -2794,7 +2794,7 @@ export function addConcaveMeniscusAndRipples(
       color: profile.meniscusHighlight,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.60,
+      opacity: 0.75,
       depthWrite: false,
     }),
   );
@@ -2810,7 +2810,7 @@ export function addConcaveMeniscusAndRipples(
       color: profile.meniscusColor,
       side: THREE.DoubleSide,
       transparent: true,
-      opacity: 0.28,
+      opacity: 0.35,
       depthWrite: false,
     }),
   );
@@ -3800,7 +3800,7 @@ export function buildProceduralEquipmentGroup(
 
       // Water inside the angled spout tube (`spout_water` — strictly hidden when idle; ONLY visible during active overflow!)
       const spoutWaterGeo = new THREE.CylinderGeometry(0.0033, 0.0041, 0.054, 18);
-      const spoutWaterMat = createStreamMaterial(0x38bdf8, 0.88);
+      const spoutWaterMat = createStreamMaterial(0x0284c7, 0.90);
       const spoutWater = new THREE.Mesh(spoutWaterGeo, spoutWaterMat);
       spoutWater.name = 'spout_water';
       spoutWater.position.set(0.063, elevY + 0.0815, 0);
@@ -3838,7 +3838,7 @@ export function buildProceduralEquipmentGroup(
       ]);
       const streamOuter = new THREE.Mesh(
         new THREE.TubeGeometry(jetCurve, 28, 0.0028, 14, false),
-        createStreamMaterial(0x38bdf8, 0.86),
+        createStreamMaterial(0x0284c7, 0.90),
       );
       streamOuter.name = 'stream_outer';
       streamOuter.renderOrder = 5;
@@ -5549,7 +5549,7 @@ export function buildProceduralEquipmentGroup(
       sepStreamGroup.name = 'spout_stream';
       const sepStreamMesh = new THREE.Mesh(
         new THREE.CylinderGeometry(0.0020, 0.0028, 0.068, 14),
-        createStreamMaterial(0x38bdf8, 0.88),
+        createStreamMaterial(0x0284c7, 0.90),
       );
       sepStreamMesh.name = 'stream_outer';
       sepStreamMesh.position.set(0, 0.054, 0);
@@ -6535,7 +6535,7 @@ export function buildProceduralEquipmentGroup(
       const streamLen = 0.212;
       const streamMesh = new THREE.Mesh(
         new THREE.CylinderGeometry(0.0028, 0.0040, streamLen, 18),
-        createStreamMaterial(0x38bdf8, 0.90),
+        createStreamMaterial(0x0284c7, 0.90),
       );
       streamMesh.name = 'stream_outer';
       streamMesh.position.set(0.095, standElevationY - 0.014 - streamLen * 0.5, 0);
