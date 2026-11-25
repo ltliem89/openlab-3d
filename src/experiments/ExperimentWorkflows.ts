@@ -302,8 +302,14 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         validationGuard: (instances) => {
           const timer = instances.find((i) => i.assetId.includes('TMR') || i.assetId.includes('TIM'));
           if (!timer) return { isPassed: false, reasonVi: 'Thiếu đồng hồ hiện số' };
-          const recordedTime = Number(timer.instanceState.recordedTimeS ?? 0.42);
-          return { isPassed: recordedTime > 0, reasonVi: `Thời gian ghi nhận: $\\Delta t = ${recordedTime.toFixed(3)}\\text{ s} \\implies v = ${(0.5 / recordedTime).toFixed(2)}\\text{ m/s}$` };
+          // C-09 (v2.5.0): không dùng giá trị mặc định 0.42 s — chưa có số đo thật thì guard phải fail.
+          const recordedTimeRaw = timer.instanceState.recordedTimeS;
+          if (recordedTimeRaw === null || recordedTimeRaw === undefined || Number.isNaN(Number(recordedTimeRaw))) {
+            return { isPassed: false, reasonVi: 'Chưa có thời gian đo — đồng hồ chưa ghi nhận Δt', hintVi: 'Thả viên bi từ đỉnh máng để cổng quang ghi nhận thời gian qua A và B' };
+          }
+          const recordedTime = Number(recordedTimeRaw);
+          if (!(recordedTime > 0)) return { isPassed: false, reasonVi: 'Thời gian đo không hợp lệ (Δt phải lớn hơn 0)', hintVi: 'Thả lại viên bi qua cổng quang' };
+          return { isPassed: true, reasonVi: `Thời gian ghi nhận: $\\Delta t = ${recordedTime.toFixed(3)}\\text{ s} \\implies v = ${(0.5 / recordedTime).toFixed(2)}\\text{ m/s}$` };
         },
       },
     ],
@@ -380,8 +386,11 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         validationGuard: (instances) => {
           const sw = instances.find((i) => i.assetId.includes('SWT') || i.assetId.includes('KEY'));
           const lamp = instances.find((i) => i.assetId.includes('LMP') || i.assetId.includes('SOC'));
-          const isClosed = sw ? sw.instanceState.isClosed !== false : true;
-          return { isPassed: isClosed, reasonVi: 'Mạch kín: Bóng đèn sáng rực rỡ, $U = 6.0\\text{ V}$, $I = 0.50\\text{ A}$' };
+          // C-09 (v2.5.0): không mặc định "đã đóng" khi chưa có công tắc trên bàn.
+          if (!sw) return { isPassed: false, reasonVi: 'Chưa có công tắc trên bàn', hintVi: 'Đặt công tắc (khóa K) lên bàn rồi đóng khóa' };
+          const isClosed = sw.instanceState.isClosed === true;
+          if (!isClosed) return { isPassed: false, reasonVi: 'Khóa K đang mở — mạch chưa kín', hintVi: 'Bấm đóng khóa K để mạch kín và bóng đèn sáng' };
+          return { isPassed: true, reasonVi: 'Mạch kín: Bóng đèn sáng rực rỡ, $U = 6.0\\text{ V}$, $I = 0.50\\text{ A}$' };
         },
       },
     ],
@@ -445,10 +454,17 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
           const lens = instances.find((i) => i.assetId.includes('OPT'));
           const screen = instances.find((i) => i.assetId.includes('SCR'));
           if (!lens || !screen) return { isPassed: false, reasonVi: 'Chưa lắp đủ thấu kính và màn hứng ảnh' };
-          const d = Number(lens.instanceState.objectDistanceDCm ?? 20.0);
-          const f = Number(lens.instanceState.focalLengthCm ?? 10.0);
+          // C-09 (v2.5.0): không dùng giá trị mặc định 20.0/10.0/20.0 — đúng bằng đáp án lý thuyết nên guard tự pass khi chưa đo.
+          const dRaw = lens.instanceState.objectDistanceDCm;
+          const fRaw = lens.instanceState.focalLengthCm;
+          const screenDRaw = screen.instanceState.screenDistanceCm;
+          if (dRaw === null || dRaw === undefined || fRaw === null || fRaw === undefined || screenDRaw === null || screenDRaw === undefined) {
+            return { isPassed: false, reasonVi: 'Chưa có số đo vị trí — thấu kính hoặc màn chưa được đặt/đo', hintVi: 'Đặt thấu kính và màn lên ray rồi dịch chuyển màn tới vị trí ảnh nét' };
+          }
+          const d = Number(dRaw);
+          const f = Number(fRaw);
           const expectedDPrime = (f * d) / (d - f);
-          const screenD = Number(screen.instanceState.screenDistanceCm ?? 20.0);
+          const screenD = Number(screenDRaw);
           const isSharp = Math.abs(screenD - expectedDPrime) <= 0.8;
           if (!isSharp) return { isPassed: false, reasonVi: `Ảnh đang bị mờ (Vị trí màn = ${screenD.toFixed(1)} cm, vị trí nét lý thuyết = ${expectedDPrime.toFixed(1)} cm)`, hintVi: 'Điều chỉnh con trượt màn hứng lại gần tiêu điểm ảnh' };
           return { isPassed: true, reasonVi: `Ảnh thật rõ nét thu được trên màn tại $d\' = ${expectedDPrime.toFixed(1)}\\text{ cm}$` };
