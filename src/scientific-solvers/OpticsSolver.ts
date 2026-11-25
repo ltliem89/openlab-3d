@@ -15,8 +15,10 @@ export interface SpectralComponent {
   wavelengthNm: number;
   colorHex: string;
   refractiveIndex: number;
-  refractionAngleDeg: number;
-  deviationAngleDeg: number;
+  // C-08 (v2.5.0): null khi bước sóng đó bị phản xạ toàn phần (không có tia khúc xạ).
+  refractionAngleDeg: number | null;
+  deviationAngleDeg: number | null;
+  isTotalInternalReflection: boolean;
 }
 
 export interface OpticsDerivedOutputs {
@@ -160,10 +162,25 @@ export class OpticsSolver {
 
       for (const band of primaryBands) {
         const nLambda = OpticsSolver.calculateCauchyRefractionIndex(band.lambda);
-        const sinRLambda = (n1 / nLambda) * Math.sin(radI);
-        const rDeg = Math.abs(sinRLambda) <= 1.0
-          ? (Math.asin(sinRLambda) * 180.0) / Math.PI
-          : 0.0;
+        // C-08 (v2.5.0): dùng đúng tỉ lệ chiết suất theo chiều tia — như đường Snell chính ở trên
+        // (không khí -> thủy tinh: n1/nLambda; thủy tinh -> không khí: nLambda/n1).
+        const nIncidentLambda = isFromDenserMedium ? nLambda : n1;
+        const nTransmittedLambda = isFromDenserMedium ? n1 : nLambda;
+        const sinRLambda = (nIncidentLambda / nTransmittedLambda) * Math.sin(radI);
+        if (Math.abs(sinRLambda) > 1.0) {
+          // Phản xạ toàn phần ở bước sóng này (tia tím, n lớn hơn, tới hạn trước tia đỏ):
+          // không có tia khúc xạ nên không ghi góc khúc xạ giả (trước đây ghi rDeg = 0.0).
+          spectralComponents.push({
+            wavelengthNm: band.lambda,
+            colorHex: band.hex,
+            refractiveIndex: Number(nLambda.toFixed(4)),
+            refractionAngleDeg: null,
+            deviationAngleDeg: null,
+            isTotalInternalReflection: true,
+          });
+          continue;
+        }
+        const rDeg = (Math.asin(sinRLambda) * 180.0) / Math.PI;
         const devDeg = Math.abs(incidentAngleDeg - rDeg);
         spectralComponents.push({
           wavelengthNm: band.lambda,
@@ -171,6 +188,7 @@ export class OpticsSolver {
           refractiveIndex: Number(nLambda.toFixed(4)),
           refractionAngleDeg: Number(rDeg.toFixed(2)),
           deviationAngleDeg: Number(devDeg.toFixed(2)),
+          isTotalInternalReflection: false,
         });
       }
     }
