@@ -3273,7 +3273,9 @@ export default function App() {
               ...item,
               instanceState: {
                 ...item.instanceState,
-                recordedTimeS: (item.instanceState.recordedTimeS ?? 0) + 1,
+                // C-11 (Vòng 3): tick 450 ms nên cộng 0,45 s mới đúng đơn vị giây thật;
+                // cộng 1/tick cũ chạy nhanh gấp ~2,2 lần (22,5 s đun thật hiển thị thành 50 s).
+                recordedTimeS: (item.instanceState.recordedTimeS ?? 0) + 0.45,
                 isTimerRunning: true,
               },
             };

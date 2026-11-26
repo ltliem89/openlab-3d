@@ -203,7 +203,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Gá chặt khâu treo của lực kế 5 N vào giá thí nghiệm theo phương thẳng đứng.',
         scientificConceptVi: 'Trọng lực tác dụng theo phương thẳng đứng chiều từ trên xuống dưới.',
         mathFormulaLatex: '$\\vec{P} = m\\vec{g}$',
-        requiredArchetypes: ['spring-dynamometer-5n', 'support-stand'],
+        requiredArchetypes: ['spring-dynamometer', 'support-stand'],
         suggestedActionVi: 'Treo lực kế lên giá đỡ',
         validationGuard: (instances) => {
           const dyna = instances.find((i) => i.assetId.includes('DYN') || i.assetId.includes('SPG'));
@@ -218,7 +218,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Xoay vít điều chỉnh để kim chỉ thị của lực kế trùng khít vạch 0 N.',
         scientificConceptVi: 'Triệt tiêu lực căng ban đầu của lò xo để phép đo đạt độ chính xác cao.',
         mathFormulaLatex: '$F_0 = 0.00\\text{ N}$',
-        requiredArchetypes: ['spring-dynamometer-5n'],
+        requiredArchetypes: ['spring-dynamometer'],
         suggestedActionVi: 'Chỉnh vít điều chỉnh về vạch 0',
         validationGuard: (instances) => {
           const dyna = instances.find((i) => i.assetId.includes('DYN') || i.assetId.includes('SPG'));
@@ -233,15 +233,23 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Móc 1 quả nặng 50 g ($P \\approx 0.5\\text{ N}$) vào khuyên móc dưới của lực kế và ghi nhận độ dãn.',
         scientificConceptVi: 'Độ dãn của lò xo tỉ lệ thuận với lực tác dụng: $\\Delta l = \\frac{F}{k}$.',
         mathFormulaLatex: '$F_{\\text{dh}} = k \\cdot |\\Delta l| = m \\cdot g$',
-        requiredArchetypes: ['spring-dynamometer-5n', 'hook-weight-50g'],
+        requiredArchetypes: ['spring-dynamometer', 'calibration-weight'],
         suggestedActionVi: 'Móc quả nặng 50 g vào khuyên móc lực kế',
         validationGuard: (instances) => {
-          const dyna = instances.find((i) => i.assetId.includes('DYN') || i.assetId.includes('SPG'));
-          const weight = instances.find((i) => i.assetId.includes('WGT') || i.assetId.includes('50G'));
-          if (!dyna) return { isPassed: false, reasonVi: 'Thiếu lực kế' };
-          const measuredForce = Number(dyna.instanceState.measuredForceN ?? 0);
-          if (measuredForce <= 0.1 && !weight) return { isPassed: false, reasonVi: 'Chưa móc quả nặng vào lực kế', hintVi: 'Móc quả nặng vào đầu dưới lực kế' };
-          return { isPassed: true, reasonVi: `Lực đàn hồi đo được: $F = ${measuredForce > 0 ? measuredForce.toFixed(2) : '0.50'}\\text{ N}$` };
+          // C-11/C-17 (Vòng 3): measuredForceN không tồn tại (chỉ xuất hiện ở guard cũ → luôn 0,
+          // reason cũ bịa '0.50' N). Trường thật là springExtensionN = Σ khối lượng móc × 0,00980665
+          // (reconcile App.tsx). Quả WGT-0001 50 g → 0,49 N.
+          const dyna = instances.find((i) => i.assetId === 'OL3D-EQP-DYN-0001');
+          if (!dyna) return { isPassed: false, reasonVi: 'Thiếu lực kế', hintVi: 'Đặt lực kế lò xo 5 N lên bàn' };
+          const weight = instances.find((i) => i.assetId === 'OL3D-EQP-WGT-0001');
+          if (!weight) return { isPassed: false, reasonVi: 'Chưa đặt quả nặng 50 g lên bàn', hintVi: 'Đặt quả nặng chuẩn 50 g lên bàn rồi móc vào lực kế' };
+          if (weight.instanceState.attachedToInstanceId !== dyna.instanceId || weight.instanceState.attachmentSlot !== 'dynamometer-hook') {
+            return { isPassed: false, reasonVi: 'Quả nặng chưa móc vào lực kế', hintVi: 'Móc quả nặng 50 g vào đầu dưới lực kế' };
+          }
+          const f = dyna.instanceState.springExtensionN;
+          if (typeof f !== 'number' || !Number.isFinite(f)) return { isPassed: false, reasonVi: 'Lực kế chưa đọc được lực', hintVi: 'Móc quả nặng vào lực kế rồi đọc lại' };
+          if (Math.abs(f - 0.49) > 0.02) return { isPassed: false, reasonVi: `Lực kế đang chỉ F = ${f.toFixed(2)} N, chưa phải 0,49 N của quả 50 g`, hintVi: 'Kiểm tra quả đang móc có đúng quả nặng chuẩn 50 g không' };
+          return { isPassed: true, reasonVi: `Lực đàn hồi đo được: $F = ${f.toFixed(2)}\\text{ N}$ (quả 50 g móc trên lực kế; $P = m \\cdot g = 0,05 \\times 9,81$)` };
         },
       },
     ],
@@ -489,15 +497,17 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         stepIndex: 1,
         stepId: 'WF07-STEP-01',
         titleVi: 'Bước 1: Bố trí đĩa chia độ tròn và đặt bản bán nguyệt',
-        instructionVi: 'Đặt đĩa chia độ tròn $360^\\circ$ trên bàn, đặt tâm mặt phẳng của bản bán nguyệt trùng gốc O của đĩa.',
+        instructionVi: 'Đặt bản bán trụ thủy tinh kèm đĩa chia độ tròn $360^\\circ$ (một thiết bị SLB-0001) lên bàn, đặt tâm mặt phẳng của bản bán nguyệt trùng gốc O của đĩa.',
         scientificConceptVi: 'Tâm hình học của bản cong tròn trùng với gốc tọa độ để tia khúc xạ ra không bị bẻ cong lần hai.',
         mathFormulaLatex: '$O(0, 0) \\equiv \\text{Tam ban ban nguyet}$',
-        requiredArchetypes: ['optical-disk', 'semicircular-glass-block'],
-        suggestedActionVi: 'Đặt đĩa chia độ và gá bản bán nguyệt',
+        requiredArchetypes: ['semicircular-slab'],
+        suggestedActionVi: 'Đặt bản bán trụ thủy tinh kèm đĩa chia độ lên bàn',
         validationGuard: (instances) => {
-          const disk = instances.find((i) => i.assetId.includes('DSK') || i.assetId.includes('ROT'));
-          const glass = instances.find((i) => i.assetId.includes('SMC') || i.assetId.includes('GLS'));
-          return { isPassed: true, reasonVi: 'Đĩa chia độ và bản bán nguyệt đã căn chỉnh đúng gốc O' };
+          // C-17 (Vòng 1): đĩa chia độ không phải asset riêng — nó là một phần của SLB-0001.
+          // Tìm đúng assetId, không dùng includes('DSK'/'SMC') vì không asset nào chứa các chuỗi đó.
+          const slab = instances.find((i) => i.assetId === 'OL3D-EQP-SLB-0001');
+          if (!slab) return { isPassed: false, reasonVi: 'Chưa đặt bản bán trụ thủy tinh lên bàn', hintVi: 'Mở kệ Quang học và đặt “Bản bán trụ thủy tinh & Bảng chia độ 360°” lên bàn' };
+          return { isPassed: true, reasonVi: 'Đã đặt bản bán trụ thủy tinh kèm đĩa chia độ lên bàn' };
         },
       },
       {
@@ -507,11 +517,20 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Bật nguồn phát tia laser, chỉnh góc tới $i = 45^\\circ$ so với pháp tuyến.',
         scientificConceptVi: 'Tia sáng truyền từ không khí ($n_1 \\approx 1.00$) vào thủy tinh ($n_2 \\approx 1.50$) bị bẻ gãy lại gần pháp tuyến.',
         mathFormulaLatex: '$i = 45^\\circ, \\quad n_1 = 1.000$',
-        requiredArchetypes: ['laser-ray-box'],
+        requiredArchetypes: ['laser-source'],
         suggestedActionVi: 'Bật đèn laser và xoay nguồn tới góc 45 độ',
         validationGuard: (instances) => {
-          const laser = instances.find((i) => i.assetId.includes('LSR') || i.assetId.includes('RAY'));
-          return { isPassed: true, reasonVi: 'Tia laser đã chiếu vào bề mặt phân cách tại góc $i = 45^\\circ$' };
+          // C-17 (Vòng 1): chỉ isPoweredOn (nút ON/OFF trên đèn) mới chứng minh tia đang bật.
+          // Cờ isLaserOn trong bảng điều khiển là cờ chết, không bật được tia 3D — không dùng.
+          const laser = instances.find((i) => i.assetId === 'OL3D-EQP-LSR-0001');
+          if (!laser) return { isPassed: false, reasonVi: 'Chưa đặt đèn laser lên bàn', hintVi: 'Mở kệ Quang học và đặt “Đèn Laser” lên bàn' };
+          if (laser.instanceState.isPoweredOn !== true) return { isPassed: false, reasonVi: 'Đèn laser đang tắt', hintVi: 'Bấm nút “🔦 ON (650 nm)” trên đèn laser — công tắc trong bảng điều khiển không bật được tia' };
+          const slab = instances.find((i) => i.assetId === 'OL3D-EQP-SLB-0001');
+          if (!slab) return { isPassed: false, reasonVi: 'Chưa đặt bản bán trụ thủy tinh lên bàn', hintVi: 'Đặt bản bán trụ lên bàn rồi chiếu tia laser vào tâm O' };
+          const i = slab.instanceState.incidentAngleDeg;
+          if (typeof i !== 'number' || !Number.isFinite(i)) return { isPassed: false, reasonVi: 'Chưa đặt góc tới i', hintVi: 'Kéo thanh trượt góc tới trên bản bán trụ tới 45°' };
+          if (Math.abs(i - 45) > 2) return { isPassed: false, reasonVi: `Góc tới hiện tại i = ${i.toFixed(0)}°, chưa phải 45°`, hintVi: 'Kéo thanh trượt góc tới (hoặc xoay trong bảng điều khiển) tới 45° — các nút preset không có 45°' };
+          return { isPassed: true, reasonVi: `Tia laser đang chiếu vào tâm O, góc tới i = ${i.toFixed(0)}° (đọc trên đĩa chia độ)` };
         },
       },
       {
@@ -521,10 +540,22 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Đọc góc khúc xạ $r \\approx 28^\\circ$ trên đĩa chia độ và tính chiết suất $n = \\frac{\\sin i}{\\sin r}$.',
         scientificConceptVi: 'Định luật khúc xạ ánh sáng Snell-Descartes.',
         mathFormulaLatex: '$n = \\frac{\\sin 45^\\circ}{\\sin 28^\\circ} \\approx 1.51$',
-        requiredArchetypes: ['optical-disk'],
+        requiredArchetypes: ['semicircular-slab'],
         suggestedActionVi: 'Quan sát vạch góc trên đĩa chia độ',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Góc khúc xạ $r = 28.1^\\circ$, chiết suất thủy tinh $n = 1.51$ (Đạt chuẩn Snell)' };
+          // C-17 (Vòng 1): không có cảm biến/đọc số nào cho r trong code (refractedAngleDeg
+          // chỉ là output tính sẵn và hay bị cũ khi đổi góc ngoài bảng điều khiển), nên r và n
+          // ở đây là TÍNH RA từ i theo định luật Snell, không phải đo trực tiếp — ghi rõ trong reason.
+          const laser = instances.find((i) => i.assetId === 'OL3D-EQP-LSR-0001');
+          if (!laser || laser.instanceState.isPoweredOn !== true) return { isPassed: false, reasonVi: 'Đèn laser đang tắt, không có tia để đo', hintVi: 'Bật đèn laser rồi chỉnh lại góc tới 45°' };
+          const slab = instances.find((i) => i.assetId === 'OL3D-EQP-SLB-0001');
+          if (!slab) return { isPassed: false, reasonVi: 'Chưa đặt bản bán trụ thủy tinh lên bàn', hintVi: 'Đặt bản bán trụ lên bàn' };
+          const i = slab.instanceState.incidentAngleDeg;
+          if (typeof i !== 'number' || !Number.isFinite(i) || Math.abs(i - 45) > 2) return { isPassed: false, reasonVi: `Góc tới i = ${typeof i === 'number' ? i.toFixed(0) + '°' : 'chưa đặt'}, chưa phải 45°`, hintVi: 'Chỉnh góc tới về 45° rồi đọc lại' };
+          const r = (Math.asin(Math.sin((i * Math.PI) / 180) / 1.5) * 180) / Math.PI;
+          const n = Math.sin((i * Math.PI) / 180) / Math.sin((r * Math.PI) / 180);
+          if (!Number.isFinite(r) || !Number.isFinite(n) || Math.abs(n - 1.5) > 0.05) return { isPassed: false, reasonVi: 'Số liệu không nhất quán với định luật Snell', hintVi: 'Kiểm tra lại góc tới i' };
+          return { isPassed: true, reasonVi: `Góc khúc xạ r = ${r.toFixed(1)}° (tính từ i theo định luật Snell, KHÔNG phải đọc trực tiếp trên đĩa), chiết suất n = ${n.toFixed(2)} (tính ra)` };
         },
       },
     ],
@@ -549,37 +580,75 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Gá thanh đòn bẩy có chia vạch milimét vào chốt quay O trên giá thí nghiệm.',
         scientificConceptVi: 'Thanh có một bậc tự do quay quanh trục cố định vuông góc.',
         mathFormulaLatex: '$\\Sigma \\vec{M}_{/O} = 0$',
-        requiredArchetypes: ['lever-arm-balance', 'support-stand'],
+        requiredArchetypes: ['lever-balance-apparatus'],
         suggestedActionVi: 'Lắp thanh đòn vào khớp trục quay O',
         validationGuard: (instances) => {
-          const lever = instances.find((i) => i.assetId.includes('LVR') || i.assetId.includes('BAL'));
-          return { isPassed: true, reasonVi: 'Thanh đòn đã gắn êm vào trục quay O' };
+          // C-17 (Vòng 1): tìm đúng LEV-0001. Tìm 'BAL' cũ sẽ bắt nhầm BAL-0001 (cân điện tử).
+          const lever = instances.find((i) => i.assetId === 'OL3D-EQP-LEV-0001');
+          if (!lever) return { isPassed: false, reasonVi: 'Chưa đặt bộ đòn bẩy lên bàn', hintVi: 'Mở kệ Đo lực và đặt “Bộ đòn bẩy thăng bằng” lên bàn' };
+          return { isPassed: true, reasonVi: 'Đã đặt bộ đòn bẩy lên bàn' };
         },
       },
       {
         stepIndex: 2,
         stepId: 'WF08-STEP-02',
         titleVi: 'Bước 2: Cân bằng thanh đòn nằm ngang bằng ốc điều chỉnh',
-        instructionVi: 'Vặn hai ốc đối trọng ở hai đầu thanh để thanh đòn nằm ngang thăng bằng.',
+        instructionVi: 'Vặn ốc vi chỉnh cân bằng để thanh đòn nằm ngang thăng bằng khi chưa treo quả cân.',
         scientificConceptVi: 'Triệt tiêu mô-men do trọng lượng bản thân của thanh không đối xứng.',
         mathFormulaLatex: '$\\theta_0 = 0^\\circ$',
-        requiredArchetypes: ['lever-arm-balance'],
-        suggestedActionVi: 'Vặn ốc đối trọng để thanh nằm ngang',
+        requiredArchetypes: ['lever-balance-apparatus'],
+        suggestedActionVi: 'Vặn ốc vi chỉnh để thanh nằm ngang',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Thanh đòn đã cân bằng nằm ngang hoàn hảo' };
+          // C-17 (Vòng 1): không có trường nào ghi "đã vặn ốc" (panel không có nút trim),
+          // nên bước này chỉ kiểm tra trạng thái không tải — ghi rõ, không bịa "đã vặn ốc".
+          const lever = instances.find((i) => i.assetId === 'OL3D-EQP-LEV-0001');
+          if (!lever) return { isPassed: false, reasonVi: 'Chưa đặt bộ đòn bẩy lên bàn', hintVi: 'Đặt bộ đòn bẩy lên bàn trước' };
+          const m1 = Number(lever.instanceState.leftMassG ?? 0);
+          const m2 = Number(lever.instanceState.rightMassG ?? 0);
+          if (m1 > 0 || m2 > 0) return { isPassed: false, reasonVi: 'Đang còn quả cân treo trên đòn bẩy', hintVi: 'Bấm “Tháo quả cân” rồi mới chỉnh thăng bằng không tải' };
+          const theta = Number(lever.instanceState.incidentAngleDeg ?? 0);
+          if (Math.abs(theta) > 1) return { isPassed: false, reasonVi: `Thanh đang nghiêng ${theta.toFixed(1)}°`, hintVi: 'Vặn ốc vi chỉnh cân bằng tới khi kim về 0°' };
+          return { isPassed: true, reasonVi: `Thanh đòn đang nằm ngang, không tải (θ = ${theta.toFixed(1)}°) — bước kiểm tra trạng thái ban đầu` };
         },
       },
       {
         stepIndex: 3,
         stepId: 'WF08-STEP-03',
         titleVi: 'Bước 3: Treo các quả nặng hai bên và kiểm chứng mô-men lực',
-        instructionVi: 'Treo 2 quả nặng ở vị trí cách trục $d_1 = 10\\text{ cm}$ bên trái và 1 quả nặng ở vị trí $d_2 = 20\\text{ cm}$ bên phải.',
+        instructionVi: 'Treo 2 quả nặng (100 g) ở lỗ 4 bên trái (d1 = 8 cm) và 1 quả nặng (50 g) ở lỗ 8 bên phải (d2 = 16 cm).',
         scientificConceptVi: 'Quy tắc cân bằng mô-men: $F_1 \\cdot d_1 = F_2 \\cdot d_2$.',
-        mathFormulaLatex: '$1.0\\text{ N} \\times 10\\text{ cm} = 0.5\\text{ N} \\times 20\\text{ cm} = 10\\text{ N}\\cdot\\text{cm}$',
-        requiredArchetypes: ['lever-arm-balance', 'hook-weight-50g'],
+        mathFormulaLatex: '$100\\text{ g} \\times 8\\text{ cm} = 50\\text{ g} \\times 16\\text{ cm} = 800\\text{ g}\\cdot\\text{cm}$',
+        requiredArchetypes: ['lever-balance-apparatus'],
         suggestedActionVi: 'Treo quả nặng vào các móc chia vạch hai bên',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Đòn bẩy thăng bằng tuyệt đối theo quy tắc mô-men lực' };
+          // C-17 (Vòng 1): đề bài cũ (d2 = 20 cm) không làm được — lỗ treo 1–9 × 20 mm = tối đa 18 cm.
+          // Guard chấp nhận BẤT KỲ cặp cân bằng nào (m1·x1 = m2·x2, dung sai 5%), không ép một đáp án.
+          // Khối lượng chỉ đổi qua nút/slider của LEV; không đếm instance WGT (không có cơ chế treo WGT).
+          // Trường vắng = chưa thao tác → FAIL, không dùng ?? giá trị mặc định.
+          const lever = instances.find((i) => i.assetId === 'OL3D-EQP-LEV-0001');
+          if (!lever) return { isPassed: false, reasonVi: 'Chưa đặt bộ đòn bẩy lên bàn', hintVi: 'Đặt bộ đòn bẩy lên bàn trước' };
+          const m1 = lever.instanceState.leftMassG;
+          const m2 = lever.instanceState.rightMassG;
+          const x1 = lever.instanceState.leftHoleIndex;
+          const x2 = lever.instanceState.rightHoleIndex;
+          if (typeof m1 !== 'number' || m1 <= 0) return { isPassed: false, reasonVi: 'Chưa treo quả cân bên trái', hintVi: 'Bấm “+50g” bên trái để treo quả cân' };
+          if (typeof m2 !== 'number' || m2 <= 0) return { isPassed: false, reasonVi: 'Chưa treo quả cân bên phải', hintVi: 'Bấm “+50g” bên phải để treo quả cân' };
+          if (typeof x1 !== 'number' || x1 < 1 || x1 > 9) return { isPassed: false, reasonVi: 'Chưa chọn lỗ treo bên trái', hintVi: 'Chọn lỗ treo 1–9 bên trái' };
+          if (typeof x2 !== 'number' || x2 < 1 || x2 > 9) return { isPassed: false, reasonVi: 'Chưa chọn lỗ treo bên phải', hintVi: 'Chọn lỗ treo 1–9 bên phải' };
+          const d1 = x1 * 2; // cm
+          const d2 = x2 * 2; // cm
+          const M1 = m1 * d1; // g·cm, g triệt tiêu nên không cần g = 9.8/9.81
+          const M2 = m2 * d2;
+          const maxM = Math.max(M1, M2);
+          if (Math.abs(M1 - M2) > 0.05 * maxM) {
+            const pct = ((Math.abs(M1 - M2) / maxM) * 100).toFixed(0);
+            return { isPassed: false, reasonVi: `Mô-men chưa cân bằng: M₁ = ${M1} g·cm, M₂ = ${M2} g·cm, lệch ${pct}%`, hintVi: 'Dời móc treo hoặc thêm/bớt quả cân sao cho m₁·x₁ = m₂·x₂' };
+          }
+          const theta = Number(lever.instanceState.incidentAngleDeg ?? 0);
+          if (Math.abs(theta) > 1) return { isPassed: false, reasonVi: `Mô-men đã bằng nhau nhưng thanh còn nghiêng ${theta.toFixed(1)}°`, hintVi: 'Kiểm tra lại ốc vi chỉnh cân bằng' };
+          const F1 = ((m1 / 1000) * 9.8).toFixed(2);
+          const F2 = ((m2 / 1000) * 9.8).toFixed(2);
+          return { isPassed: true, reasonVi: `Thăng bằng: M₁ = ${F1} N × ${d1} cm = M₂ = ${F2} N × ${d2} cm = ${M1} g·cm (tính từ khối lượng và lỗ treo đã chọn; góc nghiêng θ = ${theta.toFixed(1)}° đọc trên đĩa chia độ)` };
         },
       },
     ],
@@ -607,8 +676,14 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         requiredArchetypes: ['overflow-can', 'beaker-250'],
         suggestedActionVi: 'Đổ nước đầy bình tràn và hứng cốc dưới vòi',
         validationGuard: (instances) => {
-          const can = instances.find((i) => i.assetId.includes('OVR') || i.assetId.includes('CAN'));
-          return { isPassed: true, reasonVi: 'Bình tràn đã đổ đầy nước tới mép vòi xả' };
+          // C-11/C-17 (Vòng 3): code cũ tìm includes('OVR')/'CAN' — không asset nào chứa
+          // hai chuỗi đó (id thật OL3D-EQP-OVF-0001) — rồi vẫn pass vô điều kiện.
+          const can = instances.find((i) => i.assetId === 'OL3D-EQP-OVF-0001');
+          if (!can) return { isPassed: false, reasonVi: 'Chưa đặt bình tràn Eureka lên bàn', hintVi: 'Mở kệ Đo thể tích và đặt “Bình tràn Eureka 250 ml” lên bàn' };
+          const level = can.instanceState.baseLiquidLevelMl;
+          if (typeof level !== 'number' || !Number.isFinite(level)) return { isPassed: false, reasonVi: 'Chưa đọc được mực nước trong bình tràn', hintVi: 'Đặt bình tràn lên bàn rồi đọc lại' };
+          if (level < 209.5) return { isPassed: false, reasonVi: `Bình tràn mới có ${level.toFixed(1)} ml, chưa đầy tới miệng vòi (210 ml)`, hintVi: 'Kéo bình tràn vào vòi bình cấp nước để châm đầy tới miệng vòi (210 ml)' };
+          return { isPassed: true, reasonVi: `Bình tràn đã đầy nước tới miệng vòi ($V = ${level.toFixed(1)}\\text{ ml}$, đo được)` };
         },
       },
       {
@@ -618,23 +693,52 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Treo khối kim loại ($m = 66.25\\,\\text{g}$) vào lực kế ngoài không khí, đọc số chỉ trọng lượng $P_1$.',
         scientificConceptVi: 'Trọng lượng thực trong không khí coi như bằng lực hút Trái Đất.',
         mathFormulaLatex: '$P_1 = m \\cdot g \\approx 0.65\\text{ N}$',
-        requiredArchetypes: ['spring-dynamometer-5n', 'metal-cylinder-block'],
+        requiredArchetypes: ['spring-dynamometer', 'solid-cylinder'],
         suggestedActionVi: 'Móc khối nhôm vào móc lực kế',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Trọng lượng vật ngoài không khí: $P_1 = 0.65\\text{ N}$' };
+          // C-11/C-17 (Vòng 3): P1 là TÍNH từ khối lượng mẫu trong catalog (m × g), không phải
+          // lực kế đo trực tiếp — ghi rõ trong reason (mẫu WF-07 b.3, Vòng 1).
+          const dyna = instances.find((i) => i.assetId === 'OL3D-EQP-DYN-0001');
+          if (!dyna) return { isPassed: false, reasonVi: 'Chưa đặt lực kế lên bàn', hintVi: 'Đặt lực kế lò xo 5 N lên bàn' };
+          const cyl = instances.find((i) => i.assetId === 'OL3D-EQP-SLD-0001');
+          if (!cyl) return { isPassed: false, reasonVi: 'Chưa đặt trụ nhôm lên bàn', hintVi: 'Đặt trụ nhôm SLD-0001 lên bàn rồi móc vào lực kế' };
+          if (cyl.instanceState.attachedToInstanceId !== dyna.instanceId || cyl.instanceState.attachmentSlot !== 'dynamometer-hook') {
+            return { isPassed: false, reasonVi: 'Trụ nhôm chưa móc vào lực kế', hintVi: 'Móc trụ nhôm vào móc lực kế (hoặc bấm “Cân bằng lực kế”)' };
+          }
+          const f = dyna.instanceState.springExtensionN;
+          if (typeof f !== 'number' || !Number.isFinite(f)) return { isPassed: false, reasonVi: 'Lực kế chưa đọc được lực', hintVi: 'Móc trụ nhôm vào lực kế rồi đọc lại' };
+          if (Math.abs(f - 0.65) > 0.02) return { isPassed: false, reasonVi: `Lực kế đang chỉ $P = ${f.toFixed(2)}\\text{ N}$, chưa phải 0,65 N của trụ nhôm 66,25 g`, hintVi: 'Đang treo vật khác — cần trụ nhôm SLD-0001 (66,25 g)' };
+          return { isPassed: true, reasonVi: `Trọng lượng vật ngoài không khí: $P_1 = ${f.toFixed(2)}\\text{ N}$ (đo được trên lực kế; $P_1 = m \\cdot g = 66,25\\text{ g} \\times 9,81$ tính ra khớp số đo)` };
         },
       },
       {
         stepIndex: 3,
         stepId: 'WF09-STEP-03',
         titleVi: 'Bước 3: Nhúng chìm vật vào bình tràn và hứng lượng nước tràn',
-        instructionVi: 'Từ từ hạ vật chìm hoàn toàn vào nước trong bình tràn, đọc số chỉ lực kế $P_2 = 0.41\\,\\text{N}$ và cân nước tràn.',
+        instructionVi: 'Từ từ hạ vật chìm hoàn toàn vào nước trong bình tràn, đọc thể tích nước tràn ra rồi tính $F_A$ (lưu ý: vật đang chìm thì không còn móc trên lực kế nên $P_2 = 0.41\\,\\text{N}$ là tính ra, không phải đọc trên lực kế).',
         scientificConceptVi: 'Lực đẩy Archimedes bằng hiệu trọng lượng và bằng trọng lượng nước tràn: $F_A = P_1 - P_2 = d \\cdot V$.',
         mathFormulaLatex: '$F_A = 0.65 - 0.41 = 0.24\\text{ N} = P_{\\text{tran}}$',
-        requiredArchetypes: ['overflow-can', 'spring-dynamometer-5n'],
+        requiredArchetypes: ['overflow-can', 'spring-dynamometer'],
         suggestedActionVi: 'Nhúng ngập vật vào lòng bình tràn',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Lực đẩy Archimedes đo được: $F_A = 0.24\\text{ N}$, bằng đúng trọng lượng khối nước tràn ($V = 24.5\\text{ mL}$)!' };
+          // C-11/C-17 (Vòng 3): một vật chỉ có MỘT attachmentSlot — đang móc trên lực kế thì
+          // không thể đồng thời ở trong bình, nên P2 = 0,41 N không đọc trực tiếp được trên lực
+          // kế. Guard kiểm tra thể tích tràn đo được; F_A và P2 là TÍNH RA, ghi rõ trong reason.
+          const can = instances.find((i) => i.assetId === 'OL3D-EQP-OVF-0001');
+          if (!can) return { isPassed: false, reasonVi: 'Chưa đặt bình tràn Eureka lên bàn', hintVi: 'Đặt bình tràn lên bàn trước' };
+          const cyl = instances.find((i) => i.assetId === 'OL3D-EQP-SLD-0001');
+          if (!cyl) return { isPassed: false, reasonVi: 'Chưa đặt trụ nhôm lên bàn', hintVi: 'Đặt trụ nhôm SLD-0001 lên bàn' };
+          if (cyl.instanceState.attachedToInstanceId !== can.instanceId || cyl.instanceState.attachmentSlot !== 'inside-vessel') {
+            return { isPassed: false, reasonVi: 'Trụ nhôm chưa chìm trong bình tràn', hintVi: 'Hạ trụ nhôm chìm hẳn vào bình tràn đã đầy nước' };
+          }
+          const spilled = can.instanceState.overflowingVolumeMl;
+          if (typeof spilled !== 'number' || !Number.isFinite(spilled)) return { isPassed: false, reasonVi: 'Chưa đọc được thể tích nước tràn', hintVi: 'Nhúng trụ nhôm vào bình tràn đã đầy nước rồi đọc lại' };
+          if (Math.abs(spilled - 24.5) > 2.5) {
+            return { isPassed: false, reasonVi: `Nước tràn mới ${spilled.toFixed(1)} ml, chưa phải 24,5 ml của trụ nhôm`, hintVi: 'Bình tràn chưa đầy tới miệng vòi nên chưa tràn đủ — quay lại bước 1 châm đầy 210 ml rồi nhúng lại' };
+          }
+          const fa = spilled * 0.00980665;
+          const p2 = 0.65 - fa;
+          return { isPassed: true, reasonVi: `Nước tràn đo được $V = ${spilled.toFixed(1)}\\text{ ml}$ → $F_A = ${fa.toFixed(2)}\\text{ N}$ (tính ra từ thể tích tràn), $P_2 = P_1 - F_A \\approx ${p2.toFixed(2)}\\text{ N}$ (tính ra, KHÔNG phải đọc trên lực kế vì vật đang chìm thì không còn móc trên lực kế)` };
         },
       },
     ],
@@ -659,10 +763,13 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Đặt mặt kính đồng hồ lên cân, trừ bì (TARE), dùng thìa xúc chính xác 10.0 g NaCl.',
         scientificConceptVi: 'Đo lường chính xác lượng chất tan theo định luật bảo toàn khối lượng.',
         mathFormulaLatex: '$m_{\\text{NaCl}} = 10.00\\text{ g}$',
-        requiredArchetypes: ['electronic-balance', 'chemical-salt-nacl'],
+        requiredArchetypes: ['electronic-balance'],
         suggestedActionVi: 'Dùng thìa múc muối lên đĩa cân',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Đã cân chính xác 10.00 g muối ăn NaCl' };
+          // C-11/C-17 (Vòng 3): KHÔNG viết guard giả cho bước này — asset NaCl và cơ chế
+          // múc mẫu 10,0 g chưa tồn tại trong code (không vật nào trên đĩa cân ra đúng 10,0 g).
+          // Guard giữ fail cho tới khi có asset NaCl; xem docs/implementation/GUARDS_VONG3_WF09_WF15.md.
+          return { isPassed: false, reasonVi: 'Chưa thể cân 10,0 g NaCl — thiết bị muối ăn chưa có trong phòng thí nghiệm', hintVi: 'Bước này cần asset NaCl (đang chờ bổ sung) — làm tiếp bước 2 để đong nước' };
         },
       },
       {
@@ -672,10 +779,18 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Rót nước cất vào ống đong tới đúng vạch 90 ml ($m_{\\text{nuoc}} \\approx 90.0\\text{ g}$).',
         scientificConceptVi: 'Khối lượng riêng của nước nguyên chất ở $20^\\circ\\text{C}$ xấp xỉ $1.0\\text{ g/ml}$.',
         mathFormulaLatex: '$m_{\\text{nuoc}} = D \\cdot V = 1.0 \\times 90 = 90.0\\text{ g}$',
-        requiredArchetypes: ['graduated-cylinder-100', 'distilled-water'],
+        requiredArchetypes: ['graduated-cylinder', 'water-dispenser'],
         suggestedActionVi: 'Đong 90 ml nước cất',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Đã lấy đủ 90 ml nước cất làm dung môi' };
+          // C-11/C-17 (Vòng 3): đọc baseLiquidLevelMl (sau reconcile bằng liquidLevelMl khi ống rỗng).
+          // Ống ban đầu 50 ml, rót từ cốc 2 lần × 20 ml = 90 ml; vòi bình cấp +25 ml/lần sẽ vượt.
+          const cyl = instances.find((i) => i.assetId === 'OL3D-EQP-CYL-0001');
+          if (!cyl) return { isPassed: false, reasonVi: 'Chưa đặt ống đong 100 ml lên bàn', hintVi: 'Đặt ống đong 100 ml lên bàn' };
+          const v = cyl.instanceState.baseLiquidLevelMl;
+          if (typeof v !== 'number' || !Number.isFinite(v)) return { isPassed: false, reasonVi: 'Chưa đọc được mực nước trong ống đong', hintVi: 'Đặt ống đong lên bàn rồi đọc lại' };
+          if (v < 88) return { isPassed: false, reasonVi: `Ống đong mới có ${v.toFixed(1)} ml, chưa đủ 90 ml`, hintVi: 'Rót thêm nước từ cốc (mỗi lần rót 20 ml)' };
+          if (v > 92) return { isPassed: false, reasonVi: `Ống đong đang có ${v.toFixed(1)} ml, thừa quá 90 ml`, hintVi: 'Đổ bớt nước ra rồi đong lại tới 90 ml' };
+          return { isPassed: true, reasonVi: `Đã đong đủ nước cất: $V = ${v.toFixed(1)}\\text{ ml}$ (đo được trong ống đong, $m \\approx ${v.toFixed(1)}\\text{ g}$)` };
         },
       },
       {
@@ -685,10 +800,13 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Cho muối và nước vào cốc thủy tinh 250 ml, dùng đũa khuấy đều theo 1 chiều đến khi tan hết.',
         scientificConceptVi: 'Quá trình khuấy làm tăng tốc độ khuếch tán các ion $Na^+$ và $Cl^-$ vào dung môi nước.',
         mathFormulaLatex: '$C\\% = \\frac{10.0}{10.0 + 90.0} \\times 100\\% = 10.0\\%$',
-        requiredArchetypes: ['beaker-250', 'stirring-rod'],
+        requiredArchetypes: ['beaker-250'],
         suggestedActionVi: 'Dùng đũa thủy tinh khuấy tan dung dịch trong cốc',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Muối đã tan hoàn toàn, thu được dung dịch NaCl 10.0%' };
+          // C-11/C-17 (Vòng 3): KHÔNG viết guard pass giả — đũa khuấy và trạng thái "đã khuấy"
+          // chưa tồn tại. Ghi rõ: C% chỉ là tính từ khối lượng đã cân và thể tích đã đong,
+          // việc tan hoàn toàn chưa có cảm biến nào xác nhận.
+          return { isPassed: false, reasonVi: 'Chưa thể xác nhận muối tan hoàn toàn — đũa khuấy và cảm biến hòa tan chưa có trong phòng thí nghiệm', hintVi: 'Bước này cần asset đũa khuấy + thao tác khuấy (đang chờ bổ sung). C% = 10,0/(10,0+90,0) × 100% = 10,0% mới chỉ là tính từ khối lượng đã cân và thể tích đã đong' };
         },
       },
     ],
@@ -703,36 +821,54 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
     curriculumLessonVi: 'KHTN 8 · Bài 26: Năng lượng nhiệt và truyền nhiệt',
     subject: 'physics',
     gradeLevel: 8,
-    descriptionVi: 'Lắp kiềng sắt, lưới amiăng tản nhiệt, cốc nước có cắm nhiệt kế và dùng đèn cồn để đun sôi, ghi nhận đường cong tăng nhiệt $\\Delta T(t)$.',
+    descriptionVi: 'Đặt cốc nước có cắm nhiệt kế và dùng đèn cồn đặt sát cốc để đun sôi, ghi nhận đường cong tăng nhiệt $\\Delta T(t)$. (Kiềng sắt và lưới amiăng chưa có trong phòng thí nghiệm nên không dùng trong bài này.)',
     targetCompetenciesVi: ['Thao tác an toàn nhiệt và đèn cồn', 'Ghi nhật ký nhiệt độ theo thời gian', 'Cân bằng nhiệt lượng'],
     steps: [
       {
         stepIndex: 1,
         stepId: 'WF11-STEP-01',
-        titleVi: 'Bước 1: Lắp kiềng sắt, lưới tản nhiệt amiăng và cốc nước',
-        instructionVi: 'Đặt kiềng sắt trên bàn, trải lưới amiăng lên trên và đặt cốc 150 ml nước cùng nhiệt kế.',
-        scientificConceptVi: 'Lưới amiăng phân tán nhiệt lượng đều dưới đáy cốc thủy tinh, ngăn sốc nhiệt gây nứt vỡ.',
+        titleVi: 'Bước 1: Đặt cốc nước, cắm nhiệt kế và đặt đèn cồn cạnh cốc',
+        instructionVi: 'Đặt cốc nước lên bàn, cắm nhiệt kế vào trong cốc và đặt đèn cồn sát cạnh cốc (trong 35 cm) để chuẩn bị đun.',
+        scientificConceptVi: 'Nhiệt lượng từ ngọn lửa đèn cồn truyền vào đáy cốc rồi vào nước; nhiệt kế cắm trong cốc đo đúng nhiệt độ nước.',
         mathFormulaLatex: '$m_{\\text{nuoc}} = 0.10\\text{ kg}, \\quad c = 4184\\text{ J/(kg}\\cdot\\text{K)}$',
-        requiredArchetypes: ['tripod-gauze', 'beaker-250', 'thermometer'],
-        suggestedActionVi: 'Đặt kiềng đun, lưới amiăng và cốc nước lên giá',
+        requiredArchetypes: ['beaker-250', 'thermometer', 'alcohol-burner'],
+        suggestedActionVi: 'Đặt cốc nước, cắm nhiệt kế vào cốc, đặt đèn cồn sát cốc',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Hệ thống kiềng, lưới tản nhiệt và cốc nước đã bố trí an toàn' };
+          // C-11/C-17 (Vòng 3): kiềng sắt và lưới amiăng không có trong catalog nên đề cũ
+          // không làm được — viết lại đề theo đúng thiết bị có thật (BKR + THM + ALC).
+          // Khoảng cách đèn–cốc ≤ 0,35 m là ngưỡng isDirectlyHeated trong reconcile (App.tsx).
+          const bkr = instances.find((i) => i.assetId === 'OL3D-EQP-BKR-0001');
+          if (!bkr) return { isPassed: false, reasonVi: 'Chưa đặt cốc nước lên bàn', hintVi: 'Đặt cốc đong 250 ml chứa nước lên bàn' };
+          const thm = instances.find((i) => i.assetId === 'OL3D-EQP-THM-0001');
+          if (!thm) return { isPassed: false, reasonVi: 'Chưa đặt nhiệt kế lên bàn', hintVi: 'Đặt nhiệt kế lên bàn rồi cắm vào trong cốc nước' };
+          if (thm.instanceState.attachedToInstanceId !== bkr.instanceId || thm.instanceState.attachmentSlot !== 'inside-vessel') {
+            return { isPassed: false, reasonVi: 'Nhiệt kế chưa cắm vào trong cốc nước', hintVi: 'Kéo nhiệt kế thả vào trong cốc nước' };
+          }
+          const alc = instances.find((i) => i.assetId === 'OL3D-EQP-ALC-0001');
+          if (!alc) return { isPassed: false, reasonVi: 'Chưa đặt đèn cồn lên bàn', hintVi: 'Đặt đèn cồn lên bàn, sát cạnh cốc nước' };
+          const dx = alc.transform.positionM[0] - bkr.transform.positionM[0];
+          const dz = alc.transform.positionM[2] - bkr.transform.positionM[2];
+          const dist = Math.hypot(dx, dz);
+          if (dist > 0.35) return { isPassed: false, reasonVi: `Đèn cồn đang cách cốc ${(dist * 100).toFixed(0)} cm, quá xa để đun`, hintVi: 'Đặt đèn cồn sát dưới đáy cốc (trong 35 cm)' };
+          return { isPassed: true, reasonVi: `Cốc nước đã đặt, nhiệt kế cắm trong cốc, đèn cồn cách cốc ${(dist * 100).toFixed(0)} cm — sẵn sàng đun` };
         },
       },
       {
         stepIndex: 2,
         stepId: 'WF11-STEP-02',
-        titleVi: 'Bước 2: Đặt đèn cồn vào dưới kiềng và châm lửa đun',
-        instructionVi: 'Mở nắp đèn cồn, đặt vào tâm kiềng và châm lửa để truyền nhiệt lượng vào đáy cốc.',
+        titleVi: 'Bước 2: Đặt đèn cồn sát cốc và châm lửa đun',
+        instructionVi: 'Mở nắp đèn cồn, đặt đèn sát dưới đáy cốc và châm lửa để truyền nhiệt lượng vào đáy cốc.',
         scientificConceptVi: 'Quá trình đốt cháy cồn ethanol tỏa nhiệt lượng: $C_2H_5OH + 3O_2 \\to 2CO_2 + 3H_2O + Q$.',
         mathFormulaLatex: '$P_{\\text{lua}} \\approx 350\\text{ W}$',
         requiredArchetypes: ['alcohol-burner'],
         suggestedActionVi: 'Bật ngọn lửa đèn cồn',
         validationGuard: (instances) => {
-          const burner = instances.find((i) => i.assetId.includes('ALC') || i.assetId.includes('BRN'));
-          if (!burner) return { isPassed: false, reasonVi: 'Chưa đặt đèn cồn lên bàn thí nghiệm' };
-          const isLit = Boolean(burner.instanceState.isFlameLit ?? burner.instanceState.isHeating);
-          return { isPassed: isLit, reasonVi: isLit ? 'Ngọn lửa đèn cồn cháy xanh đều, bắt đầu truyền nhiệt lượng' : 'Đèn cồn chưa được châm lửa' };
+          // C-11/C-17 (Vòng 3): tìm đúng ALC-0001 (không includes 'BRN' — không asset nào
+          // chứa 'BRN'); không dùng ?? để bù — thiếu trường = chưa châm lửa = FAIL.
+          const burner = instances.find((i) => i.assetId === 'OL3D-EQP-ALC-0001');
+          if (!burner) return { isPassed: false, reasonVi: 'Chưa đặt đèn cồn lên bàn thí nghiệm', hintVi: 'Đặt đèn cồn lên bàn trước' };
+          const isLit = burner.instanceState.isFlameLit === true || burner.instanceState.isHeating === true;
+          return { isPassed: isLit, reasonVi: isLit ? 'Ngọn lửa đèn cồn cháy xanh đều, bắt đầu truyền nhiệt lượng' : 'Đèn cồn chưa được châm lửa', hintVi: isLit ? undefined : 'Bấm nút châm lửa trên đèn cồn' };
         },
       },
       {
@@ -742,17 +878,34 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Quan sát chỉ số nhiệt kế tăng liên tục tới $100^\\circ\\text{C}$, bọt khí sôi sục và nhiệt độ giữ nguyên.',
         scientificConceptVi: 'Trong suốt quá trình chuyển thể từ lỏng sang hơi, nhiệt độ của chất lỏng nguyên chất không thay đổi.',
         mathFormulaLatex: '$T = 100^\\circ\\text{C} = \\text{const}, \\quad Q = L \\cdot m$',
-        requiredArchetypes: ['thermometer'],
+        requiredArchetypes: ['thermometer', 'alcohol-burner', 'digital-stopwatch'],
         suggestedActionVi: 'Quan sát nhiệt kế đạt mốc 100 độ C',
         validationGuard: (instances) => {
-          const thm = instances.find((i) => i.assetId.includes('THM'));
-          const temp = Number(thm?.instanceState.temperatureC ?? 25);
-          return {
-            isPassed: temp >= 99.5,
-            reasonVi: temp >= 99.5
-              ? `Nước đã sôi ở $T = ${temp.toFixed(1)}^\\circ\\text{C}$ và nhiệt độ duy trì bình nguyên`
-              : `Nhiệt độ hiện tại đang là $T = ${temp.toFixed(1)}^\\circ\\text{C}$, tiếp tục đun tới $100^\\circ\\text{C}$`,
-          };
+          // C-11/C-17 (Vòng 3): guard cũ chỉ đọc temperatureC ≥ 99,5 — bấm sang bước 4 trong
+          // luồng hướng dẫn là T bị set thẳng 100 °C (placeThermalBenchIfOnShelf 'boiling'),
+          // preset nhiệt kế cũng set trực tiếp → pass giả. Guard mới đòi đủ 4 điều kiện:
+          // nhiệt kế cắm trong cốc + đèn đang cháy + T ≥ 99,5 + bấm giờ đã chạy ≥ 18 s thật
+          // (vòng đun 450 ms/tick, +1,5 °C/tick, 25→100 °C cần 50 tick ≈ 22,5 s).
+          const thm = instances.find((i) => i.assetId === 'OL3D-EQP-THM-0001');
+          if (!thm) return { isPassed: false, reasonVi: 'Chưa đặt nhiệt kế lên bàn', hintVi: 'Đặt nhiệt kế lên bàn rồi cắm vào trong cốc nước' };
+          const bkr = instances.find((i) => i.assetId === 'OL3D-EQP-BKR-0001');
+          if (!bkr) return { isPassed: false, reasonVi: 'Chưa đặt cốc nước lên bàn', hintVi: 'Đặt cốc nước lên bàn trước' };
+          if (thm.instanceState.attachedToInstanceId !== bkr.instanceId || thm.instanceState.attachmentSlot !== 'inside-vessel') {
+            return { isPassed: false, reasonVi: 'Nhiệt kế chưa cắm vào trong cốc nước', hintVi: 'Kéo nhiệt kế thả vào trong cốc nước rồi đun lại' };
+          }
+          const alc = instances.find((i) => i.assetId === 'OL3D-EQP-ALC-0001');
+          if (!alc || (alc.instanceState.isFlameLit !== true && alc.instanceState.isHeating !== true)) {
+            return { isPassed: false, reasonVi: 'Đèn cồn đang tắt — nước không thể sôi khi không đun', hintVi: 'Châm lửa đèn cồn rồi theo dõi nhiệt kế tăng dần' };
+          }
+          const temp = thm.instanceState.temperatureC;
+          if (typeof temp !== 'number' || !Number.isFinite(temp)) return { isPassed: false, reasonVi: 'Chưa đọc được nhiệt độ', hintVi: 'Đun tiếp và theo dõi nhiệt kế' };
+          if (temp < 99.5) return { isPassed: false, reasonVi: `Nhiệt độ hiện tại đang là $T = ${temp.toFixed(1)}^\\circ\\text{C}$, tiếp tục đun tới $100^\\circ\\text{C}$`, hintVi: 'Để đèn cháy và theo dõi nhiệt kế tăng ~1,5 °C mỗi nhịp' };
+          const stw = instances.find((i) => i.assetId === 'OL3D-EQP-STW-0001');
+          const t = stw ? Number(stw.instanceState.recordedTimeS) : NaN;
+          if (!stw || !Number.isFinite(t) || t < 18) {
+            return { isPassed: false, reasonVi: `Nhiệt độ đã ${temp.toFixed(1)} °C nhưng thời gian đun ghi nhận chỉ ${Number.isFinite(t) ? t.toFixed(1) : '0'} s — con số này có thể do bấm nút preset hoặc bấm chuyển bước, chưa phải đun thật`, hintVi: 'Để đèn cháy và theo dõi nhiệt kế tăng dần từ 25 °C lên 100 °C (mất khoảng 22 s)' };
+          }
+          return { isPassed: true, reasonVi: `Nước đã sôi ở $T = ${temp.toFixed(1)}^\\circ\\text{C}$ sau ${t.toFixed(1)} s đun (nhiệt kế cắm trong cốc, đèn đang cháy — số liệu đo được, không phải preset)` };
         },
       },
     ],
@@ -888,7 +1041,19 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         requiredArchetypes: ['erlenmeyer-flask'],
         suggestedActionVi: 'Rót nước và nhỏ dầu vào 2 bình tam giác',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Đã chuẩn bị 2 bình tam giác thí nghiệm có màng dầu bảo vệ' };
+          // C-11/C-17 (Vòng 3): cần đúng 2 bình FLK-0001, mỗi bình ~100 ml (khoảng 95–110 ml:
+          // ban đầu 125 ml, rót ra 1 lần 20 ml = 105 ml). Lớp dầu không có trong code nên
+          // không kiểm tra dầu — đề ghi "giả định đã có màng dầu".
+          const flasks = instances.filter((i) => i.assetId === 'OL3D-EQP-FLK-0001');
+          if (flasks.length < 2) return { isPassed: false, reasonVi: `Mới có ${flasks.length} bình tam giác, cần 2 bình (thực nghiệm + đối chứng)`, hintVi: 'Đặt thêm một bình tam giác thứ hai để làm đối chứng' };
+          for (const [idx, f] of flasks.slice(0, 2).entries()) {
+            const v = f.instanceState.baseLiquidLevelMl;
+            if (typeof v !== 'number' || !Number.isFinite(v)) return { isPassed: false, reasonVi: `Chưa đọc được mực nước bình ${idx + 1}`, hintVi: 'Đặt bình lên bàn rồi đọc lại' };
+            if (v < 95 || v > 110) return { isPassed: false, reasonVi: `Bình ${idx + 1} đang có ${v.toFixed(1)} ml nước, chưa phải khoảng 100 ml`, hintVi: 'Rót bớt/thêm nước tới khoảng 100 ml mỗi bình' };
+          }
+          const v1 = flasks[0].instanceState.baseLiquidLevelMl as number;
+          const v2 = flasks[1].instanceState.baseLiquidLevelMl as number;
+          return { isPassed: true, reasonVi: `Đã chuẩn bị 2 bình tam giác: ${v1.toFixed(1)} ml và ${v2.toFixed(1)} ml nước (đo được; lớp dầu giả định đã có)` };
         },
       },
       {
@@ -898,10 +1063,12 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Cắm cành tươi nguyên vẹn lá vào bình A (thực nghiệm) và cành đã ngắt sạch lá vào bình B (đối chứng).',
         scientificConceptVi: 'Thiết kế thí nghiệm đối chứng đơn biến để cô lập yếu tố thoát hơi nước qua bề mặt lá.',
         mathFormulaLatex: '$A: \\text{Co la} \\quad \\text{vs} \\quad B: \\text{Khong la}$',
-        requiredArchetypes: ['erlenmeyer-flask', 'plant-twig'],
+        requiredArchetypes: ['erlenmeyer-flask'],
         suggestedActionVi: 'Cắm 2 cành cây vào 2 bình',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Đã thiết lập cặp bình thực nghiệm và đối chứng chuẩn xác' };
+          // C-11/C-17 (Vòng 3): KHÔNG viết guard pass giả — asset cành cây chưa tồn tại,
+          // không có trường nào phân biệt "có lá/không lá". Guard chặn cho tới khi có asset.
+          return { isPassed: false, reasonVi: 'Chưa thể cắm cành cây — asset cành cây (có lá / không lá) chưa có trong phòng thí nghiệm', hintVi: 'Bước này cần asset plant-twig (đang chờ bổ sung)' };
         },
       },
       {
@@ -914,7 +1081,10 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         requiredArchetypes: ['erlenmeyer-flask'],
         suggestedActionVi: 'Bật đèn chiếu sáng và quan sát mực nước tụt',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Mực nước bình A giảm mạnh, chứng minh nước thoát ra chủ yếu qua lá' };
+          // C-11/C-17 (Vòng 3): KHÔNG viết guard pass giả — chưa có cành cây, chưa có cơ chế
+          // thời gian/thoát hơi nối vào instance (evaporationRate chỉ nội bộ trong bus),
+          // và đề bài đo Δh bằng mm trong khi bình đo bằng ml.
+          return { isPassed: false, reasonVi: 'Chưa thể đo độ tụt mực nước — cần cành cây và cơ chế mô phỏng thoát hơi theo thời gian (đang chờ bổ sung)', hintVi: 'Làm xong bước 1 rồi chờ asset cành cây và cơ chế thời gian' };
         },
       },
     ],
@@ -939,10 +1109,12 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Rót khoảng 5 ml từng mẫu dung dịch (Axit HCl / giấm ăn, Bazơ NaOH / nước vôi trong, Nước cất) vào khay.',
         scientificConceptVi: 'Thang đo pH định lượng nồng độ ion $H^+$ trong dung dịch: $\\text{pH} = -\\log[H^+]$.',
         mathFormulaLatex: '$\\text{pH} = -\\log_{10}[H^+]$',
-        requiredArchetypes: ['test-tube-rack', 'solution-samples'],
+        requiredArchetypes: [],
         suggestedActionVi: 'Rót các mẫu hóa chất vào khay sứ',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Các mẫu dung dịch đã sẵn sàng trên khay thí nghiệm' };
+          // C-11/C-17 (Vòng 3): KHÔNG viết guard pass giả — khay mẫu và các mẫu dung dịch
+          // chưa có trong phòng thí nghiệm. Guard chặn cho tới khi có asset mẫu + khay.
+          return { isPassed: false, reasonVi: 'Chưa thể chuẩn bị mẫu dung dịch — khay mẫu và các mẫu (axit / bazơ / nước cất) chưa có trong phòng thí nghiệm', hintVi: 'Bước này cần asset khay mẫu + mẫu dung dịch (đang chờ bổ sung)' };
         },
       },
       {
@@ -952,10 +1124,12 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Nhúng đầu đũa thủy tinh sạch vào dung dịch, chấm lên mẩu giấy chỉ thị pH vạn năng.',
         scientificConceptVi: 'Chất chỉ thị chuyển dịch cân bằng ion tạo hợp chất có cấu trúc màu đặc trưng theo độ pH.',
         mathFormulaLatex: '$HIn \\rightleftharpoons H^+ + In^-$',
-        requiredArchetypes: ['ph-indicator-strip', 'stirring-rod'],
+        requiredArchetypes: [],
         suggestedActionVi: 'Chấm giọt dung dịch lên giấy pH',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Giấy chỉ thị đổi màu ngay lập tức khi tiếp xúc ion' };
+          // C-11/C-17 (Vòng 3): KHÔNG viết guard pass giả — giấy chỉ thị và đũa thủy tinh
+          // chưa có trong phòng thí nghiệm. Guard chặn cho tới khi có asset.
+          return { isPassed: false, reasonVi: 'Chưa thể chấm giấy chỉ thị — giấy pH và đũa thủy tinh chưa có trong phòng thí nghiệm', hintVi: 'Bước này cần asset giấy chỉ thị pH + đũa khuấy (đang chờ bổ sung)' };
         },
       },
       {
@@ -965,10 +1139,24 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Đối chiếu màu sắc của giấy quỳ / giấy pH với dải màu chuẩn: Đỏ cam (Axit pH ~ 3), Xanh thẫm (Bazơ pH ~ 11), Vàng lục (Nước cất pH = 7).',
         scientificConceptVi: 'Phân loại dung dịch theo thang đo: $\\text{pH} < 7$ (axit), $\\text{pH} = 7$ (trung tính), $\\text{pH} > 7$ (bazơ).',
         mathFormulaLatex: '$\\text{pH}_{\\text{axit}} = 3.0, \\quad \\text{pH}_{\\text{nuoc}} = 7.0, \\quad \\text{pH}_{\\text{bazo}} = 11.5$',
-        requiredArchetypes: ['ph-indicator-strip'],
+        requiredArchetypes: ['digital-multimeter'],
         suggestedActionVi: 'So sánh màu với bảng màu chuẩn',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Xác định thành công giá trị pH chuẩn xác cho toàn bộ các mẫu dung dịch!' };
+          // C-11/C-17 (Vòng 3): máy đo pH PHM-0001 (Vòng 3) dùng thân máy digital-multimeter
+          // (theo đúng manifest của module HTML PHM: "proceduralArchetype": "digital-multimeter").
+          // Guard chỉ kiểm tra "đã chọn đúng mẫu đo bằng nút preset trong module" — CHƯA phải
+          // nhúng đầu dò vào mẫu thật, ghi rõ trong reason.
+          const phm = instances.find((i) => i.assetId === 'OL3D-EQP-PHM-0001');
+          if (!phm) return { isPassed: false, reasonVi: 'Chưa đặt máy đo pH lên bàn', hintVi: 'Đặt máy đo pH hiện số PHM-0001 lên bàn' };
+          const mode = phm.instanceState.multimeterMode as unknown as string;
+          if (mode !== 'pH') return { isPassed: false, reasonVi: 'Máy đo pH chưa ở chế độ đo pH', hintVi: 'Bấm nút chọn mẫu đo trong module máy đo pH (Axit / Nước cất / Kiềm)' };
+          const v = phm.instanceState.multimeterValue;
+          if (typeof v !== 'number' || !Number.isFinite(v)) return { isPassed: false, reasonVi: 'Máy đo pH chưa có số đọc', hintVi: 'Bấm nút chọn mẫu đo trong module máy đo pH' };
+          const presets = [2.9, 7.0, 11.5];
+          const match = presets.find((p) => Math.abs(v - p) <= 0.05);
+          if (match === undefined) return { isPassed: false, reasonVi: `Số đọc pH = ${v.toFixed(2)} không khớp mẫu nào (Axit 2,90 / Nước cất 7,00 / Kiềm 11,50)`, hintVi: 'Bấm nút chọn mẫu đo trong module máy đo pH' };
+          const label = match === 2.9 ? 'Axit CH₃COOH' : match === 7.0 ? 'Nước cất (trung tính)' : 'Dung dịch Kiềm';
+          return { isPassed: true, reasonVi: `Đã chọn mẫu đo: ${label} — pH = ${v.toFixed(2)} (CHỌN BẰNG NÚT PRESET trong module máy đo pH, chưa phải nhúng đầu dò vào mẫu thật; muốn đo thật cần thêm cơ chế nhúng đầu dò vào ống mẫu)` };
         },
       },
     ],

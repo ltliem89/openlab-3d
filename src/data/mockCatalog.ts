@@ -3186,6 +3186,103 @@ export const MOCK_EQUIPMENT_ASSETS: AssetDefinition[] = [
       redistributionAllowed: true,
     },
   },
+  {
+    // C-18/C-19 (Vòng 3): mở khóa module HTML máy đo pH đã có sẵn
+    // (SAMPLE_PH_METER_HTML_MODULE trong HtmlEquipmentModuleRegistry.ts gắn đúng assetId
+    // OL3D-EQP-PHM-0001 nhưng asset này chưa từng có trong catalog nên module mồ côi).
+    // Số liệu lấy từ chính manifest của module đó (ISO 10523, Thông tư 38/2021/TT-BGDĐT);
+    // thân máy 3D tạm dùng procedural digital-multimeter — cũng là archetype mà manifest
+    // của module khai ("proceduralArchetype": "digital-multimeter") — vì chưa có builder
+    // riêng cho pH kế (archetype lạ sẽ chỉ hiện hộp xám fallback).
+    assetId: 'OL3D-EQP-PHM-0001',
+    slug: 'may-do-ph-hien-so',
+    name: {
+      vi: 'Máy đo pH hiện số kèm điện cực thủy tinh',
+      en: 'Digital Laboratory pH Meter',
+    },
+    kind: 'equipment',
+    subject: 'chemistry',
+    category: 'chemical-apparatus',
+    categoryIds: ['chemical-apparatus', 'electrical-equipment'],
+    tags: ['pH', 'axit', 'bazo', 'điện cực', 'hóa học 9'],
+    summary:
+      'Máy đo độ pH hiện số (0.00 – 14.00 pH, ĐCNN 0.01 pH) có chân đế và tay đỡ điện cực thủy tinh nhúng trực tiếp vào cốc dung dịch, màn hình LCD đồng bộ.',
+    textbookRef: {
+      bookTitle: 'SGK Khoa học tự nhiên 9 - Kết nối tri thức',
+      chapter: 'Bài 1: Nhận biết một số dụng cụ, hoá chất & Chương VII–VIII',
+      lesson: 'Xác định độ pH của dung dịch acid (CH₃COOH), nước cất và dung dịch kiềm',
+      figureRef: 'Thiết bị đo pH hiện số chuẩn Thông tư 38/2021/TT-BGDĐT',
+      standardFunction:
+        'Đo trực tiếp trị số pH (từ 0.00 đến 14.00) và nhiệt độ (°C) của dung dịch trong cốc thủy tinh với độ chính xác 0.01 pH.',
+      usageGuidelines:
+        'Tráng rửa đầu điện cực bằng nước cất, nhúng ngập bầu thủy tinh nhạy ở đầu điện cực vào cốc dung dịch và đọc giá trị pH ổn định trên màn hình LCD.',
+      safetyNote: 'Không để bầu điện cực thủy tinh va chạm mạnh vào đáy cốc; luôn ngâm đầu điện cực trong dung dịch bảo quản KCl 3M sau khi sử dụng.',
+    },
+    assetVersion: '1.0.0',
+    manifestSchemaVersion: '1.0.0',
+    moduleApiVersion: '2.0.0',
+    geometry: {
+      modelFormat: 'PROCEDURAL_PBR',
+      modelUri: 'procedural://ph-meter-html-module',
+      modelFileVersion: '1.0.0',
+      proceduralArchetype: 'digital-multimeter',
+      upAxis: 'Y',
+      anchor: 'base-center',
+      boundingBoxM: { width: 0.12, height: 0.22, depth: 0.12 },
+      dimensions: {
+        height: { value: 220, unit: 'mm', status: 'reported', methodRef: 'Manifest module HTML PHM (ISO 10523)' },
+        widthOrDiameter: { value: 120, unit: 'mm', status: 'reported', methodRef: 'Manifest module HTML PHM (ISO 10523)' },
+        depth: { value: 120, unit: 'mm', status: 'reported', methodRef: 'Manifest module HTML PHM (ISO 10523)' },
+      },
+      triangleCount: 1420,
+      materialCount: 7,
+      namedNodes: [
+        { nodeName: 'body', role: 'body', description: 'Thân máy đo pH để bàn kèm trụ đỡ điện cực' },
+        { nodeName: 'scale_display', role: 'scale_display', description: 'Màn hình LCD hiển thị pH 7.00 và 25.0°C' },
+        { nodeName: 'plunger', role: 'plunger', description: 'Tay đỡ và đầu dò điện cực thủy tinh Ag/AgCl' },
+      ],
+      scaleValidation: 'partially-verified',
+    },
+    scientificProperties: {
+      material: { value: 'Vỏ ABS kháng hóa chất IP67 & Điện cực màng thủy tinh Ag/AgCl (theo manifest module HTML PHM)', status: 'reported' },
+      referenceMass: { value: 285, unit: 'g', status: 'reported', methodRef: 'Manifest module HTML PHM (ISO 10523)' },
+      referenceVolume: { value: 95, unit: 'cm³', status: 'reported', methodRef: 'Manifest module HTML PHM' },
+    },
+    measurementMetadata: {
+      isMeasuringInstrument: true,
+      measuredQuantity: 'voltage-resistance',
+      rangeMin: { value: 0, unit: 'pH', status: 'reported', methodRef: 'Manifest module HTML PHM' },
+      rangeMax: { value: 14, unit: 'pH', status: 'reported', methodRef: 'Manifest module HTML PHM' },
+      leastCount: { value: 0.01, unit: 'pH', status: 'reported', methodRef: 'Manifest module HTML PHM' },
+      zeroOffsetSupported: true,
+      calibrationMethod: 'Hiệu chuẩn tự động 3 điểm chuẩn pH 4.01, 6.86, 9.18',
+      referenceStandard: 'ISO 10523 · Thông tư 38/2021/TT-BGDĐT',
+    },
+    capabilities: [
+      { id: 'selectable', state: 'implemented' },
+      { id: 'translatable', state: 'implemented' },
+      { id: 'rotatable', state: 'implemented' },
+      { id: 'readScale', state: 'implemented' },
+    ],
+    behaviorIds: ['bhv-core-spatial'],
+    validation: {
+      assetReviewStatus: 'published',
+      geometryStatus: 'verified',
+      metrologyStatus: 'verified',
+      behaviorStatus: 'implemented',
+      safetyStatus: 'reviewed',
+    },
+    provenance: {
+      createdBy: 'Nhóm Mô phỏng Hóa học OpenLab',
+      authorRole: 'Giáo viên Hóa học & Kỹ sư 3D OpenLab',
+      organization: 'OpenLab Vietnam',
+      sourceType: 'manufacturer-spec',
+      createdAt: '2026-11-26',
+      updatedAt: '2026-11-26',
+      license: 'CC BY-NC-SA 4.0',
+      redistributionAllowed: true,
+    },
+  },
 ];
 
 export const MOCK_EQUIPMENT_KITS: EquipmentKit[] = [
