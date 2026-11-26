@@ -39,6 +39,11 @@ export const CANONICAL_ARCHETYPE_MAP: Record<string, ProceduralArchetype> = {
   'OL3D-EQP-WDP-1000': 'water-dispenser',
   'OL3D-EQP-LEV-0001': 'lever-balance-apparatus',
   'OL3D-EQP-HYD-0001': 'communicating-vessels-3way',
+  // C-01 (v2.5.0): 4 asset mới thêm 2026-11-10 (moduleApiVersion 2.4.0) — trước đây rơi vào nhánh suy luận theo từ khóa.
+  'OL3D-EQP-RUL-0001': 'ruler-30',
+  'OL3D-EQP-STW-0001': 'digital-stopwatch',
+  'OL3D-EQP-TUB-0001': 'test-tube',
+  'OL3D-EQP-ALC-0001': 'alcohol-burner',
 };
 
 function inferProceduralArchetypeFromIdOrSlug(
