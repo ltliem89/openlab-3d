@@ -264,6 +264,53 @@ export interface EnvironmentVariableDefinition {
   affectedSubsystems: string[];
 }
 
+/**
+ * Vòng 5 (B) — Gia tốc trọng trường CHUẨN, nguồn duy nhất trong repo.
+ * Mọi nơi khác dùng g phải import hằng này (hoặc đọc g live từ
+ * environmentStore.getGravityMps2()), không hard-code 9.80665 / 9.81 mới.
+ * Giá trị: gia tốc trọng trường chuẩn SI (CODATA), m/s².
+ */
+export const STANDARD_GRAVITY_MPS2 = 9.80665;
+
+export type CelestialBodyGravity = 'EARTH' | 'MOON' | 'MARS' | 'JUPITER' | 'MICROGRAVITY';
+
+/**
+ * Vòng 5 (B) — Bảng preset trọng trường thiên thể, nguồn duy nhất.
+ * Dùng chung cho modal môi trường (nút Trái Đất/Mặt Trăng/Sao Hỏa) và cho
+ * ChronoCausalSandbox (đối thực nhân quả). Sao Hỏa 3.71 m/s² (NASA).
+ * Không đưa Sao Mộc (24.79) vào preset modal vì vượt max env 20 m/s².
+ */
+export const CELESTIAL_GRAVITY_PRESETS: Record<
+  CelestialBodyGravity,
+  { nameVi: string; g: number; descriptionVi: string }
+> = {
+  EARTH: {
+    nameVi: 'Trái Đất (Chuẩn SI)',
+    g: STANDARD_GRAVITY_MPS2,
+    descriptionVi: 'Trọng trường chuẩn mặt nước biển: g = 9.807 m/s²',
+  },
+  MOON: {
+    nameVi: 'Mặt Trăng (Apollo 11)',
+    g: 1.62,
+    descriptionVi: 'Trọng trường yếu bằng 1/6 Trái Đất: g = 1.620 m/s²',
+  },
+  MARS: {
+    nameVi: 'Sao Hỏa (Curiosity)',
+    g: 3.71,
+    descriptionVi: 'Trọng trường xích đạo Sao Hỏa: g = 3.710 m/s²',
+  },
+  JUPITER: {
+    nameVi: 'Sao Mộc (Khí quyển cực đại)',
+    g: 24.79,
+    descriptionVi: 'Siêu trọng trường hành tinh khí: g = 24.790 m/s²',
+  },
+  MICROGRAVITY: {
+    nameVi: 'Trạm Vũ trụ Quốc tế (Vi trọng lực)',
+    g: 0.001,
+    descriptionVi: 'Môi trường rơi tự do quỹ đạo: g ≈ 0.000 m/s²',
+  },
+};
+
 export const INITIAL_ENVIRONMENT_VARIABLES: Record<
   EnvironmentVariableId,
   EnvironmentVariableDefinition
@@ -316,8 +363,8 @@ export const INITIAL_ENVIRONMENT_VARIABLES: Record<
     scope: 'room-core',
     nameVi: '4. Gia tốc trọng trường (g)',
     unit: 'm/s²',
-    value: 9.80665,
-    defaultValue: 9.80665,
+    value: STANDARD_GRAVITY_MPS2,
+    defaultValue: STANDARD_GRAVITY_MPS2,
     min: 0,
     max: 20,
     step: 0.01,
@@ -1216,6 +1263,15 @@ export interface LabEventLog {
   summaryVi: string;
   payload?: Record<string, unknown>;
 }
+
+/**
+ * Vòng 5 (A): loại sự kiện nhật ký cho mạng chỉ dẫn thí điểm WF-08.
+ * Ghi tại điểm đánh giá guard duy nhất trong LabViewport3D, chống spam bằng
+ * cách chỉ log khi reasonVi đổi so với lần log trước.
+ */
+export const LAB_EVENT_WORKFLOW_STEP_FAIL = 'WORKFLOW_STEP_FAIL';
+export const LAB_EVENT_WORKFLOW_STEP_PASS = 'WORKFLOW_STEP_PASS';
+export const LAB_EVENT_GUIDE_HINT_SHOWN = 'GUIDE_HINT_SHOWN';
 
 export function formatVietnamDateTime(date: Date = new Date()): {
   epochMs: number;

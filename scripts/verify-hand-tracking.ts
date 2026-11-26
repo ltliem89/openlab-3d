@@ -6,7 +6,7 @@ import {
   BENCH_LIMIT_X_M,
   BENCH_LIMIT_Z_M,
   computePinchRatio,
-  HAND_GRAVITY_MPS2,
+  getLiveGravityMps2,
   isTap,
   landmarkToBench,
   OneEuroFilter,
@@ -84,8 +84,8 @@ check('tay xa (cỡ 0.12) -> cao 0', landmarkToBench(lm(0.5, 0.5), 0.12).heightM
 check('tay gần (cỡ 0.3) -> cao > 0', landmarkToBench(lm(0.5, 0.5), 0.3).heightM > 0, true);
 check('cao clamp ≤ 0.35', landmarkToBench(lm(0.5, 0.5), 1.0).heightM <= 0.35, true);
 
-console.log('--- Rơi khi buông (g từ LabEnvironmentEngine) ---');
-checkClose('g = 9.80665', HAND_GRAVITY_MPS2, 9.80665);
+console.log('--- Rơi khi buông (g live từ kho môi trường, Vòng 5) ---');
+checkClose('g mặc định = 9.80665', getLiveGravityMps2(), 9.80665);
 let drop = stepDrop(0.35, 0, 0.016);
 check('rơi 1 frame: y giảm, chưa chạm', drop.landed, false);
 check('rơi 1 frame: vy âm', drop.vy < 0, true);

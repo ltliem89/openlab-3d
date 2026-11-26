@@ -15,7 +15,9 @@
     "squad:line": "tsx scripts/squad-production-line.ts",
     "squad:benchmarks": "tsx scripts/verify-hermes-5-benchmarks.ts",
     "squad:pipeline": "powershell -ExecutionPolicy Bypass -File scripts/run-continuous-physics-squad-pipeline.ps1",
-    "test": "tsx scripts/verify-fluid-simulation-realism.ts && tsx scripts/verify-fluid-micro-realism.ts && tsx scripts/verify-full-system-integration.ts && tsx scripts/verify-continuous-physics-core.ts"
+    "test": "tsx scripts/verify-fluid-simulation-realism.ts && tsx scripts/verify-fluid-micro-realism.ts && tsx scripts/verify-full-system-integration.ts && tsx scripts/verify-continuous-physics-core.ts",
+    "prebuild": "node scripts/download-hand-tracking-assets.mjs",
+    "postinstall": "node scripts/download-hand-tracking-assets.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.3",

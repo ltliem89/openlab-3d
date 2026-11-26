@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { AssetDefinition, ProceduralArchetype, SceneInstance } from '../domain/types';
 import { htmlEquipmentModuleRegistry } from './HtmlEquipmentModuleRegistry';
 import { IsoGUMMetrologyEngine } from '../core-physics/IsoGUMMetrologyEngine';
+// Vòng 5 (B): giá trị mặc định cho tham số g của buildProceduralEquipmentGroup.
+import { STANDARD_GRAVITY_MPS2 } from './LabEnvironmentEngine';
 
 /**
  * OPENLAB 3D — PROCEDURAL MULTI-PART PBR EQUIPMENT GENERATOR
@@ -3240,6 +3242,8 @@ function buildPlantTwig(withLeaves: boolean): THREE.Group {
 export function buildProceduralEquipmentGroup(
   asset: AssetDefinition,
   isSoftwareGl: boolean,
+  // Vòng 5 (B): g truyền qua tham số (mặc định chuẩn SI); caller truyền g live.
+  gravityMps2: number = STANDARD_GRAVITY_MPS2,
 ): THREE.Group {
   const root = new THREE.Group();
   root.name = 'root';
@@ -3888,7 +3892,7 @@ export function buildProceduralEquipmentGroup(
       const thetaRad = (32 * Math.PI) / 180;
       const v0xSpout = v0Spout * Math.cos(thetaRad);
       const v0ySpout = -v0Spout * Math.sin(thetaRad);
-      const gJet = 9.80665;
+      const gJet = gravityMps2;
       const yCatchSurface = 0.024;
       const dyJet = Math.max(0.015, y0Spout - yCatchSurface);
       const tJetEnd = (-v0ySpout + Math.sqrt(v0ySpout * v0ySpout + 2 * gJet * dyJet)) / gJet;

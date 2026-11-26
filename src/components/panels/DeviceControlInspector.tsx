@@ -1,6 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useSyncExternalStore } from 'react';
 import { AssetDefinition, SceneInstance } from '../../domain/types';
 import { deviceControlEngine } from '../../device-control/DeviceControlEngine';
+// Vòng 5 (B): env live từ kho môi trường để solver nhận g thật.
+import {
+  getEnvironmentSnapshot,
+  subscribeEnvironment,
+} from '../../three-runtime/environmentStore';
 import { neuralConnectionEngine } from '../../domain/neuralConnectionEngine';
 import { MathFormula, RichMathText } from '../common/MathFormula';
 import {
@@ -114,14 +119,19 @@ export const DeviceControlInspector: React.FC<DeviceControlInspectorProps> = ({
   // Trạng thái hiện tại của Instance
   const currentState = selectedInstance.instanceState as Record<string, any>;
 
+  // Vòng 5 (B): biến môi trường live (g, nhiệt độ, áp suất...) từ kho dùng
+  // chung — trước đây solver luôn nhận environment: undefined.
+  const liveEnv = useSyncExternalStore(subscribeEnvironment, getEnvironmentSnapshot);
+
   // Đánh giá đầu ra khoa học theo chu trình nhân quả
   const scientificOutputs = useMemo(() => {
     if (!profile) return {};
     return deviceControlEngine.evaluateOutputs(
       profile.deviceId,
       currentState,
+      liveEnv as unknown as Record<string, number>,
     );
-  }, [profile, currentState]);
+  }, [profile, currentState, liveEnv]);
 
   if (!profile) {
     return (

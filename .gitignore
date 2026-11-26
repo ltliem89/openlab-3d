@@ -9,3 +9,4 @@ coverage/
 pipeline_output/
 prompt_*.txt
 .vercel
+public/hand-tracking/

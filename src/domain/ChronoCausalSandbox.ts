@@ -17,35 +17,15 @@ export interface SimulationStateSnapshot {
   environmentTempC: number;
 }
 
-export type CelestialBodyGravity = 'EARTH' | 'MOON' | 'MARS' | 'JUPITER' | 'MICROGRAVITY';
+// Vòng 5 (B): bảng preset dùng chung từ LabEnvironmentEngine (nguồn duy nhất).
+// Sao Hỏa đã sửa 3.72 → 3.71 m/s² (NASA). Re-export để code cũ vẫn import được.
+import {
+  CELESTIAL_GRAVITY_PRESETS,
+  STANDARD_GRAVITY_MPS2,
+  type CelestialBodyGravity,
+} from '../three-runtime/LabEnvironmentEngine';
 
-export const CELESTIAL_GRAVITY_PRESETS: Record<CelestialBodyGravity, { nameVi: string; g: number; descriptionVi: string }> = {
-  EARTH: {
-    nameVi: 'Trái Đất (Chuẩn SI)',
-    g: 9.80665,
-    descriptionVi: 'Trọng trường chuẩn mặt nước biển: g = 9.807 m/s²',
-  },
-  MOON: {
-    nameVi: 'Mặt Trăng (Apollo 11)',
-    g: 1.62,
-    descriptionVi: 'Trọng trường yếu bằng 1/6 Trái Đất: g = 1.620 m/s²',
-  },
-  MARS: {
-    nameVi: 'Sao Hỏa (Curiosity)',
-    g: 3.72,
-    descriptionVi: 'Trọng trường xích đạo Sao Hỏa: g = 3.720 m/s²',
-  },
-  JUPITER: {
-    nameVi: 'Sao Mộc (Khí quyển cực đại)',
-    g: 24.79,
-    descriptionVi: 'Siêu trọng trường hành tinh khí: g = 24.790 m/s²',
-  },
-  MICROGRAVITY: {
-    nameVi: 'Trạm Vũ trụ Quốc tế (Vi trọng lực)',
-    g: 0.001,
-    descriptionVi: 'Môi trường rơi tự do quỹ đạo: g ≈ 0.000 m/s²',
-  },
-};
+export { CELESTIAL_GRAVITY_PRESETS, type CelestialBodyGravity };
 
 export class ChronoCausalSandbox {
   private _historyBuffer: SimulationStateSnapshot[] = [];
@@ -54,7 +34,7 @@ export class ChronoCausalSandbox {
   private _isFull: number = 0;
   private _isRewinding: boolean = false;
   private _currentPreset: CelestialBodyGravity = 'EARTH';
-  private _customGravity: number = 9.80665;
+  private _customGravity: number = STANDARD_GRAVITY_MPS2;
 
   constructor() {
     this._historyBuffer = new Array(this._maxBufferCapacity);

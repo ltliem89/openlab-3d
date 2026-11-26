@@ -40,6 +40,9 @@
  */
 
 import { ContinuousIntegratorRK4, DerivativeFunction } from './ContinuousIntegratorRK4';
+// Vòng 5 (B): g nguồn duy nhất từ LabEnvironmentEngine (không tạo import vòng:
+// LabEnvironmentEngine chỉ import 'three').
+import { STANDARD_GRAVITY_MPS2 } from '../three-runtime/LabEnvironmentEngine';
 
 // ==========================================
 // 1. CÁC THÔNG SỐ VẬT LÝ VÀ HẰNG SỐ TIÊU CHUẨN
@@ -49,7 +52,8 @@ export const STEFAN_BOLTZMANN_SIGMA = 5.670374419e-8; // W/(m^2 K^4)
 export const WATER_LATENT_HEAT_VAPORIZATION_J_KG = 2.26e6; // 2.26 MJ/kg
 export const WATER_SPECIFIC_HEAT_J_KG_K = 4184.0; // J/(kg*K)
 export const WATER_ROOM_DENSITY_KG_M3 = 998.2; // kg/m3 tại 20°C
-export const STANDARD_GRAVITY_M_S2 = 9.80665; // m/s^2
+// Vòng 5 (B): bí danh giữ tương thích ngược — giá trị lấy từ nguồn duy nhất.
+export const STANDARD_GRAVITY_M_S2 = STANDARD_GRAVITY_MPS2; // m/s^2
 
 /**
  * Trạng thái của cụm Điện -> Nhiệt -> Thủy

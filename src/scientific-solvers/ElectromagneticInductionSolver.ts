@@ -11,6 +11,8 @@
 
 import { SolverInput, SolverResult } from './types';
 import { MetrologyEngine } from './MetrologyEngine';
+// Vòng 5 (B): fallback g dùng hằng chuẩn nguồn duy nhất.
+import { STANDARD_GRAVITY_MPS2 } from '../three-runtime/LabEnvironmentEngine';
 
 export interface InductionDerivedOutputs {
   inducedEmfVolts: number;
@@ -54,7 +56,7 @@ export class ElectromagneticInductionSolver {
     const rawLenzForce = -((electromechanicalCoupling * electromechanicalCoupling) / totalResistanceOhms) * magnetVelocityMps;
     const lenzDampingForceNewtons = Math.max(-100.0, Math.min(100.0, rawLenzForce));
     const magnetMassKg = Math.max(0.001, Number(state.magnetMassKg ?? 0.08));
-    const gravityMps2 = Number(environment?.gravityMps2 ?? 9.80665);
+    const gravityMps2 = Number(environment?.gravityMps2 ?? STANDARD_GRAVITY_MPS2);
     const netMagnetAccelerationMps2 = Math.max(-50.0, Math.min(50.0, gravityMps2 + (lenzDampingForceNewtons / magnetMassKg)));
 
     // Ngưỡng điện áp mở bán dẫn điốt phát quang LED: V_F ~ 1.65 V (hoặc 0.2 V nếu không nối trực tiếp diode ngưỡng cao)

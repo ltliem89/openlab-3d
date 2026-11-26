@@ -11,6 +11,8 @@
 import { SolverInput, SolverResult } from './types';
 import { MetrologyEngine } from './MetrologyEngine';
 import { IsoGUMMetrologyEngine } from '../core-physics/IsoGUMMetrologyEngine';
+// Vòng 5 (B): fallback g dùng hằng chuẩn nguồn duy nhất.
+import { STANDARD_GRAVITY_MPS2 } from '../three-runtime/LabEnvironmentEngine';
 
 export interface MechanicsDerivedOutputs {
   massNetG: number;
@@ -38,7 +40,7 @@ export class MechanicsSolver {
     const warnings: string[] = [];
     const errors: string[] = [];
 
-    const g = Number(environment?.gravityMps2 ?? 9.80665);
+    const g = Number(environment?.gravityMps2 ?? STANDARD_GRAVITY_MPS2);
 
     // 1. Cân điện tử & Khối lượng tịnh
     const massGrossG = Number(state.measuredMassG ?? state.rawMassG ?? 0.0);

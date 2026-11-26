@@ -6,17 +6,23 @@
  * Nguồn số liệu:
  * - Pinch: tỉ lệ |ngón cái 4 − ngón trỏ 8| / cỡ bàn tay |cổ tay 0 − MCP giữa 9|,
  *   trễ hai ngưỡng vào 0.30 / ra 0.45 (nghiên cứu sâu 26/11/2026).
- * - Trọng lực: INITIAL_ENVIRONMENT_VARIABLES.gravityMps2.defaultValue
- *   (LabEnvironmentEngine.ts) = 9.80665 m/s² — KHÔNG hard-code 9.81 mới.
+ * - Trọng lực: g live từ kho môi trường (environmentStore.getGravityMps2()),
+ *   fallback về hằng chuẩn STANDARD_GRAVITY_MPS2 = 9.80665 m/s²
+ *   (LabEnvironmentEngine.ts) — Vòng 5 (B). KHÔNG hard-code 9.81 mới.
  * - Giới hạn bàn: BENCH_LIMIT_X = 1.15, BENCH_LIMIT_Z = 0.435
  *   (LabViewport3D.tsx) — vị trí tay luôn clamp vào bàn.
  */
 
-import { INITIAL_ENVIRONMENT_VARIABLES } from '../three-runtime/LabEnvironmentEngine';
+import { getGravityMps2 } from '../three-runtime/environmentStore';
 
-/** Gia tốc trọng trường dùng cho rơi khi buông tay — nguồn duy nhất trong repo. */
-export const HAND_GRAVITY_MPS2: number =
-  INITIAL_ENVIRONMENT_VARIABLES.gravityMps2.defaultValue;
+/**
+ * Vòng 5 (B): g live cho rơi khi buông tay — đọc từ kho môi trường
+ * (người dùng đổi preset Mặt Trăng thì vật rơi chậm lại thật), fallback về
+ * hằng chuẩn STANDARD_GRAVITY_MPS2 khi kho chưa có giá trị.
+ */
+export function getLiveGravityMps2(): number {
+  return getGravityMps2();
+}
 
 export const BENCH_LIMIT_X_M = 1.15;
 export const BENCH_LIMIT_Z_M = 0.435;
@@ -169,7 +175,7 @@ export function stepDrop(
   y: number,
   vy: number,
   dtS: number,
-  g: number = HAND_GRAVITY_MPS2,
+  g: number = getLiveGravityMps2(),
 ): { y: number; vy: number; landed: boolean } {
   const nextVy = vy - g * dtS;
   const nextY = y + nextVy * dtS;

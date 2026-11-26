@@ -36,6 +36,8 @@ import {
   TransformToolMode,
   ViewportDisplayMode,
 } from './three-runtime/LabViewport3D';
+// Vòng 5 (B): g live từ kho môi trường cho các công thức P = m·g.
+import { getGravityMps2 } from './three-runtime/environmentStore';
 import { StudentHomeView } from './components/student/StudentHomeView';
 import { StudentEquipmentSidebar } from './components/student/StudentEquipmentSidebar';
 import {
@@ -54,7 +56,7 @@ import { MicroscopeSimulationModal } from './components/microscope/MicroscopeSim
 import { NeuralDeviceNetworkModal } from './components/modals/NeuralDeviceNetworkModal';
 import { HandCameraPanel } from './components/hand-tracking/HandCameraPanel';
 import type { HandEvent } from './components/hand-tracking/HandCameraPanel';
-import { HAND_GRAVITY_MPS2, stepDrop } from './hand-tracking/handMath';
+import { getLiveGravityMps2, stepDrop } from './hand-tracking/handMath';
 import {
   SocraticTutorModal,
   MicroMacroLensModal,
@@ -584,13 +586,13 @@ export default function App() {
         i.instanceState.attachmentSlot === 'inside-vessel',
     );
     const rawAirN = hooked
-      ? Number(((assetsMap.get(hooked.assetId)?.scientificProperties.referenceMass?.value ?? 66.25) * 0.00980665).toFixed(2))
+      ? Number(((assetsMap.get(hooked.assetId)?.scientificProperties.referenceMass?.value ?? 66.25) * (getGravityMps2() / 1000)).toFixed(2))
       : dyn?.instanceState.springExtensionN ?? null;
     const spilledMl = ovf?.instanceState.overflowingVolumeMl ?? 0;
     const displacedMl = spilledMl > 0 ? spilledMl : isSubmerged ? 24.5 : null;
     const forceAir = rawAirN && rawAirN > 0 ? rawAirN : studentGuidedStep >= 2 ? 0.65 : null;
     const forceSub = isSubmerged && forceAir
-      ? Number(Math.max(0, forceAir - (displacedMl ?? 24.5) * 0.00980665).toFixed(2))
+      ? Number(Math.max(0, forceAir - (displacedMl ?? 24.5) * (getGravityMps2() / 1000)).toFixed(2))
       : studentGuidedStep >= 3
         ? 0.41
         : null;
@@ -1760,7 +1762,7 @@ export default function App() {
               totalHookedMassG += computeItemTotalMassG(sub);
             }
           }
-          const totalForceN = Number((totalHookedMassG * 0.00980665).toFixed(2));
+          const totalForceN = Number((totalHookedMassG * (getGravityMps2() / 1000)).toFixed(2));
           return {
             ...inst,
             instanceState: {
@@ -2077,7 +2079,7 @@ export default function App() {
           const now = performance.now();
           const dt = Math.min(0.05, (now - lastT) / 1000);
           lastT = now;
-          const res = stepDrop(y, vy, dt, HAND_GRAVITY_MPS2);
+          const res = stepDrop(y, vy, dt, getLiveGravityMps2());
           y = res.y;
           vy = res.vy;
           handleUpdateInstanceTransform(grab.instanceId, [e.point.x, y, e.point.z], inst.transform.rotationRad);

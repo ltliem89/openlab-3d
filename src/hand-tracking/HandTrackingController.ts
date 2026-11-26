@@ -4,10 +4,10 @@
  * - Chạy trên máy (on-device), không upload / không lưu frame hay landmark.
  * - Camera chỉ bật sau khi người dùng bấm nút Camera; tắt là dừng track ngay.
  * - Model + WASM: thử đường local trong public/ trước
- *   (/hand-tracking/hand_landmarker.task, /hand-tracking/wasm), nếu chưa có
- *   (Vòng 2 chưa vendor file nhị phân qua GitHub API) thì dùng CDN jsDelivr
- *   với phiên bản đã pin 0.10.14. Vòng 3 sẽ vendor file vào repo để không phụ
- *   thuộc CDN.
+ *   (/hand-tracking/hand_landmarker.task, /hand-tracking/wasm), do script
+ *   scripts/download-hand-tracking-assets.mjs tạo ra lúc postinstall/prebuild
+ *   (file sinh ra, không commit — xem .gitignore). Nếu chưa có thì dùng CDN
+ *   jsDelivr với phiên bản đã pin 0.10.14 làm dự phòng cuối.
  */
 
 import type { Landmark } from './handMath';
@@ -48,7 +48,12 @@ export class HandTrackingController {
   /** Nạp model. Trả về nguồn đã dùng ('local' | 'cdn') để UI ghi rõ. */
   async init(): Promise<'local' | 'cdn'> {
     const { FilesetResolver, HandLandmarker } = await import('@mediapipe/tasks-vision');
-    const useLocal = (await urlExists(LOCAL_MODEL_URL)) && (await urlExists(`${LOCAL_WASM_URL}/vision_wasm_internal.wasm`));
+    // Vòng 5 (C): local chỉ dùng khi đủ cả model + file .js glue + file .wasm
+    // (trước đây chỉ kiểm .wasm nên có thể chọn local thiếu file glue).
+    const useLocal =
+      (await urlExists(LOCAL_MODEL_URL)) &&
+      (await urlExists(`${LOCAL_WASM_URL}/vision_wasm_internal.js`)) &&
+      (await urlExists(`${LOCAL_WASM_URL}/vision_wasm_internal.wasm`));
     const wasmUrl = useLocal ? LOCAL_WASM_URL : CDN_WASM_URL;
     const modelUrl = useLocal ? LOCAL_MODEL_URL : CDN_MODEL_URL;
     const vision = await FilesetResolver.forVisionTasks(wasmUrl);

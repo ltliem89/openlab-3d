@@ -25,6 +25,20 @@ import { htmlEquipmentModuleRegistry } from './HtmlEquipmentModuleRegistry';
 import { equipmentImagePreviewController } from './EquipmentImagePreviewController';
 import { neuralConnectionEngine } from '../domain/neuralConnectionEngine';
 import { cognitiveNeuralEngine } from '../domain/CognitiveNeuralEngine';
+// Vòng 5 (A): mạng chỉ dẫn thí điểm WF-08 — engine bước + card hành động.
+import {
+  experimentWorkflowEngine,
+  matchesRequiredArchetype,
+} from '../experiments/ExperimentWorkflowEngine';
+import {
+  GuideNextActionCard,
+  type GuideNextAction,
+} from '../components/panels/GuideNextActionCard';
+import {
+  guideLogKey,
+  recordGuideEvaluation,
+  shouldShowGuideHint,
+} from '../components/panels/guidePilot';
 import { epistemicHologramRenderer } from './EpistemicHologramRenderer';
 import { inSituMicroscopicLens } from './InSituMicroscopicLens';
 import { chronoCausalSandbox } from '../domain/ChronoCausalSandbox';
@@ -32,6 +46,12 @@ import { scientificSolverRegistry } from '../scientific-solvers/ScientificSolver
 import { EquipmentThumbnailSvg } from '../components/common/EquipmentThumbnailSvg';
 import { DeviceControlInspector } from '../components/panels/DeviceControlInspector';
 import { labSoundEngine } from './LabSoundEngine';
+// Vòng 5 (B): kho biến môi trường dùng chung — ghi g live để solver/bus/tay đọc.
+import {
+  getGravityMps2,
+  resetEnvironmentVariables,
+  updateEnvironmentVariable,
+} from './environmentStore';
 import {
   BENCH_SURFACE_Y,
   DEFAULT_LAB_ROOM_CONFIG,
@@ -43,6 +63,9 @@ import {
   EnvironmentVariableId,
   LabClockState,
   LabEventLog,
+  LAB_EVENT_GUIDE_HINT_SHOWN,
+  LAB_EVENT_WORKFLOW_STEP_FAIL,
+  LAB_EVENT_WORKFLOW_STEP_PASS,
   LabGraphicsSettings,
   buildStandardLabRoomV2,
   buildWorldCoordinatesAndGridHelper,
@@ -819,9 +842,9 @@ function createTaperedStreamGeometry(
 }
 
 /**
- * Mô phỏng đường cong dòng chảy chất lỏng chính xác theo quỹ đạo trọng lực Trái Đất (Ballistic Gravity Parabola)
+ * Mô phỏng đường cong dòng chảy chất lỏng chính xác theo quỹ đạo trọng lực (Ballistic Gravity Parabola)
  * và cơ chế phân rã tia thành giọt (Rayleigh-Plateau dripping instability):
- * - Gia tốc trọng trường g = 9.80665 m/s²
+ * - Gia tốc trọng trường g lấy live từ kho môi trường (mặc định chuẩn SI 9.80665 m/s²)
  * - Tự động nhận diện chế độ nhỏ giọt (dripping) khi lưu lượng thấp hoặc nghiêng nhẹ (flowRate < 16 ml/s)
  * - Khi lưu lượng lớn: dòng chảy liên tục (continuous laminar stream) uốn cong parabol thon nhỏ dần do gia tốc rơi tự do A1*v1 = A2*v2
  * - Tọa độ điểm bắt đầu chính xác tại mỏ vòi rót (`pouring_lip`)
@@ -840,7 +863,7 @@ function renderGravitationalFluidStream(params: {
   streamGrp.visible = true;
   streamGrp.position.set(0, 0, 0);
 
-  const g = 9.80665; // m/s²
+  const g = getGravityMps2(); // m/s² — Vòng 5 (B): g live từ kho môi trường
   const dy = Math.max(0.012, spoutPos.y - targetSurfaceY);
   const dx = targetPos.x - spoutPos.x;
   const dz = targetPos.z - spoutPos.z;
@@ -2962,6 +2985,18 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
         },
       }));
 
+      // Vòng 5 (B): ghi vào kho dùng chung để solver/bus/tay đọc g live,
+      // và đẩy g thật vào MultiPhysicsCouplingBus (lần đầu bus nhận g thật
+      // thay vì chỉ dùng hằng mặc định khởi tạo).
+      updateEnvironmentVariable(id, clampedVal);
+      const nextTempC = id === 'airTemperatureC' ? clampedVal : envVars.airTemperatureC.value;
+      const nextPressureKPa =
+        id === 'atmosphericPressureKPa' ? clampedVal : envVars.atmosphericPressureKPa.value;
+      const nextGravity = id === 'gravityMps2' ? clampedVal : envVars.gravityMps2.value;
+      scientificSolverRegistry
+        .getMultiPhysicsBus()
+        .setEnvironment(nextTempC, nextPressureKPa, nextGravity);
+
       // Mục 7: Chỉ cập nhật các thiết bị có đăng ký environmentDependencies
       if (id === 'gravityMps2' && onUpdateInstanceState) {
         const dynInst = instances.find(
@@ -2978,9 +3013,13 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
           );
           let totalMassG = 0;
           hookedItems.forEach((h) => {
-            totalMassG +=
-              assetsMap.get(h.assetId)?.scientificProperties.referenceMass
-                ?.value ?? 66.25;
+            // Vòng 5 (B): bỏ fallback bịa 66.25 g — vật không có khối lượng
+            // tham chiếu thì bỏ qua, không gán khối lượng tưởng tượng.
+            const refMass =
+              assetsMap.get(h.assetId)?.scientificProperties.referenceMass?.value;
+            if (typeof refMass === 'number' && Number.isFinite(refMass)) {
+              totalMassG += refMass;
+            }
           });
           if (totalMassG > 0) {
             const nextForceN = Number(
@@ -3032,6 +3071,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
 
   const handleResetEnvVars = useCallback(() => {
     setEnvVars(INITIAL_ENVIRONMENT_VARIABLES);
+    // Vòng 5 (B): reset kho dùng chung cùng lúc để g live không lệch.
+    resetEnvironmentVariables();
     appendLabEventLog(
       'ENV_VAR_RESET',
       'Khôi phục toàn bộ 13 biến môi trường vật lý về giá trị cấu hình mặc định.',
@@ -9487,6 +9528,141 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     viewMode === 'single-asset' ? selectedCatalogAsset : null,
   ]);
 
+  // =====================================================================
+  // Vòng 5 (A) — Mạng chỉ dẫn thí điểm WF-08 (điểm đánh giá guard duy nhất).
+  // Pilot tự kích hoạt khi đòn bẩy LEV-0001 có trên bàn; tắt khi dỡ xuống.
+  // Một hàm duy nhất refreshGuidePilot() làm: nối dây
+  // solveContinuousStepVerification (đo thời gian ở bước, tự tiến bước khi
+  // pass ổn định ≥ 0.8 s — logic sẵn của engine), đánh giá guard, cập nhật
+  // card hành động tiếp theo, ghi LabEventLog (chống spam: chỉ log khi
+  // reasonVi đổi). Hint chỉ hiện khi kẹt: fail sau 3 lần thao tác sai liên
+  // tiếp HOẶC fail liên tục ≥ 30 s. KHÔNG làm: tutor tự do/chat, Socrates,
+  // số từ CognitiveNeuralEngine hay syncSceneSignals.
+  // =====================================================================
+  const [guideNextAction, setGuideNextAction] = useState<GuideNextAction | null>(null);
+  const [guidePilotActive, setGuidePilotActive] = useState<boolean>(false);
+  const appendLabEventLogRef = useRef(appendLabEventLog);
+  appendLabEventLogRef.current = appendLabEventLog;
+  const guidePilotRef = useRef({
+    consecutiveFails: 0,
+    failSinceMs: null as number | null,
+    lastLoggedKey: '',
+    hintShownStep: 0,
+    lastEvalAtMs: 0,
+    lastCardJson: '',
+  });
+
+  const refreshGuidePilot = useCallback((countAttempt: boolean) => {
+    const instancesNow = instancesRef.current;
+    const engine = experimentWorkflowEngine;
+    const hasLever = instancesNow.some(
+      (i) => i.assetId === 'OL3D-EQP-LEV-0001' && i.visible,
+    );
+    const st = guidePilotRef.current;
+    if (!hasLever) {
+      if (engine.getActiveWorkflow()?.workflowId === 'WF-08') engine.stopWorkflow();
+      if (guidePilotActive) setGuidePilotActive(false);
+      st.consecutiveFails = 0;
+      st.failSinceMs = null;
+      st.lastLoggedKey = '';
+      st.hintShownStep = 0;
+      st.lastEvalAtMs = 0;
+      if (st.lastCardJson !== '') {
+        st.lastCardJson = '';
+        setGuideNextAction(null);
+      }
+      return;
+    }
+    if (!engine.getActiveWorkflow()) engine.startWorkflow('WF-08');
+    if (engine.getActiveWorkflow()?.workflowId !== 'WF-08') return;
+    if (!guidePilotActive) setGuidePilotActive(true);
+
+    const nowMs = Date.now();
+    const dtSeconds = st.lastEvalAtMs > 0 ? Math.min(2, (nowMs - st.lastEvalAtMs) / 1000) : 0.5;
+    st.lastEvalAtMs = nowMs;
+    // Nối dây kiểm chứng liên tục (trước đây 0 caller).
+    engine.solveContinuousStepVerification(instancesNow, dtSeconds);
+
+    const progress = engine.getProgressState();
+    const evalResult = engine.evaluateCurrentStep(instancesNow);
+    const rec = engine.getARNeuralRecommendation(instancesNow);
+    const stepIndex = progress.stepIndex;
+    const log = appendLabEventLogRef.current;
+
+    if (progress.isCompleted) {
+      const completed: GuideNextAction = {
+        stepIndex: progress.totalSteps,
+        totalSteps: progress.totalSteps,
+        titleVi: 'Hoàn thành WF-08',
+        actionVerbVi: '',
+        instructionVi: '',
+        isCompleted: true,
+      };
+      const key = `__PASS__:${progress.totalSteps}`;
+      if (st.lastLoggedKey !== key) {
+        log(
+          LAB_EVENT_WORKFLOW_STEP_PASS,
+          `WF-08 bước ${progress.totalSteps}: ${evalResult.reasonVi}`,
+          { workflowId: 'WF-08', stepIndex: progress.totalSteps, reasonVi: evalResult.reasonVi },
+        );
+        st.lastLoggedKey = key;
+      }
+      const json = JSON.stringify(completed);
+      if (st.lastCardJson !== json) {
+        st.lastCardJson = json;
+        setGuideNextAction(completed);
+      }
+      return;
+    }
+
+    if (!rec.hasRecommendation) return;
+
+    // Theo dõi kẹt (logic thuần ở guidePilot.ts, có test riêng).
+    recordGuideEvaluation(st, evalResult.isPassed, countAttempt, nowMs);
+    const showHint = shouldShowGuideHint(st, nowMs);
+
+    // Ghi LabEventLog — chỉ khi reasonVi đổi so với lần log trước.
+    const logKey = guideLogKey(stepIndex, evalResult.isPassed, evalResult.reasonVi);
+    if (st.lastLoggedKey !== logKey) {
+      log(
+        evalResult.isPassed ? LAB_EVENT_WORKFLOW_STEP_PASS : LAB_EVENT_WORKFLOW_STEP_FAIL,
+        `WF-08 bước ${stepIndex}: ${evalResult.reasonVi}`,
+        { workflowId: 'WF-08', stepIndex, reasonVi: evalResult.reasonVi },
+      );
+      st.lastLoggedKey = logKey;
+    }
+    if (showHint && st.hintShownStep !== stepIndex) {
+      log(
+        LAB_EVENT_GUIDE_HINT_SHOWN,
+        `WF-08 bước ${stepIndex}: hiện gợi ý sau khi kẹt — ${evalResult.hintVi ?? evalResult.reasonVi}`,
+        { workflowId: 'WF-08', stepIndex, hintVi: evalResult.hintVi ?? evalResult.reasonVi },
+      );
+      st.hintShownStep = stepIndex;
+    }
+
+    const next: GuideNextAction = {
+      stepIndex,
+      totalSteps: progress.totalSteps,
+      titleVi: rec.titleVi,
+      actionVerbVi: rec.actionVerbVi,
+      instructionVi: rec.instructionVi,
+      hintVi: showHint ? (evalResult.hintVi ?? null) : null,
+    };
+    const json = JSON.stringify(next);
+    if (st.lastCardJson !== json) {
+      st.lastCardJson = json;
+      setGuideNextAction(next);
+    }
+  }, [guidePilotActive]);
+
+  // Vòng 5 (A): đồng hồ 500 ms cho pilot — chỉ chạy khi đòn bẩy đang trên bàn
+  // (đo fail liên tục ≥ 30 s; effect đồng bộ scene không chạy theo thời gian).
+  useEffect(() => {
+    if (!guidePilotActive) return;
+    const id = window.setInterval(() => refreshGuidePilot(false), 500);
+    return () => window.clearInterval(id);
+  }, [guidePilotActive, refreshGuidePilot]);
+
   // 4. Sync Selection Box, Ground Target Ring & Rotate Gizmo
   useEffect(() => {
     const transformControls = transformRef.current;
@@ -9548,7 +9724,24 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
             assetsMap,
           );
 
-          candidates.slice(0, 12).forEach((cand, idx) => {
+          // Vòng 5 (A): thí điểm WF-08 — tối đa 3 tia, chỉ ứng viên khớp
+          // requiredArchetypes của bước hiện tại (qua matchesRequiredArchetype).
+          // Khi không có pilot thì giữ như cũ (tối đa 12 tia).
+          const pilotStep =
+            experimentWorkflowEngine.getActiveWorkflow()?.workflowId === 'WF-08'
+              ? experimentWorkflowEngine.getCurrentStep()
+              : null;
+          const shownCandidates = pilotStep
+            ? candidates
+                .filter((cand) =>
+                  pilotStep.requiredArchetypes.some((req) =>
+                    matchesRequiredArchetype(cand.targetInstance, req),
+                  ),
+                )
+                .slice(0, 3)
+            : candidates.slice(0, 12);
+
+          shownCandidates.forEach((cand, idx) => {
             const targetObj = instanceObjectsRef.current.get(cand.targetInstance.instanceId);
             if (!targetObj) return;
 
@@ -9673,6 +9866,10 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
 
     updateProjectedOverlays();
     requestRenderRef.current();
+
+    // Vòng 5 (A): đánh giá bước chỉ dẫn tại cùng điểm đồng bộ này (debounce 500 ms).
+    const guideTimer = window.setTimeout(() => refreshGuidePilot(true), 500);
+    return () => window.clearTimeout(guideTimer);
   }, [
     selectedInstanceId,
     instances,
@@ -9683,6 +9880,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
     isStudentMode,
     isNeuralGuideEnabled,
     updateProjectedOverlays,
+    refreshGuidePilot,
   ]);
 
   // Smooth Camera Actions for the Vertical Right Toolbar (Section 4.D)
@@ -10913,6 +11111,13 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
               </button>
             </div>
           )}
+
+        {/* Vòng 5 (A): Card hành động tiếp theo — thí điểm WF-08 (tối đa 3 nhãn). */}
+        {guideNextAction && (
+          <div className="absolute top-20 left-3 z-30 pointer-events-auto">
+            <GuideNextActionCard action={guideNextAction} />
+          </div>
+        )}
 
         {/* Loading Progress Indicator */}
         {loadingCount > 0 && (
@@ -13898,8 +14103,11 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                         const rD = ((next.rightHoleIndex ?? 4) * 20) / 1000;
                         const lNut = (next.leftTrimNutPos ?? 0) * 0.001;
                         const rNut = (next.rightTrimNutPos ?? 0) * 0.001;
-                        const tauL = lM * lD * 9.81 + lNut * 9.81;
-                        const tauR = rM * rD * 9.81 + rNut * 9.81;
+                        // Vòng 5 (B): mô-men hiển thị dùng g live; điều kiện
+                        // cân bằng (tỉ lệ hai phía) không đổi vì g triệt tiêu.
+                        const gLive = getGravityMps2();
+                        const tauL = lM * lD * gLive + lNut * gLive;
+                        const tauR = rM * rD * gLive + rNut * gLive;
                         const net = tauR - tauL;
                         const isBal = Math.abs(net) < 0.005;
                         const ang = Number(
@@ -14057,7 +14265,8 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                         const nextMl = Math.max(20, Math.min(140, ml));
                         const hMm = Number((nextMl / 1.5).toFixed(1));
                         const pPa = Number(
-                          (1000 * 9.81 * (hMm / 1000)).toFixed(0),
+                          // Vòng 5 (B): áp suất thủy tĩnh dùng g live.
+                          (1000 * getGravityMps2() * (hMm / 1000)).toFixed(0),
                         );
                         onUpdateInstanceState?.(activeInstance.instanceId, {
                           liquidLevelMl: nextMl,

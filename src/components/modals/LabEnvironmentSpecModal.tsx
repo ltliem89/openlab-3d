@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   BENCH_SURFACE_Y,
+  CELESTIAL_GRAVITY_PRESETS,
   CoordinateDisplaySettings,
   EnvironmentVariableDefinition,
   EnvironmentVariableId,
@@ -736,6 +737,32 @@ export const LabEnvironmentSpecModal: React.FC<LabEnvironmentSpecModalProps> = (
                             className="w-20 bg-[#0B1526] border border-[#28436C] rounded px-2 py-1 text-xs font-mono text-white text-right"
                           />
                         </div>
+
+                        {/* Vòng 5 (B): preset trọng trường thiên thể cho gravityMps2. */}
+                        {v.id === 'gravityMps2' && (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            <span className="text-[11px] text-slate-400">Preset:</span>
+                            {(
+                              [
+                                ['EARTH', 'Trái Đất'],
+                                ['MOON', 'Mặt Trăng'],
+                                ['MARS', 'Sao Hỏa'],
+                              ] as const
+                            ).map(([key, label]) => (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() =>
+                                  onUpdateEnvVar('gravityMps2', CELESTIAL_GRAVITY_PRESETS[key].g)
+                                }
+                                className="px-2 py-1 rounded-md bg-[#0B1526] hover:bg-[#1E3A6D] border border-[#28436C] text-[11px] font-bold text-[#00BCEB] cursor-pointer"
+                                title={`${CELESTIAL_GRAVITY_PRESETS[key].descriptionVi} (g = ${CELESTIAL_GRAVITY_PRESETS[key].g} m/s²)`}
+                              >
+                                {label} · {CELESTIAL_GRAVITY_PRESETS[key].g}
+                              </button>
+                            ))}
+                          </div>
+                        )}
 
                         <div className="text-[11px] pt-1.5 border-t border-[#233E68]">
                           {dependentModules.length > 0 ? (

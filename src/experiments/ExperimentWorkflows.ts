@@ -9,6 +9,8 @@ import {
   solveResistiveCircuit,
   solveMultiBranchCircuit,
 } from '../three-runtime/AssemblySystem';
+// Vòng 5 (B): số hiển thị trong reason dùng g live từ kho môi trường.
+import { getGravityMps2 } from '../three-runtime/environmentStore';
 
 export interface WorkflowStepSpec {
   stepIndex: number;
@@ -650,8 +652,11 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
           }
           const theta = Number(lever.instanceState.incidentAngleDeg ?? 0);
           if (Math.abs(theta) > 1) return { isPassed: false, reasonVi: `Mô-men đã bằng nhau nhưng thanh còn nghiêng ${theta.toFixed(1)}°`, hintVi: 'Kiểm tra lại ốc vi chỉnh cân bằng' };
-          const F1 = ((m1 / 1000) * 9.8).toFixed(2);
-          const F2 = ((m2 / 1000) * 9.8).toFixed(2);
+          // Vòng 5 (B): lực hiển thị dùng g live; logic so sánh mô-men
+          // (M1 vs M2, g·cm) giữ nguyên vì g triệt tiêu hai phía.
+          const gLive = getGravityMps2();
+          const F1 = ((m1 / 1000) * gLive).toFixed(2);
+          const F2 = ((m2 / 1000) * gLive).toFixed(2);
           return { isPassed: true, reasonVi: `Thăng bằng: M₁ = ${F1} N × ${d1} cm = M₂ = ${F2} N × ${d2} cm = ${M1} g·cm (tính từ khối lượng và lỗ treo đã chọn; góc nghiêng θ = ${theta.toFixed(1)}° đọc trên đĩa chia độ)` };
         },
       },
@@ -740,7 +745,7 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
           if (Math.abs(spilled - 24.5) > 2.5) {
             return { isPassed: false, reasonVi: `Nước tràn mới ${spilled.toFixed(1)} ml, chưa phải 24,5 ml của trụ nhôm`, hintVi: 'Bình tràn chưa đầy tới miệng vòi nên chưa tràn đủ — quay lại bước 1 châm đầy 210 ml rồi nhúng lại' };
           }
-          const fa = spilled * 0.00980665;
+          const fa = spilled * (getGravityMps2() / 1000);
           const p2 = 0.65 - fa;
           return { isPassed: true, reasonVi: `Nước tràn đo được $V = ${spilled.toFixed(1)}\\text{ ml}$ → $F_A = ${fa.toFixed(2)}\\text{ N}$ (tính ra từ thể tích tràn), $P_2 = P_1 - F_A \\approx ${p2.toFixed(2)}\\text{ N}$ (tính ra, KHÔNG phải đọc trên lực kế vì vật đang chìm thì không còn móc trên lực kế)` };
         },
