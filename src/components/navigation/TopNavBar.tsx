@@ -65,6 +65,8 @@ interface TopNavBarProps {
   isFullscreen?: boolean;
   isNeuralGuideEnabled?: boolean;
   onToggleNeuralGuide?: () => void;
+  isHandCameraEnabled?: boolean;
+  onToggleHandCamera?: () => void;
   onOpenNeuralModal?: () => void;
   onToggleDarkMode?: () => void;
   onToggleLibraryPanel?: () => void;
@@ -131,6 +133,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   isFullscreen = false,
   isNeuralGuideEnabled = true,
   onToggleNeuralGuide,
+  isHandCameraEnabled = false,
+  onToggleHandCamera,
   onOpenNeuralModal,
   onToggleDarkMode,
   onToggleLibraryPanel,
@@ -918,6 +922,29 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               </span>
               <span className="hidden 2xl:inline">
                 {isNeuralGuideEnabled ? 'Nơ-ron: BẬT' : 'Nơ-ron: TẮT'}
+              </span>
+            </button>
+          )}
+
+          {/* Nút Bật/Tắt Camera nhận diện bàn tay (HAND-01, Vòng 2) */}
+          {onToggleHandCamera && (
+            <button
+              type="button"
+              onClick={onToggleHandCamera}
+              className={`h-8 2xl:h-9 px-2 2xl:px-2.5 rounded-[8px] border flex items-center gap-1 2xl:gap-1.5 transition-all cursor-pointer font-bold text-xs whitespace-nowrap ${
+                isHandCameraEnabled
+                  ? 'bg-gradient-to-r from-[#0B1930] to-[#10223D] border-[#F5C542] text-[#F5C542] shadow-[0_0_14px_rgba(245,197,66,0.32)]'
+                  : 'bg-[#0B1930]/85 hover:bg-[#10223D] border-[#41D9F5]/25 text-[#A8BCD5]'
+              }`}
+              title="Camera nhận diện bàn tay (HAND-01): chụm ngón tay để cầm thiết bị, buông ra để thả rơi, chụm nhanh để chạm mở thiết bị. Camera mặc định TẮT, video chỉ xử lý trên máy."
+              aria-label="Camera nhận diện bàn tay"
+            >
+              <span className="text-sm">📷</span>
+              <span className="hidden xl:inline 2xl:hidden">
+                {isHandCameraEnabled ? 'Tay' : 'Tắt'}
+              </span>
+              <span className="hidden 2xl:inline">
+                {isHandCameraEnabled ? 'Tay: BẬT' : 'Tay: TẮT'}
               </span>
             </button>
           )}

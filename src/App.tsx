@@ -52,6 +52,9 @@ import {
 } from './components/student/StudentModalsAndSubViews';
 import { MicroscopeSimulationModal } from './components/microscope/MicroscopeSimulationModal';
 import { NeuralDeviceNetworkModal } from './components/modals/NeuralDeviceNetworkModal';
+import { HandCameraPanel } from './components/hand-tracking/HandCameraPanel';
+import type { HandEvent } from './components/hand-tracking/HandCameraPanel';
+import { HAND_GRAVITY_MPS2, stepDrop } from './hand-tracking/handMath';
 import {
   SocraticTutorModal,
   MicroMacroLensModal,
@@ -105,6 +108,14 @@ export default function App() {
   );
   const [showNeuralNetworkModal, setShowNeuralNetworkModal] = useState<boolean>(false);
   const [neuralModalTargetDeviceId, setNeuralModalTargetDeviceId] = useState<string | null>(null);
+
+  // HAND-01 (Vòng 2) — Camera nhận diện bàn tay, mặc định TẮT.
+  const [isHandCameraEnabled, setIsHandCameraEnabled] = useState<boolean>(false);
+  const handGrabRef = useRef<{
+    instanceId: string;
+    lastCommitMs: number;
+  } | null>(null);
+  const handDropRafRef = useRef<number>(0);
   const [showMicroMacroModal, setShowMicroMacroModal] = useState<boolean>(false);
   const [showSaveProjectModal, setShowSaveProjectModal] = useState<boolean>(false);
   const [showOpenProjectModal, setShowOpenProjectModal] = useState<boolean>(false);
@@ -1844,6 +1855,91 @@ export default function App() {
     },
     [reconcileCumulativeLabMeasurements],
   );
+
+  // HAND-01 (Vòng 2) — Xử lý sự kiện tay từ camera.
+  // Trong lúc cầm: chỉ commit vị trí thưa (100 ms/lần) để tránh setScene mỗi
+  // frame; khi buông: tự tích phân rơi với g của phòng lab rồi commit y=0 một
+  // lần cuối. Không ghi thêm key lạ vào instanceState (xem khảo sát Vòng 2).
+  const handleHandEvent = useCallback(
+    (e: HandEvent) => {
+      const nearest = (x: number, z: number) => {
+        let best: SceneInstance | null = null;
+        let bestD = 0.2; // chỉ cầm/chạm vật trong bán kính 20 cm quanh con trỏ tay
+        for (const inst of scene.instances) {
+          const dx = inst.transform.positionM[0] - x;
+          const dz = inst.transform.positionM[2] - z;
+          const d = Math.hypot(dx, dz);
+          if (d < bestD) {
+            bestD = d;
+            best = inst;
+          }
+        }
+        return best;
+      };
+      if (e.type === 'grab') {
+        const target = nearest(e.point.x, e.point.z);
+        if (!target) {
+          notify('Tay chưa chạm thiết bị nào — đưa tay tới gần một thiết bị rồi chụm lại', 'info');
+          return;
+        }
+        handGrabRef.current = { instanceId: target.instanceId, lastCommitMs: 0 };
+        handleSelectSceneInstance(target.instanceId);
+        notify(`🤏 Đang cầm ${target.customLabel ?? target.assetId} — di chuyển tay để di chuyển thiết bị`, 'info');
+      } else if (e.type === 'move') {
+        const grab = handGrabRef.current;
+        if (!grab) return;
+        const now = performance.now();
+        if (now - grab.lastCommitMs < 100) return;
+        grab.lastCommitMs = now;
+        const inst = scene.instances.find((i) => i.instanceId === grab.instanceId);
+        if (!inst) {
+          handGrabRef.current = null;
+          return;
+        }
+        handleUpdateInstanceTransform(
+          grab.instanceId,
+          [e.point.x, e.point.heightM, e.point.z],
+          inst.transform.rotationRad,
+        );
+      } else if (e.type === 'release') {
+        const grab = handGrabRef.current;
+        handGrabRef.current = null;
+        if (!grab) return;
+        const inst = scene.instances.find((i) => i.instanceId === grab.instanceId);
+        if (!inst) return;
+        // Rơi tự do từ độ cao tay đang giữ, g lấy từ biến môi trường phòng lab.
+        let y = Math.max(0, e.point.heightM);
+        let vy = 0;
+        let lastT = performance.now();
+        const dropStep = () => {
+          const now = performance.now();
+          const dt = Math.min(0.05, (now - lastT) / 1000);
+          lastT = now;
+          const res = stepDrop(y, vy, dt, HAND_GRAVITY_MPS2);
+          y = res.y;
+          vy = res.vy;
+          handleUpdateInstanceTransform(grab.instanceId, [e.point.x, y, e.point.z], inst.transform.rotationRad);
+          if (!res.landed) {
+            handDropRafRef.current = requestAnimationFrame(dropStep);
+          }
+        };
+        handDropRafRef.current = requestAnimationFrame(dropStep);
+      } else if (e.type === 'tap') {
+        const target = nearest(e.point.x, e.point.z);
+        if (!target) return;
+        if (selectedInstanceId === target.instanceId) {
+          // Đã chọn rồi thì chạm lần nữa = mở mạng lưới chỉ dẫn (như double-click chuột).
+          window.dispatchEvent(
+            new CustomEvent('openlab:open-neural-modal', { detail: { deviceId: target.assetId } }),
+          );
+        } else {
+          handleSelectSceneInstance(target.instanceId);
+        }
+      }
+    },
+    [scene.instances, selectedInstanceId, handleSelectSceneInstance, handleUpdateInstanceTransform],
+  );
+
 
   // Real-Life Physical Lab Docking Handler (Cumulative Multi-Object Balance Weighing, Liquid Pouring, Submersion, Dynamometer & Caliper)
   const handlePhysicalDockInteraction = useCallback(
@@ -5157,6 +5253,23 @@ export default function App() {
             next ? 'success' : 'info',
           );
         }}
+        isHandCameraEnabled={isHandCameraEnabled}
+        onToggleHandCamera={() => {
+          setIsHandCameraEnabled((v) => {
+            const next = !v;
+            if (!next) {
+              handGrabRef.current = null;
+              if (handDropRafRef.current) cancelAnimationFrame(handDropRafRef.current);
+            }
+            notify(
+              next
+                ? '📷 Camera tay: ĐÃ BẬT — chụm ngón cái + ngón trỏ để cầm thiết bị (video chỉ xử lý trên máy)'
+                : '📷 Camera tay: ĐÃ TẮT',
+              next ? 'success' : 'info',
+            );
+            return next;
+          });
+        }}
         onOpenNeuralModal={() => {
           setNeuralModalTargetDeviceId(null);
           setShowNeuralNetworkModal(true);
@@ -5193,6 +5306,17 @@ export default function App() {
         notificationCount={recentLogs.length}
         recentLogs={recentLogs}
       />
+
+      {/* HAND-01 (Vòng 2) — Panel camera nhận diện bàn tay, chỉ hiện khi bật. */}
+      {isHandCameraEnabled && (
+        <HandCameraPanel
+          onHandEvent={handleHandEvent}
+          onError={(msg) => {
+            notify(msg, 'error');
+            setIsHandCameraEnabled(false);
+          }}
+        />
+      )}
 
       {/* =====================================================================
           MODE 1: STUDENT MODE — Official Reference 6-Region Desktop Layout
