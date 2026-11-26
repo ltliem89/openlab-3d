@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OL3D HTML Module — Máy khuấy từ gia nhiệt 0–1500 rpm (OL3D-EQP-STR-0001)</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; }
+    .header { padding: 14px 24px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    .badge { background: #10b981; color: #fff; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px; }
+    #preview3d { width: 100%; height: 420px; border-radius: 10px; overflow: hidden; background: radial-gradient(circle at center, #1e293b, #090d16); }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <span class="badge">THIẾT BỊ MỚI .HTML v2.1</span>
+      <strong style="margin-left: 10px; font-size: 18px;">Máy khuấy từ gia nhiệt phòng thí nghiệm 0–1500 rpm (OL3D-EQP-STR-0001)</strong>
+    </div>
+    <div style="font-size: 13px; color: #94a3b8;">Đầy đủ: Mâm gốm Ceramic + Cá từ xoay PTFE + Màn hình LED 360° + Cốc khuấy xoáy</div>
+  </div>
+
+  <!-- 1. HỒ SƠ THÔNG SỐ VẬT LÝ, TÍNH NĂNG TƯƠNG TÁC & 5 NGUỒN WEB -->
+  <script id="ol3d-module-manifest" type="application/json">
+  {
+    "moduleSpecVersion": "OL3D-HTML-MODULE-v2.1",
+    "asset": {
+      "assetId": "OL3D-EQP-STR-0001",
+      "slug": "may-khuay-tu-gia-nhiet",
+      "name": {
+        "vi": "Máy khuấy từ gia nhiệt kèm cá từ PTFE",
+        "en": "Digital Magnetic Hotplate Stirrer"
+      },
+      "kind": "equipment",
+      "subject": "chemistry",
+      "category": "thermal-apparatus",
+      "categoryIds": ["thermal-apparatus", "chemical-apparatus", "measuring-instrument"],
+      "tags": ["máy khuấy từ", "gia nhiệt", "cá từ", "hòa tan", "hóa học 9", "module html"],
+      "summary": "Máy khuấy từ gia nhiệt hiện số (0 – 1500 vòng/phút, gia nhiệt tới 280°C) dùng mâm gốm Ceramic chống ăn mòn và thanh cá từ PTFE khuấy đều dung dịch hóa chất tự động.",
+      "textbookRef": {
+        "bookTitle": "SGK Khoa học tự nhiên 9 - Kết nối tri thức",
+        "chapter": "Bài 1: Nhận biết một số dụng cụ, hoá chất & Thực hành pha chế dung dịch",
+        "lesson": "Hòa tan chất rắn, chuẩn độ và đun nóng dung dịch đồng nhất",
+        "figureRef": "Thiết bị khuấy trộn & gia nhiệt PTN chuẩn Thông tư 38/2021/TT-BGDĐT",
+        "standardFunction": "Khuấy trộn đồng nhất dung dịch bằng từ trường quay (0–1500 rpm) kết hợp gia nhiệt mâm gốm Ceramic chính xác.",
+        "usageGuidelines": "Đặt cốc thủy tinh chứa dung dịch và viên cá từ PTFE vào chính giữa mâm gốm trắng, vặn núm chỉnh tốc độ khuấy tăng dần từ 100 đến 1200 rpm.",
+        "safetyNote": "Không chạm tay vào mặt mâm gốm khi đèn báo HOT đang sáng (> 50°C); tăng tốc độ khuấy từ từ để tránh văng dung dịch."
+      },
+      "assetVersion": "1.0.0",
+      "manifestSchemaVersion": "2.0.0",
+      "moduleApiVersion": "2.0.0",
+      "geometry": {
+        "modelFormat": "PROCEDURAL_PBR",
+        "modelUri": "procedural://magnetic-stirrer-html-module",
+        "modelFileVersion": "1.0.0",
+        "proceduralArchetype": "electronic-balance",
+        "upAxis": "Y",
+        "anchor": "base-center",
+        "boundingBoxM": { "width": 0.15, "height": 0.165, "depth": 0.17 },
+        "dimensions": {
+          "height": { "value": 165, "unit": "mm", "status": "verified" },
+          "widthOrDiameter": { "value": 150, "unit": "mm", "status": "verified" },
+          "depth": { "value": 170, "unit": "mm", "status": "verified" }
+        },
+        "triangleCount": 1680,
+        "materialCount": 8,
+        "namedNodes": [
+          { "nodeName": "body", "role": "body", "description": "Thân máy khuấy từ đúc nhôm sơn tĩnh điện kháng hóa chất" },
+          { "nodeName": "pan_plate", "role": "pan_plate", "description": "Mâm gia nhiệt phủ gốm Ceramic trắng Ø135 mm" },
+          { "nodeName": "scale_display", "role": "scale_display", "description": "Màn hình LED hiển thị tốc độ khuấy (rpm) & nhiệt độ (°C) 360°" },
+          { "nodeName": "stir_bar", "role": "plunger", "description": "Thanh cá từ bọc nhựa PTFE và phễu xoáy dung dịch" }
+        ],
+        "scaleValidation": "verified"
+      },
+      "scientificProperties": {
+        "material": { "value": "Thân hợp kim nhôm đúc, Mâm gốm Ceramic Ø135mm & Cá từ PTFE", "status": "verified" },
+        "referenceMass": { "value": 1450.0, "unit": "g", "status": "verified" },
+        "referenceVolume": { "value": 420.0, "unit": "cm³", "status": "verified" }
+      },
+      "measurementMetadata": {
+        "isMeasuringInstrument": true,
+        "measuredQuantity": "temperature",
+        "rangeMin": { "value": 0, "unit": "rpm", "status": "verified" },
+        "rangeMax": { "value": 1500, "unit": "rpm", "status": "verified" },
+        "leastCount": { "value": 10, "unit": "rpm", "status": "verified" },
+        "zeroOffsetSupported": true,
+        "calibrationMethod": "Điều khiển vi xử lý PID ổn định tốc độ vòng quay từ trường",
+        "referenceStandard": "DIN EN 61010-2-010 · Thông tư 38/2021/TT-BGDĐT"
+      }
+    },
+    "moduleControls": {
+      "stateKey": "multimeterValue",
+      "label": "Tốc độ khuấy từ (vòng/phút)",
+      "unit": "rpm",
+      "min": 0,
+      "max": 1500,
+      "step": 50,
+      "defaultValue": 0,
+      "canBeWeighedOnBalance": true,
+      "canHoldLiquid": false,
+      "canSubmergeInVessel": false,
+      "soundPhenomenon": "probe-measure",
+      "presets": [
+        { "label": "Tắt khuấy (0 rpm · 25°C)", "statePatch": { "multimeterValue": 0, "temperatureC": 25 } },
+        { "label": "Khuấy hòa tan nhẹ (450 rpm · 45°C)", "statePatch": { "multimeterValue": 450, "temperatureC": 45 } },
+        { "label": "Khuấy trung bình (800 rpm · 65°C)", "statePatch": { "multimeterValue": 800, "temperatureC": 65 } },
+        { "label": "Khuấy xoáy mạnh (1350 rpm · 90°C)", "statePatch": { "multimeterValue": 1350, "temperatureC": 90 } }
+      ]
+    },
+    "realPhotoMeta": {
+      "caption": "Ảnh thực tế Máy khuấy từ gia nhiệt mâm gốm Ceramic Ø135mm kèm cốc dung dịch CuSO₄ và thanh cá từ PTFE đang khuấy xoáy",
+      "manufacturerRef": "IKA / DLAB MS-H280-Pro / Thiết bị KHTN 9",
+      "realWorldScaleNote": "Kích thước máy: 150 × 170 × 165 mm · Mâm gốm Ceramic: Ø 135 mm · Tốc độ: 0 – 1500 rpm",
+      "annotations": [
+        { "xPercent": 50, "yPercent": 55, "label": "Mâm gia nhiệt phủ gốm Ceramic trắng Ø135 mm chịu nhiệt 280°C và kháng axit" },
+        { "xPercent": 50, "yPercent": 42, "label": "Thanh cá từ bọc PTFE trắng xoay đồng tâm tạo phễu xoáy hòa tan hóa chất" },
+        { "xPercent": 50, "yPercent": 78, "label": "Màn hình LED kép hiển thị tốc độ khuấy (600 RPM) và nhiệt độ mâm nhiệt (60°C)" },
+        { "xPercent": 28, "yPercent": 80, "label": "Núm vặn điều chỉnh nhiệt độ (HEAT) và tốc độ khuấy từ (STIR)" }
+      ]
+    },
+    "dossier": {
+      "assetId": "OL3D-EQP-STR-0001",
+      "technicalStandard": "DIN EN 61010-2-010 · Thông tư 38/2021/TT-BGDĐT · SGK KHTN 9",
+      "exactDimensionsSpec": "Thân máy: 150 × 170 × 85 mm · Tổng chiều cao kèm cốc khuấy đối chứng: 165 mm · Mâm gốm: Ø 135 mm",
+      "weightOrCapacitySpec": "Tốc độ khuấy: 0 – 1500 rpm · Gia nhiệt: 25 – 280 °C · Khối lượng máy: 1450 g",
+      "synthesizedFeatures": [
+        "Mâm gia nhiệt phủ gốm Ceramic trắng chống ăn mòn hóa chất, truyền nhiệt đều và dễ vệ sinh.",
+        "Tích hợp hiệu ứng thanh cá từ PTFE và phễu xoáy chất lỏng thay đổi độ sâu theo tốc độ RPM.",
+        "Bảng điều khiển nghiêng 32° hiển thị số LED xanh/đỏ sắc nét từ cả 4 hướng 360°."
+      ],
+      "fiveWebSources": [
+        { "siteName": "DLAB Scientific — MS-H280-Pro", "domain": "dlabsci.com", "verifiedSpecSummary": "Máy khuấy từ gia nhiệt kỹ thuật số LED, mâm gốm Ø135mm, dải tốc độ 200–1500 rpm, nhiệt độ tối đa 280°C." },
+        { "siteName": "IKA Works — C-MAG HS 7", "domain": "ika.com", "verifiedSpecSummary": "Mặt gia nhiệt Ceramic kháng hóa chất tuyệt đối, động cơ từ trường không chổi than êm ái." },
+        { "siteName": "VietChem — Thiết bị Phòng thí nghiệm", "domain": "vietchem.com.vn", "verifiedSpecSummary": "Ứng dụng máy khuấy từ và cá từ PTFE trong pha chế dung dịch chuẩn và phản ứng hóa học phổ thông." },
+        { "siteName": "Thư viện Pháp luật (Thông tư 38/2021/TT-BGDĐT)", "domain": "thuvienphapluat.vn", "verifiedSpecSummary": "Danh mục thiết bị đun nóng và khuấy trộn dung dịch phòng bộ môn Khoa học tự nhiên." },
+        { "siteName": "Visitech Việt Nam", "domain": "visitech.vn", "verifiedSpecSummary": "Hướng dẫn chọn kích thước cá từ PTFE (25–30 mm) phù hợp với cốc thủy tinh 250 ml." }
+      ]
+    },
+    "audit360": {
+      "assetId": "OL3D-EQP-STR-0001",
+      "omnidirectionalReadout360": "Màn hình LED trước và sau đồng bộ 360° hiển thị tốc độ vòng quay (RPM) và nhiệt độ gia nhiệt (°C).",
+      "coreInteractiveFunctions": [
+        "Điều chỉnh tốc độ khuấy từ 0 đến 1500 rpm làm thay đổi độ sâu phễu xoáy dung dịch và góc quay cá từ.",
+        "Hiển thị vành nhiệt hồng ngoại trên mâm gốm khi tốc độ và nhiệt độ tăng cao."
+      ],
+      "environmentalAndCrossToolInteractions": [
+        "Đặt cốc thủy tinh hoặc bình tam giác lên mâm gốm để khuấy đều và gia nhiệt dung dịch.",
+        "Đặt lên Cân điện tử hiển thị khối lượng chuẩn 1450.00 g."
+      ]
+    }
+  }
+  </script>
+
+  <!-- 2. ICON 2D VECTOR CHUẨN -->
+  <template id="ol3d-module-icon">
+    <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="40" cy="73" rx="30" ry="4" fill="#94A3B8" opacity="0.35" />
+      <!-- Thân máy khuấy từ -->
+      <rect x="14" y="48" width="52" height="22" rx="5" fill="#F8FAFC" stroke="#334155" stroke-width="2" />
+      <rect x="18" y="44" width="44" height="5" rx="2" fill="#E2E8F0" stroke="#475569" stroke-width="1.5" />
+      <!-- Màn hình LED & 2 núm vặn -->
+      <rect x="28" y="54" width="24" height="10" rx="2" fill="#0F172A" stroke="#10B981" stroke-width="1.3" />
+      <text x="40" y="61.5" text-anchor="middle" fill="#34D399" font-family="monospace" font-weight="bold" font-size="7.5">600rpm</text>
+      <circle cx="21" cy="59" r="3.8" fill="#0284C7" stroke="#0F172A" stroke-width="1.2" />
+      <circle cx="59" cy="59" r="3.8" fill="#F97316" stroke="#0F172A" stroke-width="1.2" />
+      <!-- Cốc dung dịch & Cá từ đang khuấy trên mâm -->
+      <rect x="26" y="16" width="28" height="28" rx="3" fill="#E0F2FE" fill-opacity="0.65" stroke="#0284C7" stroke-width="1.8" />
+      <path d="M28 24 Q40 34 52 24 L52 42 L28 42 Z" fill="#38BDF8" fill-opacity="0.55" />
+      <!-- Thanh cá từ PTFE -->
+      <rect x="34" y="39" width="12" height="3.2" rx="1.6" fill="#FFFFFF" stroke="#0F172A" stroke-width="1" />
+    </svg>
+  </template>
+
+  <!-- 3. ẢNH THẬT PHÒNG THÍ NGHIỆM ĐỐI CHIẾU -->
+  <template id="ol3d-module-real-photo">
+    <svg viewBox="0 0 680 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="stirBg" x1="0" y1="0" x2="0" y2="420" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#0F172A" />
+          <stop offset="74%" stop-color="#1E293B" />
+          <stop offset="74.5%" stop-color="#78350F" />
+          <stop offset="100%" stop-color="#451A03" />
+        </linearGradient>
+      </defs>
+      <rect width="680" height="420" rx="14" fill="url(#stirBg)" />
+      <line x1="0" y1="312" x2="680" y2="312" stroke="#D97706" stroke-width="2" />
+      <rect x="30" y="368" width="620" height="28" rx="6" fill="#090D16" fill-opacity="0.82" stroke="#334155" />
+      <text x="44" y="386" fill="#34D399" font-family="monospace" font-size="12" font-weight="bold">THƯỚC ĐỐI CHIẾU THỰC TẾ: MÂM GỐM Ø135 mm · TỐC ĐỘ 0–1500 RPM · GIA NHIỆT 280°C</text>
+
+      <!-- Thân máy khuấy từ -->
+      <ellipse cx="340" cy="328" rx="150" ry="18" fill="#000" opacity="0.45" />
+      <rect x="200" y="232" width="280" height="86" rx="14" fill="#F1F5F9" stroke="#475569" stroke-width="3" />
+      <!-- Mâm gốm Ceramic -->
+      <ellipse cx="340" cy="232" rx="118" ry="16" fill="#FFFFFF" stroke="#94A3B8" stroke-width="3" />
+      <ellipse cx="340" cy="232" rx="92" ry="11" fill="#FEE2E2" stroke="#F87171" stroke-width="1.5" stroke-dasharray="6 4" />
+      <!-- Bảng điều khiển LED & 2 núm vặn -->
+      <rect x="272" y="256" width="136" height="44" rx="8" fill="#0F172A" stroke="#10B981" stroke-width="2.5" />
+      <text x="340" y="274" text-anchor="middle" fill="#34D399" font-family="monospace" font-size="11" font-weight="bold">STIR SPEED · TEMP</text>
+      <text x="340" y="294" text-anchor="middle" fill="#A7F3D0" font-family="monospace" font-size="20" font-weight="bold">600 RPM · 60°C</text>
+      <circle cx="236" cy="278" r="18" fill="#1E293B" stroke="#38BDF8" stroke-width="3" />
+      <circle cx="444" cy="278" r="18" fill="#1E293B" stroke="#F97316" stroke-width="3" />
+
+      <!-- Cốc thủy tinh và phễu xoáy nước + Cá từ PTFE -->
+      <rect x="275" y="78" width="130" height="150" rx="8" fill="#E0F2FE" fill-opacity="0.22" stroke="#7DD3FC" stroke-width="2.5" />
+      <path d="M279 125 Q340 195 401 125 L401 224 L279 224 Z" fill="#0284C7" fill-opacity="0.48" />
+      <rect x="316" y="212" width="48" height="10" rx="5" fill="#FFFFFF" stroke="#0F172A" stroke-width="2" />
+    </svg>
+  </template>
+
+  <!-- 4. MÃ DỰNG MÔ HÌNH 3D THREE.JS TUÂN THỦ CHUẨN OL3D-HTML-MODULE v2.1 -->
+  <script id="ol3d-module-3d-script">
+    window.OL3D_EQUIPMENT_MODULE = {
+      buildEquipmentGroup: function(THREE, asset) {
+        var group = new THREE.Group();
+        group.name = (asset && asset.slug ? asset.slug : 'magnetic_stirrer') + '_root';
+
+        var housingMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.28, metalness: 0.18 });
+        var baseDarkMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.4, metalness: 0.25 });
+        var ceramicMat = new THREE.MeshStandardMaterial({
+          color: 0xffffff,
+          roughness: 0.15,
+          metalness: 0.05,
+          emissive: new THREE.Color(0xf97316),
+          emissiveIntensity: 0.08
+        });
+        var glassMat = new THREE.MeshPhysicalMaterial({
+          color: 0xe0f2fe,
+          transparent: true,
+          opacity: 0.42,
+          roughness: 0.06,
+          transmission: 0.85,
+          ior: 1.47,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        });
+        var liquidMat = new THREE.MeshStandardMaterial({
+          color: 0x0284c7,
+          transparent: true,
+          opacity: 0.68,
+          roughness: 0.12,
+          side: THREE.DoubleSide,
+          depthWrite: false
+        });
+
+        // 1. Đế cao su & Thân máy (y = 0 -> 0.062m)
+        var lowerChassis = new THREE.Mesh(new THREE.BoxGeometry(0.146, 0.016, 0.164), baseDarkMat);
+        lowerChassis.position.set(0, 0.008, 0);
+        lowerChassis.castShadow = true;
+        lowerChassis.receiveShadow = true;
+        group.add(lowerChassis);
+
+        var mainBody = new THREE.Mesh(new THREE.BoxGeometry(0.144, 0.044, 0.158), housingMat);
+        mainBody.name = 'body';
+        mainBody.position.set(0, 0.038, -0.002);
+        mainBody.castShadow = true;
+        mainBody.receiveShadow = true;
+        group.add(mainBody);
+
+        // 2. Mâm gốm Ceramic trắng Ø135mm (y = 0.060 -> 0.068m)
+        var hotplateMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.0675, 0.069, 0.008, 40), ceramicMat);
+        hotplateMesh.name = 'pan_plate';
+        hotplateMesh.position.set(0, 0.064, -0.006);
+        hotplateMesh.receiveShadow = true;
+        group.add(hotplateMesh);
+
+        // Vòng cảnh báo nhiệt trên mặt mâm gốm
+        var heatRing = new THREE.Mesh(
+          new THREE.RingGeometry(0.046, 0.050, 36),
+          new THREE.MeshBasicMaterial({ color: 0xef4444, side: THREE.DoubleSide })
+        );
+        heatRing.rotation.x = -Math.PI / 2;
+        heatRing.position.set(0, 0.0683, -0.006);
+        group.add(heatRing);
+
+        // 3. Cốc thủy tinh 250ml đặt trên mâm khuấy + Cá từ PTFE + Cột chất lỏng xoáy
+        var vesselRadius = 0.036;
+        var vesselHeight = 0.092;
+        var vesselWall = new THREE.Mesh(
+          new THREE.CylinderGeometry(vesselRadius, vesselRadius, vesselHeight, 36, 1, true),
+          glassMat
+        );
+        vesselWall.position.set(0, 0.068 + vesselHeight * 0.5, -0.006);
+        group.add(vesselWall);
+
+        var liquidBody = new THREE.Mesh(
+          new THREE.CylinderGeometry(vesselRadius * 0.94, vesselRadius * 0.94, 0.056, 32),
+          liquidMat
+        );
+        liquidBody.name = 'liquid_volume';
+        liquidBody.position.set(0, 0.068 + 0.029, -0.006);
+        group.add(liquidBody);
+
+        // Phễu xoáy nước (vortex cone) ở tâm cốc
+        var vortexCone = new THREE.Mesh(
+          new THREE.ConeGeometry(0.022, 0.032, 28, 1, true),
+          new THREE.MeshStandardMaterial({
+            color: 0xbae6fd,
+            transparent: true,
+            opacity: 0.72,
+            roughness: 0.08,
+            side: THREE.DoubleSide
+          })
+        );
+        vortexCone.name = 'vortex_funnel';
+        vortexCone.rotation.x = Math.PI;
+        vortexCone.position.set(0, 0.068 + 0.046, -0.006);
+        group.add(vortexCone);
+
+        // Thanh cá từ PTFE trắng dưới đáy cốc
+        var stirBar = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.0042, 0.0042, 0.028, 16),
+          new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.15 })
+        );
+        stirBar.name = 'plunger';
+        stirBar.rotation.z = Math.PI / 2;
+        stirBar.position.set(0, 0.073, -0.006);
+        group.add(stirBar);
+
+        // 4. Màn hình LED hiển thị RPM & Nhiệt độ (Đồng bộ trước & sau 360°)
+        function makeStirrerLedTexture(rpmVal) {
+          var canvas = document.createElement('canvas');
+          canvas.width = 512;
+          canvas.height = 192;
+          var ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(0, 0, 512, 192);
+            ctx.strokeStyle = '#10b981';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(8, 8, 496, 176);
+            ctx.fillStyle = '#34d399';
+            ctx.font = 'bold 26px monospace';
+            ctx.fillText('MAGNETIC STIRRER · HOTPLATE', 24, 46);
+            ctx.fillStyle = '#ecfdf5';
+            ctx.font = 'bold 76px monospace';
+            ctx.textAlign = 'right';
+            ctx.fillText(Math.round(rpmVal) + ' RPM', 484, 142);
+          }
+          var tex = new THREE.CanvasTexture(canvas);
+          tex.needsUpdate = true;
+          return tex;
+        }
+
+        var ledMat = new THREE.MeshStandardMaterial({
+          map: makeStirrerLedTexture(600),
+          roughness: 0.2,
+          emissive: new THREE.Color('#10b981'),
+          emissiveIntensity: 0.28,
+          polygonOffset: true,
+          polygonOffsetFactor: -2,
+          polygonOffsetUnits: -2
+        });
+
+        var frontPanelGroup = new THREE.Group();
+        frontPanelGroup.position.set(0, 0.036, 0.079);
+        frontPanelGroup.rotation.x = -0.35;
+        group.add(frontPanelGroup);
+
+        var frontLed = new THREE.Mesh(new THREE.PlaneGeometry(0.074, 0.026), ledMat);
+        frontLed.name = 'scale_display';
+        frontLed.position.set(0, 0, 0.002);
+        frontPanelGroup.add(frontLed);
+
+        // 2 núm vặn tốc độ & nhiệt độ hai bên màn hình
+        var knobLeft = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.009, 0.010, 0.010, 20),
+          new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.3 })
+        );
+        knobLeft.rotation.x = Math.PI / 2;
+        knobLeft.position.set(-0.050, 0, 0.005);
+        frontPanelGroup.add(knobLeft);
+
+        var knobRight = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.009, 0.010, 0.010, 20),
+          new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.3 })
+        );
+        knobRight.rotation.x = Math.PI / 2;
+        knobRight.position.set(0.050, 0, 0.005);
+        frontPanelGroup.add(knobRight);
+
+        // Màn hình phụ mặt sau 180°
+        var rearLed = new THREE.Mesh(new THREE.PlaneGeometry(0.074, 0.026), ledMat);
+        rearLed.name = 'scale_display_rear';
+        rearLed.position.set(0, 0.038, -0.082);
+        rearLed.rotation.y = Math.PI;
+        group.add(rearLed);
+
+        return group;
+      },
+
+      applyEquipmentState: function(THREE, rootObject, instance, asset) {
+        var rpm = instance && instance.instanceState && typeof instance.instanceState.multimeterValue === 'number'
+          ? instance.instanceState.multimeterValue
+          : 600;
+        var ratio = Math.max(0, Math.min(1, rpm / 1500));
+
+        rootObject.traverse(function(child) {
+          if (child.name === 'plunger') {
+            child.rotation.y = (rpm * 0.045) % (Math.PI * 2);
+          }
+          if (child.name === 'vortex_funnel') {
+            child.visible = rpm > 40;
+            child.scale.set(0.4 + ratio * 0.85, 0.25 + ratio * 1.15, 0.4 + ratio * 0.85);
+          }
+          if (child.name === 'pan_plate' && child.material && child.material.emissive) {
+            child.material.emissiveIntensity = 0.04 + ratio * 0.32;
+          }
+          if (child.isMesh && typeof child.name === 'string' && child.name.indexOf('scale_display') === 0) {
+            var mat = child.material;
+            if (mat && mat.map && mat.map.image && mat.map.image.getContext) {
+              var ctx = mat.map.image.getContext('2d');
+              ctx.fillStyle = '#090d16';
+              ctx.fillRect(0, 0, 512, 192);
+              ctx.strokeStyle = '#10b981';
+              ctx.lineWidth = 6;
+              ctx.strokeRect(8, 8, 496, 176);
+              ctx.fillStyle = '#34d399';
+              ctx.font = 'bold 26px monospace';
+              ctx.fillText('MAGNETIC STIRRER · ' + Math.round(25 + ratio * 65) + '°C', 24, 46);
+              ctx.fillStyle = '#ecfdf5';
+              ctx.font = 'bold 76px monospace';
+              ctx.textAlign = 'right';
+              ctx.fillText(Math.round(rpm) + ' RPM', 484, 142);
+              mat.map.needsUpdate = true;
+            }
+          }
+        });
+      },
+
+      playEquipmentSound: function(eventType, value) {
+        try {
+          var AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          if (!window.__ol3dAudioCtx) window.__ol3dAudioCtx = new AudioCtx();
+          var ctx = window.__ol3dAudioCtx;
+          if (ctx.state === 'suspended') ctx.resume();
+          var now = ctx.currentTime;
+          var rpmVal = typeof value === 'number' ? value : 600;
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(140 + (rpmVal / 1500) * 320, now);
+          osc.frequency.exponentialRampToValueAtTime(180 + (rpmVal / 1500) * 380, now + 0.14);
+          gain.gain.setValueAtTime(0.09, now);
+          gain.gain.exponentialRampToValueAtTime(0.002, now + 0.15);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.16);
+        } catch (e) {}
+      }
+    };
+  </script>
+
+  <!-- 5. TRẠM KIỂM ĐỊNH ĐỘC LẬP TRÊN TRÌNH DUYỆT WEB -->
+  <div id="ol3d-standalone-inspector" style="max-width: 1360px; margin: 0 auto; padding: 18px 24px;">
+    <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 18px;">
+      <div class="card" style="display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 13px; font-weight: 800; color: #34d399; text-transform: uppercase;">
+            1. MÔ HÌNH 3D MÁY KHUẤY TỪ GIA NHIỆT (0 – 1500 RPM)
+          </div>
+          <div style="display: flex; gap: 6px;">
+            <button onclick="window.__setCamAngle(0)" style="background:#10b981;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;">0° Trực diện</button>
+            <button onclick="window.__setCamAngle(90)" style="background:#334155;color:#e2e8f0;border:none;padding:5px 10px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;">90° Phải</button>
+            <button onclick="window.__setCamAngle(180)" style="background:#334155;color:#e2e8f0;border:none;padding:5px 10px;border-radius:6px;font-size:11.5px;font-weight:700;cursor:pointer;">180° Sau</button>
+          </div>
+        </div>
+        <div id="preview3d"></div>
+        <div style="background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12.5px; font-weight: 800; color: #facc15;">TEST TỐC ĐỘ KHUẤY TỪ (RPM):</span>
+            <span id="rpm-readout" style="font-family: monospace; font-size: 14px; font-weight: 800; color: #34d399;">600 RPM</span>
+          </div>
+          <input id="rpm-slider" type="range" min="0" max="1500" step="50" value="600" style="width: 100%; accent-color: #10b981; cursor: pointer;" />
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div class="card">
+          <div style="font-size: 13px; font-weight: 800; color: #f59e0b; margin-bottom: 10px;">2. ẢNH THỰC TẾ ĐỐI CHIẾU</div>
+          <div id="real-photo-mount" style="border-radius: 10px; overflow: hidden; border: 1px solid #334155;"></div>
+        </div>
+        <div class="card" style="display: flex; align-items: center; gap: 16px;">
+          <div style="background: #f8fafc; border: 2px solid #10b981; border-radius: 12px; width: 84px; height: 84px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 6px;" id="icon-2d-mount"></div>
+          <div id="textbook-summary" style="font-size: 12.5px; color: #cbd5e1; line-height: 1.5;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      try {
+        var manifest = JSON.parse(document.getElementById('ol3d-module-manifest').textContent);
+        var asset = manifest.asset;
+        document.getElementById('icon-2d-mount').innerHTML = document.getElementById('ol3d-module-icon').innerHTML;
+        document.getElementById('real-photo-mount').innerHTML = document.getElementById('ol3d-module-real-photo').innerHTML;
+        document.getElementById('textbook-summary').innerHTML = '<strong>' + asset.name.vi + ' (' + asset.assetId + ')</strong><br/>' + asset.summary;
+
+        var container = document.getElementById('preview3d');
+        if (window.THREE && window.OL3D_EQUIPMENT_MODULE && container) {
+          var w = container.clientWidth || 560, h = container.clientHeight || 420;
+          var scene = new THREE.Scene();
+          var camera = new THREE.PerspectiveCamera(38, w / h, 0.01, 20);
+          var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+          renderer.setSize(w, h);
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+          container.appendChild(renderer.domElement);
+          scene.add(new THREE.AmbientLight(0xffffff, 0.9));
+          var dirLight = new THREE.DirectionalLight(0xffffff, 1.15);
+          dirLight.position.set(0.6, 1.2, 0.8);
+          scene.add(dirLight);
+          var eqGroup = window.OL3D_EQUIPMENT_MODULE.buildEquipmentGroup(THREE, asset);
+          scene.add(eqGroup);
+          var yaw = 0.3, pitch = 0.32, dist = 0.38;
+          function updateCam() {
+            camera.position.set(Math.sin(yaw)*Math.cos(pitch)*dist, 0.08 + Math.sin(pitch)*dist, Math.cos(yaw)*Math.cos(pitch)*dist);
+            camera.lookAt(0, 0.08, 0);
+          }
+          updateCam();
+          window.__setCamAngle = function(deg) { yaw = (deg * Math.PI) / 180; updateCam(); };
+          var currentRpm = 600;
+          document.getElementById('rpm-slider').addEventListener('input', function(e) {
+            currentRpm = parseFloat(e.target.value);
+            document.getElementById('rpm-readout').textContent = Math.round(currentRpm) + ' RPM';
+            window.OL3D_EQUIPMENT_MODULE.applyEquipmentState(THREE, eqGroup, { instanceState: { multimeterValue: currentRpm } }, asset);
+            if (window.OL3D_EQUIPMENT_MODULE.playEquipmentSound) window.OL3D_EQUIPMENT_MODULE.playEquipmentSound('stir', currentRpm);
+          });
+          function animate() {
+            requestAnimationFrame(animate);
+            eqGroup.traverse(function(c) {
+              if (c.name === 'plunger' && currentRpm > 0) c.rotation.y += (currentRpm / 1500) * 0.25;
+            });
+            renderer.render(scene, camera);
+          }
+          animate();
+        }
+      } catch (e) {}
+    })();
+  </script>
+</body>
+</html>

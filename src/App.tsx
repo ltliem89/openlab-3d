@@ -52,6 +52,9 @@ import {
 } from './components/student/StudentModalsAndSubViews';
 import { MicroscopeSimulationModal } from './components/microscope/MicroscopeSimulationModal';
 import { NeuralDeviceNetworkModal } from './components/modals/NeuralDeviceNetworkModal';
+import { HandCameraPanel } from './components/hand-tracking/HandCameraPanel';
+import type { HandEvent } from './components/hand-tracking/HandCameraPanel';
+import { HAND_GRAVITY_MPS2, stepDrop } from './hand-tracking/handMath';
 import {
   SocraticTutorModal,
   MicroMacroLensModal,
@@ -72,7 +75,10 @@ import {
   assemblyGraph,
   AssemblyRelationType,
   solveElectricalCircuit,
+  solveResistiveCircuit,
+  solveMultiBranchCircuit,
 } from './three-runtime/AssemblySystem';
+import { ChemicalSolutionSolver } from './scientific-solvers/ChemicalSolutionSolver';
 import { ChevronRight, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 
 interface ToastNotification {
@@ -105,6 +111,14 @@ export default function App() {
   );
   const [showNeuralNetworkModal, setShowNeuralNetworkModal] = useState<boolean>(false);
   const [neuralModalTargetDeviceId, setNeuralModalTargetDeviceId] = useState<string | null>(null);
+
+  // HAND-01 (Vòng 2) — Camera nhận diện bàn tay, mặc định TẮT.
+  const [isHandCameraEnabled, setIsHandCameraEnabled] = useState<boolean>(false);
+  const handGrabRef = useRef<{
+    instanceId: string;
+    lastCommitMs: number;
+  } | null>(null);
+  const handDropRafRef = useRef<number>(0);
   const [showMicroMacroModal, setShowMicroMacroModal] = useState<boolean>(false);
   const [showSaveProjectModal, setShowSaveProjectModal] = useState<boolean>(false);
   const [showOpenProjectModal, setShowOpenProjectModal] = useState<boolean>(false);
@@ -812,14 +826,28 @@ export default function App() {
               isHeating: false, // Không tự động đun nóng khi chưa có lửa (P06)
               temperatureC: 25.0, // Nhiệt độ phòng tiêu chuẩn
             };
+            // C-18/C-19 (Vòng 4): giá trị khởi tạo riêng theo asset (không phụ thuộc
+            // module HTML có được nạp hay chưa — module có thể chưa load khi add).
+            const assetInitState: SceneInstance['instanceState'] = {};
+            if (asset.assetId === 'OL3D-EQP-NAC-0001') assetInitState.sampleMassG = 0;
+            if (asset.assetId === 'OL3D-EQP-RES-0001') assetInitState.resistanceOhms = 10;
+            if (asset.assetId === 'OL3D-EQP-RHE-0001') {
+              assetInitState.rheostatOhms = 10;
+              assetInitState.rheostatAdjusted = false;
+            }
+            if (asset.assetId === 'OL3D-EQP-SOC-0001') assetInitState.bulbResistanceOhms = 12;
+            if (asset.assetId === 'OL3D-EQP-PSU-0001') assetInitState.circuitTopology = 'series';
+            if (asset.assetId === 'OL3D-EQP-AMP-0001') assetInitState.multimeterMode = 'DCA';
+            if (asset.assetId === 'OL3D-EQP-VOL-0001') assetInitState.multimeterMode = 'DCV';
             if (customMod) {
               const ctrl = customMod.moduleControls;
               return {
                 ...baseState,
+                ...assetInitState,
                 [ctrl.stateKey]: ctrl.defaultValue,
               };
             }
-            return baseState;
+            return { ...baseState, ...assetInitState };
           })(),
         };
 
@@ -1025,6 +1053,12 @@ export default function App() {
             item.instanceState.liquidLevelMl ??
             0
           : 0;
+        // C-18/C-19 (Vòng 4): muối đã xúc trong lọ NAC cộng vào khối lượng trên đĩa cân.
+        // Lọ NAC đặt lên đĩa rồi TARE trừ bì lọ thì (measuredMassG − tareOffsetG) = sampleMassG.
+        const sampleMass =
+          item.assetId === 'OL3D-EQP-NAC-0001'
+            ? item.instanceState.sampleMassG ?? 0
+            : 0;
         // Also include any specimens submerged inside this vessel if the vessel itself is on the balance!
         let submergedMass = 0;
         if (isVessel) {
@@ -1042,7 +1076,7 @@ export default function App() {
             }
           }
         }
-        return dryMass + waterMass + submergedMass;
+        return dryMass + waterMass + submergedMass + sampleMass;
       };
 
       // Map balanceId -> list of attached items on pan so we can arrange them without overlap
@@ -1086,6 +1120,53 @@ export default function App() {
       const hasPsuOnBench = Boolean(optPsu);
       const isLampSwitchOn = optLamp?.instanceState.isPoweredOn !== false;
       const isLampLit = hasPsuOnBench ? circuitState.isLampLit : isLampSwitchOn;
+
+      // C-18/C-19 (Vòng 4): mạch điện trở WF-12 (PSU–RES–RHE) và mạch 2 bóng WF-13.
+      // PSU dùng chung cho cả mạch quang học và mạch điện trở (cùng một nguồn trên bàn).
+      const dist3D = (a: SceneInstance, b: SceneInstance): number =>
+        Math.hypot(
+          a.transform.positionM[0] - b.transform.positionM[0],
+          a.transform.positionM[1] - b.transform.positionM[1],
+          a.transform.positionM[2] - b.transform.positionM[2],
+        );
+      const resistiveNodes = [
+        ...(optPsu
+          ? [{ instance: optPsu, role: 'psu' as const, resistanceOhms: 0 }]
+          : []),
+        ...(activeBenchItem('resistor-sample')
+          ? [
+              {
+                instance: activeBenchItem('resistor-sample')!,
+                role: 'resistor' as const,
+                resistanceOhms:
+                  activeBenchItem('resistor-sample')!.instanceState.resistanceOhms ?? 10,
+              },
+            ]
+          : []),
+        ...(activeBenchItem('rheostat')
+          ? [
+              {
+                instance: activeBenchItem('rheostat')!,
+                role: 'rheostat' as const,
+                resistanceOhms:
+                  activeBenchItem('rheostat')!.instanceState.rheostatOhms ?? 10,
+              },
+            ]
+          : []),
+      ];
+      const resistiveState = solveResistiveCircuit(resistiveNodes);
+      const socketInstances = rawInstances.filter(
+        (i) =>
+          i.visible &&
+          i.instanceState.attachmentSlot !== 'shelf' &&
+          assetsMap.get(i.assetId)?.geometry.proceduralArchetype ===
+            'incandescent-lamp-socket',
+      );
+      const multiBranchState = solveMultiBranchCircuit(
+        optPsu ?? null,
+        socketInstances,
+        optPsu?.instanceState.circuitTopology ?? 'series',
+      );
       const activeSupplyVoltageV =
         circuitState.voltageAtLampV > 0
           ? circuitState.voltageAtLampV
@@ -1777,16 +1858,108 @@ export default function App() {
           };
         }
 
-        // 8. Digital Multimeter Real Circuit Measurement (P07):
+        // 8. Digital Multimeter Real Circuit Measurement (P07) — Vòng 4 (C-18/C-19):
+        // số đo do solver mạch điện trở ghi, không bấm preset đặt giá trị đo.
+        // V/DCV: chỉ khi mạch kín và đồng hồ trong 0,35 m của điện trở mẫu.
+        // A/DCA: chỉ khi mạch kín và đồng hồ trong 0,70 m của nguồn PSU.
+        // OHM: chỉ khi PSU TẮT (đo điện trở không cấp nguồn); PSU bật thì không ghi.
+        // Ngoài các trường hợp trên thì giữ nguyên giá trị cũ, không bịa số đo.
         if (arch === 'digital-multimeter') {
           const mode = inst.instanceState.multimeterMode ?? 'DCV';
-          const val = inst.instanceState.multimeterValue ?? 0.0;
+          let val = inst.instanceState.multimeterValue ?? 0.0;
+          const resInst = rawInstances.find(
+            (i) =>
+              i.visible &&
+              assetsMap.get(i.assetId)?.geometry.proceduralArchetype ===
+                'resistor-sample',
+          );
+          // V/DCV gần bóng đèn (≤ 0,35 m) → đọc điện áp nhánh của bóng đó (WF-13).
+          const nearSocket = rawInstances.find(
+            (i) =>
+              i.visible &&
+              assetsMap.get(i.assetId)?.geometry.proceduralArchetype ===
+                'incandescent-lamp-socket' &&
+              dist3D(inst, i) <= 0.35,
+          );
+          const nearBranch = nearSocket
+            ? multiBranchState.branches.find(
+                (b) => b.instanceId === nearSocket.instanceId,
+              )
+            : undefined;
+          if (
+            (mode === 'V' || mode === 'DCV') &&
+            nearBranch &&
+            multiBranchState.isCircuitClosed
+          ) {
+            val = Number(nearBranch.voltageV.toFixed(2));
+          } else if (
+            (mode === 'V' || mode === 'DCV') &&
+            resistiveState.isCircuitClosed &&
+            resInst &&
+            dist3D(inst, resInst) <= 0.35
+          ) {
+            val = Number(resistiveState.voltageAtResistorV.toFixed(2));
+          } else if (
+            (mode === 'A' || mode === 'DCA') &&
+            resistiveState.isCircuitClosed &&
+            optPsu &&
+            dist3D(inst, optPsu) <= 0.7
+          ) {
+            val = Number(resistiveState.currentA.toFixed(2));
+          } else if (
+            mode === 'OHM' &&
+            optPsu?.instanceState.isPoweredOn !== true &&
+            resistiveState.resistanceTotalOhms > 0
+          ) {
+            val = Number(resistiveState.resistanceTotalOhms.toFixed(1));
+          }
           return {
             ...inst,
             instanceState: {
               ...inst.instanceState,
               multimeterMode: mode,
               multimeterValue: val,
+            },
+          };
+        }
+
+        // 8b. Vòng 4 (C-18/C-19): đui đèn WF-13 — ghi U/I từng nhánh + trạng thái sáng
+        // từ solver mạch 2 bóng. R bóng 12 Ω là giả định mô phỏng (xem AssemblySystem).
+        if (arch === 'incandescent-lamp-socket') {
+          const branch = multiBranchState.branches.find(
+            (b) => b.instanceId === inst.instanceId,
+          );
+          if (!branch) return inst;
+          return {
+            ...inst,
+            instanceState: {
+              ...inst.instanceState,
+              branchVoltageV: Number(branch.voltageV.toFixed(2)),
+              branchCurrentA: Number(branch.currentA.toFixed(2)),
+              isLampLit: branch.isLit,
+            },
+          };
+        }
+
+        // 8c. Vòng 4 (C-18/C-19): giấy chỉ thị pH — màu giấy lấy từ
+        // ChemicalSolutionSolver theo pH của mẫu trong ống đang nhúng.
+        if (arch === 'ph-indicator-strip') {
+          const tubeId = inst.instanceState.attachedToInstanceId;
+          const tube =
+            inst.instanceState.attachmentSlot === 'inside-vessel' && tubeId
+              ? rawInstances.find((i) => i.instanceId === tubeId)
+              : undefined;
+          const tubePh =
+            tube && typeof tube.instanceState.samplePh === 'number'
+              ? tube.instanceState.samplePh
+              : undefined;
+          if (tubePh === undefined) return inst;
+          return {
+            ...inst,
+            instanceState: {
+              ...inst.instanceState,
+              indicatorColorHex:
+                ChemicalSolutionSolver.getUniversalIndicatorHex(tubePh),
             },
           };
         }
@@ -1844,6 +2017,91 @@ export default function App() {
     },
     [reconcileCumulativeLabMeasurements],
   );
+
+  // HAND-01 (Vòng 2) — Xử lý sự kiện tay từ camera.
+  // Trong lúc cầm: chỉ commit vị trí thưa (100 ms/lần) để tránh setScene mỗi
+  // frame; khi buông: tự tích phân rơi với g của phòng lab rồi commit y=0 một
+  // lần cuối. Không ghi thêm key lạ vào instanceState (xem khảo sát Vòng 2).
+  const handleHandEvent = useCallback(
+    (e: HandEvent) => {
+      const nearest = (x: number, z: number) => {
+        let best: SceneInstance | null = null;
+        let bestD = 0.2; // chỉ cầm/chạm vật trong bán kính 20 cm quanh con trỏ tay
+        for (const inst of scene.instances) {
+          const dx = inst.transform.positionM[0] - x;
+          const dz = inst.transform.positionM[2] - z;
+          const d = Math.hypot(dx, dz);
+          if (d < bestD) {
+            bestD = d;
+            best = inst;
+          }
+        }
+        return best;
+      };
+      if (e.type === 'grab') {
+        const target = nearest(e.point.x, e.point.z);
+        if (!target) {
+          notify('Tay chưa chạm thiết bị nào — đưa tay tới gần một thiết bị rồi chụm lại', 'info');
+          return;
+        }
+        handGrabRef.current = { instanceId: target.instanceId, lastCommitMs: 0 };
+        handleSelectSceneInstance(target.instanceId);
+        notify(`🤏 Đang cầm ${target.customLabel ?? target.assetId} — di chuyển tay để di chuyển thiết bị`, 'info');
+      } else if (e.type === 'move') {
+        const grab = handGrabRef.current;
+        if (!grab) return;
+        const now = performance.now();
+        if (now - grab.lastCommitMs < 100) return;
+        grab.lastCommitMs = now;
+        const inst = scene.instances.find((i) => i.instanceId === grab.instanceId);
+        if (!inst) {
+          handGrabRef.current = null;
+          return;
+        }
+        handleUpdateInstanceTransform(
+          grab.instanceId,
+          [e.point.x, e.point.heightM, e.point.z],
+          inst.transform.rotationRad,
+        );
+      } else if (e.type === 'release') {
+        const grab = handGrabRef.current;
+        handGrabRef.current = null;
+        if (!grab) return;
+        const inst = scene.instances.find((i) => i.instanceId === grab.instanceId);
+        if (!inst) return;
+        // Rơi tự do từ độ cao tay đang giữ, g lấy từ biến môi trường phòng lab.
+        let y = Math.max(0, e.point.heightM);
+        let vy = 0;
+        let lastT = performance.now();
+        const dropStep = () => {
+          const now = performance.now();
+          const dt = Math.min(0.05, (now - lastT) / 1000);
+          lastT = now;
+          const res = stepDrop(y, vy, dt, HAND_GRAVITY_MPS2);
+          y = res.y;
+          vy = res.vy;
+          handleUpdateInstanceTransform(grab.instanceId, [e.point.x, y, e.point.z], inst.transform.rotationRad);
+          if (!res.landed) {
+            handDropRafRef.current = requestAnimationFrame(dropStep);
+          }
+        };
+        handDropRafRef.current = requestAnimationFrame(dropStep);
+      } else if (e.type === 'tap') {
+        const target = nearest(e.point.x, e.point.z);
+        if (!target) return;
+        if (selectedInstanceId === target.instanceId) {
+          // Đã chọn rồi thì chạm lần nữa = mở mạng lưới chỉ dẫn (như double-click chuột).
+          window.dispatchEvent(
+            new CustomEvent('openlab:open-neural-modal', { detail: { deviceId: target.assetId } }),
+          );
+        } else {
+          handleSelectSceneInstance(target.instanceId);
+        }
+      }
+    },
+    [scene.instances, selectedInstanceId, handleSelectSceneInstance, handleUpdateInstanceTransform],
+  );
+
 
   // Real-Life Physical Lab Docking Handler (Cumulative Multi-Object Balance Weighing, Liquid Pouring, Submersion, Dynamometer & Caliper)
   const handlePhysicalDockInteraction = useCallback(
@@ -2407,8 +2665,43 @@ export default function App() {
         return inst;
       });
 
-      const reconciledInstances =
+      let reconciledInstances =
         reconcileCumulativeLabMeasurements(draftInstances);
+
+      // C-18/C-19 (Vòng 4): cành cây vừa cắm vào bình tam giác → ghi lại mực nước
+      // lúc bắt đầu làm mốc cho guard WF-14 b.3 (chỉ ghi lần đầu, không ghi đè).
+      if (
+        slot === 'inside-vessel' &&
+        targetInstanceId &&
+        (draggedAsset?.assetId === 'OL3D-EQP-TWG-0001' ||
+          draggedAsset?.assetId === 'OL3D-EQP-TWG-0002')
+      ) {
+        const targetFlask = reconciledInstances.find(
+          (i) => i.instanceId === targetInstanceId,
+        );
+        if (
+          targetFlask &&
+          assetsMap.get(targetFlask.assetId)?.geometry.proceduralArchetype ===
+            'erlenmeyer-flask' &&
+          typeof targetFlask.instanceState.initialLiquidLevelMl !== 'number'
+        ) {
+          const startMl =
+            targetFlask.instanceState.baseLiquidLevelMl ??
+            targetFlask.instanceState.liquidLevelMl ??
+            0;
+          reconciledInstances = reconciledInstances.map((i) =>
+            i.instanceId === targetInstanceId
+              ? {
+                  ...i,
+                  instanceState: {
+                    ...i.instanceState,
+                    initialLiquidLevelMl: startMl,
+                  },
+                }
+              : i,
+          );
+        }
+      }
 
       setScene((prev) => ({
         ...prev,
@@ -3177,7 +3470,9 @@ export default function App() {
               ...item,
               instanceState: {
                 ...item.instanceState,
-                recordedTimeS: (item.instanceState.recordedTimeS ?? 0) + 1,
+                // C-11 (Vòng 3): tick 450 ms nên cộng 0,45 s mới đúng đơn vị giây thật;
+                // cộng 1/tick cũ chạy nhanh gấp ~2,2 lần (22,5 s đun thật hiển thị thành 50 s).
+                recordedTimeS: (item.instanceState.recordedTimeS ?? 0) + 0.45,
                 isTimerRunning: true,
               },
             };
@@ -3202,6 +3497,112 @@ export default function App() {
 
     return () => window.clearInterval(timer);
   }, [scene.instances, assetsMap]);
+
+  // C-18/C-19 (Vòng 4): vòng khuấy + thoát hơi nước, cùng nhịp 450 ms như vòng đun
+  // (không qua reconcile — ghi trực tiếp như vòng đun để không đánh nhau với
+  // các lần ghi baseLiquidLevelMl khác).
+  // - Khuấy: STR đang bật (tốc độ khuấy rpm > 0) và có cốc BKR trong 0,15 m thì
+  //   stirTimeS += 0,45 s/tick (giây thật). Guard WF-10 b.3 cần stirTimeS ≥ 10 s.
+  // - Thoát hơi: đèn quang học OLP đang sáng và bình FLK trong 0,35 m của OLP,
+  //   có cành TWG cắm trong bình thì tích lũy thời gian chiếu sáng mô phỏng
+  //   (1 giây thật = 1 phút mô phỏng) và giảm mực nước: có lá −0,4 ml/phút mô
+  //   phỏng, không lá −0,02 ml/phút. Tốc độ này là mô phỏng rút gọn thời gian
+  //   (ghi rõ trong reason guard WF-14 b.3), không phải tốc độ thật ngoài đời.
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setScene((prev) => {
+        let changed = false;
+        const distXZ = (a: SceneInstance, b: SceneInstance): number =>
+          Math.hypot(
+            a.transform.positionM[0] - b.transform.positionM[0],
+            a.transform.positionM[2] - b.transform.positionM[2],
+          );
+        const litLamps = prev.instances.filter(
+          (i) =>
+            i.visible &&
+            assetsMap.get(i.assetId)?.geometry.proceduralArchetype ===
+              'optical-lamp' &&
+            i.instanceState.isLampLit === true,
+        );
+        const nextInstances = prev.instances.map((item) => {
+          const arch = assetsMap.get(item.assetId)?.geometry.proceduralArchetype;
+          // (a) Máy khuấy từ đang chạy gần cốc
+          if (item.assetId === 'OL3D-EQP-STR-0001') {
+            const rpm =
+              typeof item.instanceState.multimeterValue === 'number'
+                ? item.instanceState.multimeterValue
+                : 0;
+            if (rpm > 0) {
+              const hasBeakerNear = prev.instances.some(
+                (other) =>
+                  other.visible &&
+                  assetsMap.get(other.assetId)?.geometry.proceduralArchetype ===
+                    'beaker-250' &&
+                  distXZ(item, other) <= 0.15,
+              );
+              if (hasBeakerNear) {
+                changed = true;
+                return {
+                  ...item,
+                  instanceState: {
+                    ...item.instanceState,
+                    stirTimeS: Number(
+                      ((item.instanceState.stirTimeS ?? 0) + 0.45).toFixed(2),
+                    ),
+                  },
+                };
+              }
+            }
+          }
+          // (b) Bình tam giác có cành cây, đang được đèn chiếu sáng
+          if (arch === 'erlenmeyer-flask' && litLamps.length > 0) {
+            const twig = prev.instances.find(
+              (other) =>
+                other.visible &&
+                (other.assetId === 'OL3D-EQP-TWG-0001' ||
+                  other.assetId === 'OL3D-EQP-TWG-0002') &&
+                other.instanceState.attachedToInstanceId === item.instanceId &&
+                other.instanceState.attachmentSlot === 'inside-vessel',
+            );
+            if (!twig) return item;
+            const nearLitLamp = litLamps.some(
+              (lamp) => distXZ(item, lamp) <= 0.35,
+            );
+            if (!nearLitLamp) return item;
+            const rateMlPerSimMin =
+              twig.assetId === 'OL3D-EQP-TWG-0001' ? 0.4 : 0.02;
+            const curMl =
+              item.instanceState.baseLiquidLevelMl ??
+              item.instanceState.liquidLevelMl ??
+              0;
+            const nextMl = Math.max(0, Number((curMl - rateMlPerSimMin * 0.45).toFixed(2)));
+            changed = true;
+            return {
+              ...item,
+              instanceState: {
+                ...item.instanceState,
+                baseLiquidLevelMl: nextMl,
+                liquidLevelMl: nextMl,
+                lightExposureMin: Number(
+                  ((item.instanceState.lightExposureMin ?? 0) + 0.45).toFixed(2),
+                ),
+              },
+            };
+          }
+          return item;
+        });
+
+        if (!changed) return prev;
+        return {
+          ...prev,
+          sceneRevision: prev.sceneRevision + 1,
+          instances: nextInstances,
+        };
+      });
+    }, 450);
+
+    return () => window.clearInterval(timer);
+  }, [assetsMap]);
 
   // Header 4-step bar click handler
   const handleChangeHeaderProgressStep = useCallback(
@@ -3933,13 +4334,49 @@ export default function App() {
             : action === 'multimeter-mode-a'
               ? 'A'
               : 'Ω';
-        // P07: Kiểm tra xem que đo có đang kết nối với nguồn điện thực tế hay không
+        // P07 (Vòng 4): chọn thang đo, giá trị đo lấy từ solver mạch điện trở thật
+        // (PSU–RES–RHE), không dùng hằng số 16 Ω bịa sẵn như trước.
+        // Nút này chỉ đổi thang; reconcile sẽ ghi lại số đo chính xác ở lần
+        // cập nhật cảnh tiếp theo (khoảng cách đồng hồ–mạch được kiểm tra ở đó).
         const psu = scene.instances.find(
           (i) =>
             i.visible &&
             assetsMap.get(i.assetId)?.geometry.proceduralArchetype ===
               'optical-power-supply',
         );
+        const resInst = scene.instances.find(
+          (i) =>
+            i.visible &&
+            assetsMap.get(i.assetId)?.geometry.proceduralArchetype ===
+              'resistor-sample',
+        );
+        const rheInst = scene.instances.find(
+          (i) =>
+            i.visible &&
+            assetsMap.get(i.assetId)?.geometry.proceduralArchetype ===
+              'rheostat',
+        );
+        const resistiveNow = solveResistiveCircuit([
+          ...(psu ? [{ instance: psu, role: 'psu' as const, resistanceOhms: 0 }] : []),
+          ...(resInst
+            ? [
+                {
+                  instance: resInst,
+                  role: 'resistor' as const,
+                  resistanceOhms: resInst.instanceState.resistanceOhms ?? 10,
+                },
+              ]
+            : []),
+          ...(rheInst
+            ? [
+                {
+                  instance: rheInst,
+                  role: 'rheostat' as const,
+                  resistanceOhms: rheInst.instanceState.rheostatOhms ?? 10,
+                },
+              ]
+            : []),
+        ]);
         const psuOn = Boolean(psu && psu.instanceState.isPoweredOn === true);
         const psuV =
           typeof psu?.instanceState.voltageSetting === 'number'
@@ -3948,16 +4385,23 @@ export default function App() {
               ? psu.instanceState.supplyVoltageV
               : 12.0;
 
-        let val = 0.0;
-        if (psuOn) {
-          val =
-            mode === 'V'
+        let val = inst.instanceState.multimeterValue ?? 0.0;
+        if (mode === 'V') {
+          val = resistiveNow.isCircuitClosed
+            ? Number(resistiveNow.voltageAtResistorV.toFixed(2))
+            : psuOn
               ? psuV
-              : mode === 'A'
-                ? Number((psuV / 16.0).toFixed(2))
-                : 16.0;
-        } else {
-          val = mode === 'Ω' ? 999999 : 0.0;
+              : 0.0;
+        } else if (mode === 'A') {
+          val = resistiveNow.isCircuitClosed
+            ? Number(resistiveNow.currentA.toFixed(2))
+            : 0.0;
+        } else if (mode === 'Ω') {
+          // Đo điện trở chỉ có nghĩa khi nguồn tắt; nguồn đang bật thì giữ nguyên
+          // giá trị cũ, không bịa số đo.
+          if (!psuOn && resistiveNow.resistanceTotalOhms > 0) {
+            val = Number(resistiveNow.resistanceTotalOhms.toFixed(1));
+          }
         }
 
         setScene((prev) => ({
@@ -4794,6 +5238,16 @@ export default function App() {
         }
       }
 
+      // C-18/C-19 (Vòng 4): vặn biến trở là một thao tác đo được — đánh dấu đã chỉnh
+      // để guard WF-12 b.3 phân biệt "đã vặn" với "để nguyên 10 Ω mặc định".
+      const effectivePatch: Partial<SceneInstance['instanceState']> = { ...patch };
+      if (
+        typeof patch.rheostatOhms === 'number' &&
+        targetInst &&
+        patch.rheostatOhms !== targetInst.instanceState.rheostatOhms
+      ) {
+        effectivePatch.rheostatAdjusted = true;
+      }
       setScene((prev) => {
         const draft = prev.instances.map((inst) =>
           inst.instanceId === instanceId
@@ -4801,7 +5255,7 @@ export default function App() {
                 ...inst,
                 instanceState: {
                   ...inst.instanceState,
-                  ...patch,
+                  ...effectivePatch,
                 },
               }
             : inst,
@@ -5157,6 +5611,23 @@ export default function App() {
             next ? 'success' : 'info',
           );
         }}
+        isHandCameraEnabled={isHandCameraEnabled}
+        onToggleHandCamera={() => {
+          setIsHandCameraEnabled((v) => {
+            const next = !v;
+            if (!next) {
+              handGrabRef.current = null;
+              if (handDropRafRef.current) cancelAnimationFrame(handDropRafRef.current);
+            }
+            notify(
+              next
+                ? '📷 Camera tay: ĐÃ BẬT — chụm ngón cái + ngón trỏ để cầm thiết bị (video chỉ xử lý trên máy)'
+                : '📷 Camera tay: ĐÃ TẮT',
+              next ? 'success' : 'info',
+            );
+            return next;
+          });
+        }}
         onOpenNeuralModal={() => {
           setNeuralModalTargetDeviceId(null);
           setShowNeuralNetworkModal(true);
@@ -5193,6 +5664,17 @@ export default function App() {
         notificationCount={recentLogs.length}
         recentLogs={recentLogs}
       />
+
+      {/* HAND-01 (Vòng 2) — Panel camera nhận diện bàn tay, chỉ hiện khi bật. */}
+      {isHandCameraEnabled && (
+        <HandCameraPanel
+          onHandEvent={handleHandEvent}
+          onError={(msg) => {
+            notify(msg, 'error');
+            setIsHandCameraEnabled(false);
+          }}
+        />
+      )}
 
       {/* =====================================================================
           MODE 1: STUDENT MODE — Official Reference 6-Region Desktop Layout

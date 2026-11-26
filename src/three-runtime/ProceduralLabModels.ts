@@ -3176,6 +3176,67 @@ export function syncHydrostaticLiquidToGravity(
   };
 }
 
+/**
+ * Cành cây dùng cho thí nghiệm quang hợp / thoát hơi nước.
+ * Gốc ở đáy-tâm, thân cành mảnh cao ~0,15 m; withLeaves=true thêm 5 lá xanh.
+ */
+function buildPlantTwig(withLeaves: boolean): THREE.Group {
+  const twig = new THREE.Group();
+  twig.name = 'body';
+
+  const stemMat = new THREE.MeshStandardMaterial({
+    color: 0x78350f,
+    roughness: 0.9,
+    metalness: 0,
+  });
+  const stem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.0015, 0.0022, 0.15, 12),
+    stemMat,
+  );
+  stem.position.y = 0.075;
+  stem.castShadow = true;
+  twig.add(stem);
+
+  // 2 cành nhỏ chéo hai bên thân chính
+  [-1, 1].forEach((side, i) => {
+    const branch = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.0009, 0.0013, 0.045, 10),
+      stemMat,
+    );
+    branch.position.set(side * 0.012, 0.09 + i * 0.025, 0);
+    branch.rotation.z = side * -0.6;
+    twig.add(branch);
+  });
+
+  if (withLeaves) {
+    const leafMat = new THREE.MeshStandardMaterial({
+      color: 0x16a34a,
+      roughness: 0.7,
+      metalness: 0,
+      side: THREE.DoubleSide,
+    });
+    const leafGeo = new THREE.SphereGeometry(0.012, 16, 12);
+    // [x, y, rotZ, rotY] — 5 lá xanh hình elip gắn dọc cành, xen kẽ 2 bên
+    const leafDefs: Array<[number, number, number, number]> = [
+      [-0.016, 0.055, 0.9, 0],
+      [0.016, 0.08, -0.9, 0.4],
+      [-0.016, 0.105, 0.9, -0.5],
+      [0.016, 0.128, -0.9, 0.3],
+      [0, 0.152, 0, 0],
+    ];
+    leafDefs.forEach(([x, y, rz, ry]) => {
+      const leaf = new THREE.Mesh(leafGeo, leafMat);
+      leaf.scale.set(1, 1.8, 0.25);
+      leaf.position.set(x, y, 0);
+      leaf.rotation.set(0, ry, rz);
+      leaf.castShadow = true;
+      twig.add(leaf);
+    });
+  }
+
+  return twig;
+}
+
 export function buildProceduralEquipmentGroup(
   asset: AssetDefinition,
   isSoftwareGl: boolean,
@@ -7778,6 +7839,345 @@ export function buildProceduralEquipmentGroup(
       anchor.name = 'measurement_anchor';
       anchor.position.set(0, 0.150, 0);
       root.add(anchor);
+
+      root.add(bodyGroup);
+      break;
+    }
+
+    case 'chemical-sample': {
+      // Mẫu muối ăn NaCl dùng cho WF-10: lọ nhỏ đựng bột trắng, cao ~0,062 m.
+      addContactShadow(root, 0.025, 0.025);
+      const bodyGroup = new THREE.Group();
+      bodyGroup.name = 'body';
+
+      const glassMat = createGlassMaterial(isSoftwareGl);
+      const powderMat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        roughness: 0.95,
+        metalness: 0,
+      });
+      const capMat = new THREE.MeshStandardMaterial({
+        color: 0x1e40af,
+        roughness: 0.5,
+        metalness: 0.1,
+      });
+      const labelMat = new THREE.MeshStandardMaterial({
+        color: 0xfefce8,
+        roughness: 0.8,
+        metalness: 0,
+      });
+
+      // Lọ thủy tinh nhỏ cao 0,05 m
+      const jar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.018, 0.018, 0.05, 32),
+        glassMat,
+      );
+      jar.position.y = 0.025;
+      jar.castShadow = true;
+      jar.receiveShadow = true;
+      bodyGroup.add(jar);
+
+      // Bột muối trắng bên trong (cao ~0,03 m)
+      const powder = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.016, 0.016, 0.03, 32),
+        powderMat,
+      );
+      powder.position.y = 0.016;
+      bodyGroup.add(powder);
+
+      // Nhãn dán quanh thân lọ
+      const label = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.0183, 0.0183, 0.02, 32, 1, true),
+        labelMat,
+      );
+      label.position.y = 0.025;
+      bodyGroup.add(label);
+
+      // Nắp vặn màu xanh
+      const cap = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.019, 0.019, 0.012, 32),
+        capMat,
+      );
+      cap.position.y = 0.056;
+      cap.castShadow = true;
+      bodyGroup.add(cap);
+
+      root.add(bodyGroup);
+      break;
+    }
+
+    case 'resistor-sample': {
+      // Điện trở mẫu 10 Ω: vạch màu nâu-đen-đen-vàng (1-0-×1, vàng = ±5%).
+      addContactShadow(root, 0.05, 0.015);
+      const bodyGroup = new THREE.Group();
+      bodyGroup.name = 'body';
+
+      const ceramicMat = new THREE.MeshStandardMaterial({
+        color: 0xd6a35c,
+        roughness: 0.6,
+        metalness: 0,
+      });
+      const leadMat = new THREE.MeshStandardMaterial({
+        color: 0xc0c0c0,
+        roughness: 0.25,
+        metalness: 0.9,
+      });
+
+      // Thân sứ nằm ngang, dài 0,05 m, trục dọc X, tâm cao 0,006 m
+      const body = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.006, 0.006, 0.05, 24).rotateZ(
+          Math.PI / 2,
+        ),
+        ceramicMat,
+      );
+      body.position.y = 0.006;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      bodyGroup.add(body);
+
+      // 2 dây dẫn kim loại 2 đầu, mỗi dây dài 0,02 m
+      [-1, 1].forEach((side) => {
+        const lead = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.001, 0.001, 0.02, 12).rotateZ(
+            Math.PI / 2,
+          ),
+          leadMat,
+        );
+        lead.position.set(side * 0.035, 0.006, 0);
+        bodyGroup.add(lead);
+      });
+
+      // 4 vạch màu: nâu (1) - đen (0) - đen (×1) - vàng (±5%, tách riêng)
+      const bandColors = [0x7c2d12, 0x111111, 0x111111, 0xeab308];
+      const bandX = [-0.018, -0.012, -0.006, 0.014];
+      bandColors.forEach((color, i) => {
+        const band = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.0062, 0.0062, 0.003, 24).rotateZ(
+            Math.PI / 2,
+          ),
+          new THREE.MeshStandardMaterial({
+            color,
+            roughness: 0.55,
+            metalness: 0,
+          }),
+        );
+        band.position.set(bandX[i], 0.006, 0);
+        bodyGroup.add(band);
+      });
+
+      root.add(bodyGroup);
+      break;
+    }
+
+    case 'rheostat': {
+      // Biến trở 0–20 Ω (RHE-0001): hộp chữ nhật + núm xoay + 2 cọc đấu dây.
+      addContactShadow(root, 0.07, 0.05);
+      const bodyGroup = new THREE.Group();
+      bodyGroup.name = 'body';
+
+      const housingMat = new THREE.MeshStandardMaterial({
+        color: 0x334155,
+        roughness: 0.6,
+        metalness: 0.2,
+      });
+      const brassMat = new THREE.MeshStandardMaterial({
+        color: 0xd4a017,
+        roughness: 0.3,
+        metalness: 0.85,
+      });
+      const knobMat = new THREE.MeshStandardMaterial({
+        color: 0x111827,
+        roughness: 0.5,
+        metalness: 0.1,
+      });
+
+      // Hộp 0,12 × 0,05 × 0,08 m
+      const housing = new THREE.Mesh(
+        new THREE.BoxGeometry(0.12, 0.05, 0.08),
+        housingMat,
+      );
+      housing.position.y = 0.025;
+      housing.castShadow = true;
+      housing.receiveShadow = true;
+      bodyGroup.add(housing);
+
+      // Ray trượt kim loại trên mặt hộp
+      const rail = new THREE.Mesh(
+        new THREE.BoxGeometry(0.09, 0.002, 0.012),
+        brassMat,
+      );
+      rail.position.y = 0.051;
+      bodyGroup.add(rail);
+
+      // Núm xoay tròn trên mặt hộp
+      const knob = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02, 0.022, 0.012, 32),
+        knobMat,
+      );
+      knob.name = 'knob';
+      knob.position.y = 0.056;
+      knob.castShadow = true;
+      bodyGroup.add(knob);
+
+      // Vạch chỉ trên núm xoay
+      const pointer = new THREE.Mesh(
+        new THREE.BoxGeometry(0.004, 0.004, 0.016),
+        new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.4 }),
+      );
+      pointer.position.set(0, 0.063, 0.01);
+      bodyGroup.add(pointer);
+
+      // 2 cọc đấu dây ở 2 đầu mặt trên
+      [-1, 1].forEach((side) => {
+        const terminal = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.004, 0.004, 0.015, 16),
+          brassMat,
+        );
+        terminal.position.set(side * 0.045, 0.0575, 0);
+        terminal.castShadow = true;
+        bodyGroup.add(terminal);
+        const nut = new THREE.Mesh(
+          new THREE.SphereGeometry(0.005, 16, 12),
+          brassMat,
+        );
+        nut.position.set(side * 0.045, 0.066, 0);
+        bodyGroup.add(nut);
+      });
+
+      root.add(bodyGroup);
+      break;
+    }
+
+    case 'incandescent-lamp-socket': {
+      // Đui đèn + bóng đèn sợi đốt: đế trụ tròn, bóng cầu thủy tinh, dây tóc bên trong.
+      addContactShadow(root, 0.03, 0.03);
+      const bodyGroup = new THREE.Group();
+      bodyGroup.name = 'body';
+
+      const brassMat = new THREE.MeshStandardMaterial({
+        color: 0xd4a017,
+        roughness: 0.3,
+        metalness: 0.85,
+      });
+      const socketMat = new THREE.MeshStandardMaterial({
+        color: 0x1f2937,
+        roughness: 0.55,
+        metalness: 0.3,
+      });
+      const glassMat = createGlassMaterial(isSoftwareGl);
+      const filamentMat = new THREE.MeshStandardMaterial({
+        color: 0x92400e,
+        roughness: 0.4,
+        metalness: 0.6,
+        emissive: 0xea580c,
+        emissiveIntensity: 0.6,
+      });
+
+      // Đế trụ tròn (đui đèn)
+      const base = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02, 0.022, 0.02, 32),
+        brassMat,
+      );
+      base.position.y = 0.01;
+      base.castShadow = true;
+      base.receiveShadow = true;
+      bodyGroup.add(base);
+
+      // Cổ đui đèn
+      const socket = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.014, 0.016, 0.015, 32),
+        socketMat,
+      );
+      socket.position.y = 0.0275;
+      bodyGroup.add(socket);
+
+      // Bóng đèn hình cầu thủy tinh trong, tâm cao 0,057 m
+      const bulb = new THREE.Mesh(
+        new THREE.SphereGeometry(0.022, 32, 24),
+        glassMat,
+      );
+      bulb.position.y = 0.057;
+      bulb.castShadow = true;
+      bodyGroup.add(bulb);
+
+      // Dây tóc hình vòng cung bên trong bóng
+      const filament = new THREE.Mesh(
+        new THREE.TorusGeometry(0.008, 0.001, 10, 24),
+        filamentMat,
+      );
+      filament.position.y = 0.057;
+      bodyGroup.add(filament);
+
+      // 2 dây đỡ dây tóc
+      [-1, 1].forEach((side) => {
+        const wire = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.0007, 0.0007, 0.014, 8),
+          brassMat,
+        );
+        wire.position.set(side * 0.005, 0.047, 0);
+        bodyGroup.add(wire);
+      });
+
+      // 2 cọc đấu dây ở 2 bên đế
+      [-1, 1].forEach((side) => {
+        const terminal = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.003, 0.003, 0.01, 12).rotateZ(
+            Math.PI / 2,
+          ),
+          brassMat,
+        );
+        terminal.position.set(side * 0.024, 0.01, 0);
+        bodyGroup.add(terminal);
+      });
+
+      root.add(bodyGroup);
+      break;
+    }
+
+    case 'plant-twig-leafy': {
+      // Cành cây có lá (5 lá xanh) — dùng chung helper với 'plant-twig-bare'.
+      addContactShadow(root, 0.03, 0.03);
+      root.add(buildPlantTwig(true));
+      break;
+    }
+
+    case 'plant-twig-bare': {
+      // Cành cây không lá — dùng chung helper với 'plant-twig-leafy'.
+      addContactShadow(root, 0.03, 0.03);
+      root.add(buildPlantTwig(false));
+      break;
+    }
+
+    case 'ph-indicator-strip': {
+      // Giấy chỉ thị pH chưa đổi màu (vàng nhạt), đặt nằm phẳng trên bàn.
+      addContactShadow(root, 0.012, 0.045);
+      const bodyGroup = new THREE.Group();
+      bodyGroup.name = 'body';
+
+      const paperMat = new THREE.MeshStandardMaterial({
+        color: 0xfde68a,
+        roughness: 0.9,
+        metalness: 0,
+        side: THREE.DoubleSide,
+      });
+
+      // Dải giấy mỏng dài 0,08 m, rộng 0,01 m
+      const strip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.01, 0.001, 0.08),
+        paperMat,
+      );
+      strip.position.y = 0.0005;
+      strip.castShadow = true;
+      strip.receiveShadow = true;
+      bodyGroup.add(strip);
+
+      // Ô thuốc thử ở một đầu dải giấy
+      const pad = new THREE.Mesh(
+        new THREE.BoxGeometry(0.009, 0.0012, 0.012),
+        new THREE.MeshStandardMaterial({ color: 0xfef9c3, roughness: 0.85 }),
+      );
+      pad.position.set(0, 0.0006, 0.032);
+      bodyGroup.add(pad);
 
       root.add(bodyGroup);
       break;

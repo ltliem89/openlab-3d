@@ -130,7 +130,14 @@ export type ProceduralArchetype =
   | 'communicating-vessels-3way'
   | 'ruler-30'
   | 'digital-stopwatch'
-  | 'test-tube';
+  | 'test-tube'
+  | 'chemical-sample'
+  | 'resistor-sample'
+  | 'rheostat'
+  | 'incandescent-lamp-socket'
+  | 'plant-twig-leafy'
+  | 'plant-twig-bare'
+  | 'ph-indicator-strip';
 
 export interface QuantityValue {
   value: number;
@@ -184,6 +191,9 @@ export interface ScientificMetadata {
   material: {
     value: string;
     status: DataProvenanceStatus;
+    // Vòng 4: cho phép ghi nguồn gốc vật liệu (vd "Manifest module HTML STR",
+    // "giá trị danh nghĩa, cần phòng lab xác nhận") như QuantityValue.
+    methodRef?: string;
   };
   referenceMass?: QuantityValue;
   referenceVolume?: QuantityValue;
@@ -355,11 +365,26 @@ export interface SceneInstance {
     isPoweredOn?: boolean;
     incidentAngleDeg?: number;
     galvanometerDeflection?: number; // -1..+1 (-50..+50 uA)
-    multimeterMode?: 'DCV' | 'DCA' | 'OHM' | 'V' | 'A' | 'Ω';
+    multimeterMode?: 'DCV' | 'DCA' | 'OHM' | 'V' | 'A' | 'Ω' | 'pH';
     multimeterValue?: number;
     magnification?: number;
     isHeating?: boolean;
     temperatureC?: number;
+    // Vòng 4 (C-18/C-19) — trường có kiểu rõ, không dùng index signature.
+    sampleMassG?: number; // NAC-0001: khối lượng muối đã xúc (g), mặc định 0 = chưa xúc
+    stirTimeS?: number; // STR-0001: thời gian đã khuấy tích lũy (giây thật)
+    resistanceOhms?: number; // RES-0001: điện trở mẫu (Ω), mặc định 10
+    rheostatOhms?: number; // RHE-0001: điện trở biến trở hiện tại (Ω), mặc định 10
+    rheostatAdjusted?: boolean; // RHE-0001: đã vặn biến trở ít nhất 1 lần
+    bulbResistanceOhms?: number; // SOC-0001: điện trở bóng đèn (Ω), 12 = giả định mô phỏng
+    branchVoltageV?: number; // SOC-0001: hiệu điện thế trên nhánh bóng đèn (V, tính ra)
+    branchCurrentA?: number; // SOC-0001: cường độ dòng qua nhánh bóng đèn (A, tính ra)
+    circuitTopology?: 'series' | 'parallel'; // PSU-0001: cách mắc 2 bóng (mặc định 'series')
+    lightExposureMin?: number; // FLK-0001: thời gian chiếu sáng mô phỏng tích lũy (phút mô phỏng)
+    initialLiquidLevelMl?: number; // FLK-0001: mực nước lúc bắt đầu thí nghiệm thoát hơi (ml)
+    samplePh?: number; // TUB-0001: pH của mẫu trong ống (absent = chưa chọn mẫu)
+    sampleKind?: 'hcl' | 'water' | 'naoh'; // TUB-0001: loại mẫu đã chọn
+    indicatorColorHex?: string; // LIT-0001: màu giấy chỉ thị theo pH mẫu (từ ChemicalSolutionSolver)
     isValveOpen?: boolean;
     overflowingVolumeMl?: number;
     experimentMode?: 'f_object' | 'laser_rays';
