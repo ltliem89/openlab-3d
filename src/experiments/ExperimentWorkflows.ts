@@ -489,15 +489,17 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         stepIndex: 1,
         stepId: 'WF07-STEP-01',
         titleVi: 'Bước 1: Bố trí đĩa chia độ tròn và đặt bản bán nguyệt',
-        instructionVi: 'Đặt đĩa chia độ tròn $360^\\circ$ trên bàn, đặt tâm mặt phẳng của bản bán nguyệt trùng gốc O của đĩa.',
+        instructionVi: 'Đặt bản bán trụ thủy tinh kèm đĩa chia độ tròn $360^\\circ$ (một thiết bị SLB-0001) lên bàn, đặt tâm mặt phẳng của bản bán nguyệt trùng gốc O của đĩa.',
         scientificConceptVi: 'Tâm hình học của bản cong tròn trùng với gốc tọa độ để tia khúc xạ ra không bị bẻ cong lần hai.',
         mathFormulaLatex: '$O(0, 0) \\equiv \\text{Tam ban ban nguyet}$',
-        requiredArchetypes: ['optical-disk', 'semicircular-glass-block'],
-        suggestedActionVi: 'Đặt đĩa chia độ và gá bản bán nguyệt',
+        requiredArchetypes: ['semicircular-slab'],
+        suggestedActionVi: 'Đặt bản bán trụ thủy tinh kèm đĩa chia độ lên bàn',
         validationGuard: (instances) => {
-          const disk = instances.find((i) => i.assetId.includes('DSK') || i.assetId.includes('ROT'));
-          const glass = instances.find((i) => i.assetId.includes('SMC') || i.assetId.includes('GLS'));
-          return { isPassed: true, reasonVi: 'Đĩa chia độ và bản bán nguyệt đã căn chỉnh đúng gốc O' };
+          // C-17 (Vòng 1): đĩa chia độ không phải asset riêng — nó là một phần của SLB-0001.
+          // Tìm đúng assetId, không dùng includes('DSK'/'SMC') vì không asset nào chứa các chuỗi đó.
+          const slab = instances.find((i) => i.assetId === 'OL3D-EQP-SLB-0001');
+          if (!slab) return { isPassed: false, reasonVi: 'Chưa đặt bản bán trụ thủy tinh lên bàn', hintVi: 'Mở kệ Quang học và đặt “Bản bán trụ thủy tinh & Bảng chia độ 360°” lên bàn' };
+          return { isPassed: true, reasonVi: 'Đã đặt bản bán trụ thủy tinh kèm đĩa chia độ lên bàn' };
         },
       },
       {
@@ -507,11 +509,20 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Bật nguồn phát tia laser, chỉnh góc tới $i = 45^\\circ$ so với pháp tuyến.',
         scientificConceptVi: 'Tia sáng truyền từ không khí ($n_1 \\approx 1.00$) vào thủy tinh ($n_2 \\approx 1.50$) bị bẻ gãy lại gần pháp tuyến.',
         mathFormulaLatex: '$i = 45^\\circ, \\quad n_1 = 1.000$',
-        requiredArchetypes: ['laser-ray-box'],
+        requiredArchetypes: ['laser-source'],
         suggestedActionVi: 'Bật đèn laser và xoay nguồn tới góc 45 độ',
         validationGuard: (instances) => {
-          const laser = instances.find((i) => i.assetId.includes('LSR') || i.assetId.includes('RAY'));
-          return { isPassed: true, reasonVi: 'Tia laser đã chiếu vào bề mặt phân cách tại góc $i = 45^\\circ$' };
+          // C-17 (Vòng 1): chỉ isPoweredOn (nút ON/OFF trên đèn) mới chứng minh tia đang bật.
+          // Cờ isLaserOn trong bảng điều khiển là cờ chết, không bật được tia 3D — không dùng.
+          const laser = instances.find((i) => i.assetId === 'OL3D-EQP-LSR-0001');
+          if (!laser) return { isPassed: false, reasonVi: 'Chưa đặt đèn laser lên bàn', hintVi: 'Mở kệ Quang học và đặt “Đèn Laser” lên bàn' };
+          if (laser.instanceState.isPoweredOn !== true) return { isPassed: false, reasonVi: 'Đèn laser đang tắt', hintVi: 'Bấm nút “🔦 ON (650 nm)” trên đèn laser — công tắc trong bảng điều khiển không bật được tia' };
+          const slab = instances.find((i) => i.assetId === 'OL3D-EQP-SLB-0001');
+          if (!slab) return { isPassed: false, reasonVi: 'Chưa đặt bản bán trụ thủy tinh lên bàn', hintVi: 'Đặt bản bán trụ lên bàn rồi chiếu tia laser vào tâm O' };
+          const i = slab.instanceState.incidentAngleDeg;
+          if (typeof i !== 'number' || !Number.isFinite(i)) return { isPassed: false, reasonVi: 'Chưa đặt góc tới i', hintVi: 'Kéo thanh trượt góc tới trên bản bán trụ tới 45°' };
+          if (Math.abs(i - 45) > 2) return { isPassed: false, reasonVi: `Góc tới hiện tại i = ${i.toFixed(0)}°, chưa phải 45°`, hintVi: 'Kéo thanh trượt góc tới (hoặc xoay trong bảng điều khiển) tới 45° — các nút preset không có 45°' };
+          return { isPassed: true, reasonVi: `Tia laser đang chiếu vào tâm O, góc tới i = ${i.toFixed(0)}° (đọc trên đĩa chia độ)` };
         },
       },
       {
@@ -521,10 +532,22 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Đọc góc khúc xạ $r \\approx 28^\\circ$ trên đĩa chia độ và tính chiết suất $n = \\frac{\\sin i}{\\sin r}$.',
         scientificConceptVi: 'Định luật khúc xạ ánh sáng Snell-Descartes.',
         mathFormulaLatex: '$n = \\frac{\\sin 45^\\circ}{\\sin 28^\\circ} \\approx 1.51$',
-        requiredArchetypes: ['optical-disk'],
+        requiredArchetypes: ['semicircular-slab'],
         suggestedActionVi: 'Quan sát vạch góc trên đĩa chia độ',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Góc khúc xạ $r = 28.1^\\circ$, chiết suất thủy tinh $n = 1.51$ (Đạt chuẩn Snell)' };
+          // C-17 (Vòng 1): không có cảm biến/đọc số nào cho r trong code (refractedAngleDeg
+          // chỉ là output tính sẵn và hay bị cũ khi đổi góc ngoài bảng điều khiển), nên r và n
+          // ở đây là TÍNH RA từ i theo định luật Snell, không phải đo trực tiếp — ghi rõ trong reason.
+          const laser = instances.find((i) => i.assetId === 'OL3D-EQP-LSR-0001');
+          if (!laser || laser.instanceState.isPoweredOn !== true) return { isPassed: false, reasonVi: 'Đèn laser đang tắt, không có tia để đo', hintVi: 'Bật đèn laser rồi chỉnh lại góc tới 45°' };
+          const slab = instances.find((i) => i.assetId === 'OL3D-EQP-SLB-0001');
+          if (!slab) return { isPassed: false, reasonVi: 'Chưa đặt bản bán trụ thủy tinh lên bàn', hintVi: 'Đặt bản bán trụ lên bàn' };
+          const i = slab.instanceState.incidentAngleDeg;
+          if (typeof i !== 'number' || !Number.isFinite(i) || Math.abs(i - 45) > 2) return { isPassed: false, reasonVi: `Góc tới i = ${typeof i === 'number' ? i.toFixed(0) + '°' : 'chưa đặt'}, chưa phải 45°`, hintVi: 'Chỉnh góc tới về 45° rồi đọc lại' };
+          const r = (Math.asin(Math.sin((i * Math.PI) / 180) / 1.5) * 180) / Math.PI;
+          const n = Math.sin((i * Math.PI) / 180) / Math.sin((r * Math.PI) / 180);
+          if (!Number.isFinite(r) || !Number.isFinite(n) || Math.abs(n - 1.5) > 0.05) return { isPassed: false, reasonVi: 'Số liệu không nhất quán với định luật Snell', hintVi: 'Kiểm tra lại góc tới i' };
+          return { isPassed: true, reasonVi: `Góc khúc xạ r = ${r.toFixed(1)}° (tính từ i theo định luật Snell, KHÔNG phải đọc trực tiếp trên đĩa), chiết suất n = ${n.toFixed(2)} (tính ra)` };
         },
       },
     ],
@@ -549,37 +572,75 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Gá thanh đòn bẩy có chia vạch milimét vào chốt quay O trên giá thí nghiệm.',
         scientificConceptVi: 'Thanh có một bậc tự do quay quanh trục cố định vuông góc.',
         mathFormulaLatex: '$\\Sigma \\vec{M}_{/O} = 0$',
-        requiredArchetypes: ['lever-arm-balance', 'support-stand'],
+        requiredArchetypes: ['lever-balance-apparatus'],
         suggestedActionVi: 'Lắp thanh đòn vào khớp trục quay O',
         validationGuard: (instances) => {
-          const lever = instances.find((i) => i.assetId.includes('LVR') || i.assetId.includes('BAL'));
-          return { isPassed: true, reasonVi: 'Thanh đòn đã gắn êm vào trục quay O' };
+          // C-17 (Vòng 1): tìm đúng LEV-0001. Tìm 'BAL' cũ sẽ bắt nhầm BAL-0001 (cân điện tử).
+          const lever = instances.find((i) => i.assetId === 'OL3D-EQP-LEV-0001');
+          if (!lever) return { isPassed: false, reasonVi: 'Chưa đặt bộ đòn bẩy lên bàn', hintVi: 'Mở kệ Đo lực và đặt “Bộ đòn bẩy thăng bằng” lên bàn' };
+          return { isPassed: true, reasonVi: 'Đã đặt bộ đòn bẩy lên bàn' };
         },
       },
       {
         stepIndex: 2,
         stepId: 'WF08-STEP-02',
         titleVi: 'Bước 2: Cân bằng thanh đòn nằm ngang bằng ốc điều chỉnh',
-        instructionVi: 'Vặn hai ốc đối trọng ở hai đầu thanh để thanh đòn nằm ngang thăng bằng.',
+        instructionVi: 'Vặn ốc vi chỉnh cân bằng để thanh đòn nằm ngang thăng bằng khi chưa treo quả cân.',
         scientificConceptVi: 'Triệt tiêu mô-men do trọng lượng bản thân của thanh không đối xứng.',
         mathFormulaLatex: '$\\theta_0 = 0^\\circ$',
-        requiredArchetypes: ['lever-arm-balance'],
-        suggestedActionVi: 'Vặn ốc đối trọng để thanh nằm ngang',
+        requiredArchetypes: ['lever-balance-apparatus'],
+        suggestedActionVi: 'Vặn ốc vi chỉnh để thanh nằm ngang',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Thanh đòn đã cân bằng nằm ngang hoàn hảo' };
+          // C-17 (Vòng 1): không có trường nào ghi "đã vặn ốc" (panel không có nút trim),
+          // nên bước này chỉ kiểm tra trạng thái không tải — ghi rõ, không bịa "đã vặn ốc".
+          const lever = instances.find((i) => i.assetId === 'OL3D-EQP-LEV-0001');
+          if (!lever) return { isPassed: false, reasonVi: 'Chưa đặt bộ đòn bẩy lên bàn', hintVi: 'Đặt bộ đòn bẩy lên bàn trước' };
+          const m1 = Number(lever.instanceState.leftMassG ?? 0);
+          const m2 = Number(lever.instanceState.rightMassG ?? 0);
+          if (m1 > 0 || m2 > 0) return { isPassed: false, reasonVi: 'Đang còn quả cân treo trên đòn bẩy', hintVi: 'Bấm “Tháo quả cân” rồi mới chỉnh thăng bằng không tải' };
+          const theta = Number(lever.instanceState.incidentAngleDeg ?? 0);
+          if (Math.abs(theta) > 1) return { isPassed: false, reasonVi: `Thanh đang nghiêng ${theta.toFixed(1)}°`, hintVi: 'Vặn ốc vi chỉnh cân bằng tới khi kim về 0°' };
+          return { isPassed: true, reasonVi: `Thanh đòn đang nằm ngang, không tải (θ = ${theta.toFixed(1)}°) — bước kiểm tra trạng thái ban đầu` };
         },
       },
       {
         stepIndex: 3,
         stepId: 'WF08-STEP-03',
         titleVi: 'Bước 3: Treo các quả nặng hai bên và kiểm chứng mô-men lực',
-        instructionVi: 'Treo 2 quả nặng ở vị trí cách trục $d_1 = 10\\text{ cm}$ bên trái và 1 quả nặng ở vị trí $d_2 = 20\\text{ cm}$ bên phải.',
+        instructionVi: 'Treo 2 quả nặng (100 g) ở lỗ 4 bên trái (d1 = 8 cm) và 1 quả nặng (50 g) ở lỗ 8 bên phải (d2 = 16 cm).',
         scientificConceptVi: 'Quy tắc cân bằng mô-men: $F_1 \\cdot d_1 = F_2 \\cdot d_2$.',
-        mathFormulaLatex: '$1.0\\text{ N} \\times 10\\text{ cm} = 0.5\\text{ N} \\times 20\\text{ cm} = 10\\text{ N}\\cdot\\text{cm}$',
-        requiredArchetypes: ['lever-arm-balance', 'hook-weight-50g'],
+        mathFormulaLatex: '$100\\text{ g} \\times 8\\text{ cm} = 50\\text{ g} \\times 16\\text{ cm} = 800\\text{ g}\\cdot\\text{cm}$',
+        requiredArchetypes: ['lever-balance-apparatus'],
         suggestedActionVi: 'Treo quả nặng vào các móc chia vạch hai bên',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Đòn bẩy thăng bằng tuyệt đối theo quy tắc mô-men lực' };
+          // C-17 (Vòng 1): đề bài cũ (d2 = 20 cm) không làm được — lỗ treo 1–9 × 20 mm = tối đa 18 cm.
+          // Guard chấp nhận BẤT KỲ cặp cân bằng nào (m1·x1 = m2·x2, dung sai 5%), không ép một đáp án.
+          // Khối lượng chỉ đổi qua nút/slider của LEV; không đếm instance WGT (không có cơ chế treo WGT).
+          // Trường vắng = chưa thao tác → FAIL, không dùng ?? giá trị mặc định.
+          const lever = instances.find((i) => i.assetId === 'OL3D-EQP-LEV-0001');
+          if (!lever) return { isPassed: false, reasonVi: 'Chưa đặt bộ đòn bẩy lên bàn', hintVi: 'Đặt bộ đòn bẩy lên bàn trước' };
+          const m1 = lever.instanceState.leftMassG;
+          const m2 = lever.instanceState.rightMassG;
+          const x1 = lever.instanceState.leftHoleIndex;
+          const x2 = lever.instanceState.rightHoleIndex;
+          if (typeof m1 !== 'number' || m1 <= 0) return { isPassed: false, reasonVi: 'Chưa treo quả cân bên trái', hintVi: 'Bấm “+50g” bên trái để treo quả cân' };
+          if (typeof m2 !== 'number' || m2 <= 0) return { isPassed: false, reasonVi: 'Chưa treo quả cân bên phải', hintVi: 'Bấm “+50g” bên phải để treo quả cân' };
+          if (typeof x1 !== 'number' || x1 < 1 || x1 > 9) return { isPassed: false, reasonVi: 'Chưa chọn lỗ treo bên trái', hintVi: 'Chọn lỗ treo 1–9 bên trái' };
+          if (typeof x2 !== 'number' || x2 < 1 || x2 > 9) return { isPassed: false, reasonVi: 'Chưa chọn lỗ treo bên phải', hintVi: 'Chọn lỗ treo 1–9 bên phải' };
+          const d1 = x1 * 2; // cm
+          const d2 = x2 * 2; // cm
+          const M1 = m1 * d1; // g·cm, g triệt tiêu nên không cần g = 9.8/9.81
+          const M2 = m2 * d2;
+          const maxM = Math.max(M1, M2);
+          if (Math.abs(M1 - M2) > 0.05 * maxM) {
+            const pct = ((Math.abs(M1 - M2) / maxM) * 100).toFixed(0);
+            return { isPassed: false, reasonVi: `Mô-men chưa cân bằng: M₁ = ${M1} g·cm, M₂ = ${M2} g·cm, lệch ${pct}%`, hintVi: 'Dời móc treo hoặc thêm/bớt quả cân sao cho m₁·x₁ = m₂·x₂' };
+          }
+          const theta = Number(lever.instanceState.incidentAngleDeg ?? 0);
+          if (Math.abs(theta) > 1) return { isPassed: false, reasonVi: `Mô-men đã bằng nhau nhưng thanh còn nghiêng ${theta.toFixed(1)}°`, hintVi: 'Kiểm tra lại ốc vi chỉnh cân bằng' };
+          const F1 = ((m1 / 1000) * 9.8).toFixed(2);
+          const F2 = ((m2 / 1000) * 9.8).toFixed(2);
+          return { isPassed: true, reasonVi: `Thăng bằng: M₁ = ${F1} N × ${d1} cm = M₂ = ${F2} N × ${d2} cm = ${M1} g·cm (tính từ khối lượng và lỗ treo đã chọn; góc nghiêng θ = ${theta.toFixed(1)}° đọc trên đĩa chia độ)` };
         },
       },
     ],
