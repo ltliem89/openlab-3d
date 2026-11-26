@@ -85,27 +85,8 @@
     "min": 0,
     "max": 250,
     "step": 0.1,
-    "defaultValue": 12,
-    "presets": [
-      {
-        "label": "0.0 V (Hở mạch)",
-        "statePatch": {
-          "multimeterValue": 0
-        }
-      },
-      {
-        "label": "1.5 V (Pin AA)",
-        "statePatch": {
-          "multimeterValue": 1.5
-        }
-      },
-      {
-        "label": "12.0 V (Nguồn DC)",
-        "statePatch": {
-          "multimeterValue": 12
-        }
-      }
-    ],
+    "defaultValue": 0,
+    "presets": [],
     "canHoldLiquid": false,
     "canBeWeighedOnBalance": true,
     "canSubmergeInVessel": false,

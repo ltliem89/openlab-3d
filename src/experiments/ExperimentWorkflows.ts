@@ -5,6 +5,10 @@
  */
 
 import { SceneInstance } from '../domain/types';
+import {
+  solveResistiveCircuit,
+  solveMultiBranchCircuit,
+} from '../three-runtime/AssemblySystem';
 
 export interface WorkflowStepSpec {
   stepIndex: number;
@@ -760,16 +764,26 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         stepIndex: 1,
         stepId: 'WF10-STEP-01',
         titleVi: 'Bước 1: Cân 10.0 g muối NaCl trên cân điện tử',
-        instructionVi: 'Đặt mặt kính đồng hồ lên cân, trừ bì (TARE), dùng thìa xúc chính xác 10.0 g NaCl.',
+        instructionVi: 'Đặt lọ muối NaCl lên đĩa cân, trừ bì (TARE), dùng thanh trượt khối lượng mẫu để xúc chính xác 10.0 g NaCl.',
         scientificConceptVi: 'Đo lường chính xác lượng chất tan theo định luật bảo toàn khối lượng.',
         mathFormulaLatex: '$m_{\\text{NaCl}} = 10.00\\text{ g}$',
-        requiredArchetypes: ['electronic-balance'],
-        suggestedActionVi: 'Dùng thìa múc muối lên đĩa cân',
+        requiredArchetypes: ['electronic-balance', 'chemical-sample'],
+        suggestedActionVi: 'Đặt lọ muối lên đĩa cân, bấm TARE, tăng khối lượng mẫu tới 10,0 g',
         validationGuard: (instances) => {
-          // C-11/C-17 (Vòng 3): KHÔNG viết guard giả cho bước này — asset NaCl và cơ chế
-          // múc mẫu 10,0 g chưa tồn tại trong code (không vật nào trên đĩa cân ra đúng 10,0 g).
-          // Guard giữ fail cho tới khi có asset NaCl; xem docs/implementation/GUARDS_VONG3_WF09_WF15.md.
-          return { isPassed: false, reasonVi: 'Chưa thể cân 10,0 g NaCl — thiết bị muối ăn chưa có trong phòng thí nghiệm', hintVi: 'Bước này cần asset NaCl (đang chờ bổ sung) — làm tiếp bước 2 để đong nước' };
+          // C-18/C-19 (Vòng 4): lọ NAC đặt lên đĩa cân, TARE trừ bì lọ thì
+          // (measuredMassG − tareOffsetG) = sampleMassG (khối lượng muối đã xúc).
+          const bal = instances.find((i) => i.assetId === 'OL3D-EQP-BAL-0001');
+          const nac = instances.find((i) => i.assetId === 'OL3D-EQP-NAC-0001');
+          if (!bal || !nac) return { isPassed: false, reasonVi: 'Cần cả cân điện tử và lọ muối NaCl trên bàn', hintVi: 'Đặt cân điện tử và lọ muối NaCl lên bàn' };
+          const tare = bal.instanceState.tareOffsetG;
+          if (typeof tare !== 'number' || tare <= 0) return { isPassed: false, reasonVi: 'Chưa trừ bì lọ muối', hintVi: 'Đặt lọ muối lên đĩa cân rồi bấm phím TARE' };
+          const raw = bal.instanceState.measuredMassG;
+          if (typeof raw !== 'number' || !Number.isFinite(raw)) return { isPassed: false, reasonVi: 'Chưa đọc được khối lượng trên cân', hintVi: 'Đặt lọ muối lên đĩa cân rồi đọc lại' };
+          // Làm tròn 2 chữ số thập phân trước khi so sánh: phép trừ float
+          // (vd 70,2 − 60 = 10,200000000000003) không được làm học sinh trượt oan.
+          const net = Number((raw - tare).toFixed(2));
+          if (Math.abs(net - 10.0) > 0.2) return { isPassed: false, reasonVi: `Khối lượng muối tịnh đang là ${net.toFixed(1)} g, chưa phải 10,0 g`, hintVi: 'Tăng/giảm thanh trượt khối lượng mẫu tới 10,0 g' };
+          return { isPassed: true, reasonVi: `Đã cân chính xác muối ăn NaCl: $m = ${net.toFixed(1)}\\text{ g}$ (đo được trên cân sau khi trừ bì)` };
         },
       },
       {
@@ -796,17 +810,34 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
       {
         stepIndex: 3,
         stepId: 'WF10-STEP-03',
-        titleVi: 'Bước 3: Đổ vào cốc và khuấy tan hoàn toàn bằng đũa thủy tinh',
-        instructionVi: 'Cho muối và nước vào cốc thủy tinh 250 ml, dùng đũa khuấy đều theo 1 chiều đến khi tan hết.',
+        titleVi: 'Bước 3: Đổ vào cốc và khuấy tan bằng máy khuấy từ',
+        instructionVi: 'Cho muối và nước vào cốc thủy tinh 250 ml, đặt cốc lên máy khuấy từ và bật khuấy ít nhất 10 giây.',
         scientificConceptVi: 'Quá trình khuấy làm tăng tốc độ khuếch tán các ion $Na^+$ và $Cl^-$ vào dung môi nước.',
         mathFormulaLatex: '$C\\% = \\frac{10.0}{10.0 + 90.0} \\times 100\\% = 10.0\\%$',
-        requiredArchetypes: ['beaker-250'],
-        suggestedActionVi: 'Dùng đũa thủy tinh khuấy tan dung dịch trong cốc',
+        requiredArchetypes: ['beaker-250', 'electronic-balance'],
+        suggestedActionVi: 'Đặt cốc lên máy khuấy từ, bật khuấy ≥ 10 giây',
         validationGuard: (instances) => {
-          // C-11/C-17 (Vòng 3): KHÔNG viết guard pass giả — đũa khuấy và trạng thái "đã khuấy"
-          // chưa tồn tại. Ghi rõ: C% chỉ là tính từ khối lượng đã cân và thể tích đã đong,
-          // việc tan hoàn toàn chưa có cảm biến nào xác nhận.
-          return { isPassed: false, reasonVi: 'Chưa thể xác nhận muối tan hoàn toàn — đũa khuấy và cảm biến hòa tan chưa có trong phòng thí nghiệm', hintVi: 'Bước này cần asset đũa khuấy + thao tác khuấy (đang chờ bổ sung). C% = 10,0/(10,0+90,0) × 100% = 10,0% mới chỉ là tính từ khối lượng đã cân và thể tích đã đong' };
+          // C-18/C-19 (Vòng 4): kiểm tra lại điều kiện b.1 (cân đủ 10,0 g) và b.2
+          // (đong đủ 90 ml) thay vì tin bước trước; cộng thêm thời gian đã khuấy.
+          // Chỉ ghi "đã khuấy ≥ 10 s" — KHÔNG ghi "đã tan hoàn toàn" (chưa có cảm
+          // biến nào xác nhận muối tan hết); C% là tính từ khối lượng đã cân và
+          // thể tích đã đong.
+          const bal = instances.find((i) => i.assetId === 'OL3D-EQP-BAL-0001');
+          const tare = bal?.instanceState.tareOffsetG;
+          const raw = bal?.instanceState.measuredMassG;
+          if (!bal || typeof tare !== 'number' || tare <= 0 || typeof raw !== 'number' || Math.abs((raw - tare) - 10.0) > 0.2) {
+            return { isPassed: false, reasonVi: 'Chưa cân đủ 10,0 g muối NaCl ở bước 1', hintVi: 'Quay lại bước 1: đặt lọ muối lên cân, bấm TARE, xúc tới 10,0 g' };
+          }
+          const cyl = instances.find((i) => i.assetId === 'OL3D-EQP-CYL-0001');
+          const v = cyl?.instanceState.baseLiquidLevelMl;
+          if (!cyl || typeof v !== 'number' || v < 88 || v > 92) {
+            return { isPassed: false, reasonVi: 'Chưa đong đủ 90 ml nước cất ở bước 2', hintVi: 'Quay lại bước 2: đong nước tới 90 ml' };
+          }
+          const str = instances.find((i) => i.assetId === 'OL3D-EQP-STR-0001');
+          if (!str) return { isPassed: false, reasonVi: 'Chưa đặt máy khuấy từ lên bàn', hintVi: 'Đặt máy khuấy từ lên bàn, đặt cốc lên máy rồi bật khuấy' };
+          const t = str.instanceState.stirTimeS;
+          if (typeof t !== 'number' || t < 10) return { isPassed: false, reasonVi: `Mới khuấy được ${(typeof t === 'number' ? t : 0).toFixed(1)} s, chưa đủ 10 s`, hintVi: 'Bật máy khuấy từ (tốc độ > 0) và để cốc trên máy khuấy ít nhất 10 giây' };
+          return { isPassed: true, reasonVi: `Đã khuấy ${t.toFixed(1)} s bằng máy khuấy từ (đo được); C% = 10,0/(10,0+90,0) × 100% = 10,0% (tính từ khối lượng đã cân và thể tích đã đong — việc tan hoàn toàn chưa có cảm biến xác nhận)` };
         },
       },
     ],
@@ -927,39 +958,92 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         stepIndex: 1,
         stepId: 'WF12-STEP-01',
         titleVi: 'Bước 1: Mắc đoạn mạch nối tiếp nguồn, biến trở, điện trở mẫu và ampe kế',
-        instructionVi: 'Lắp ráp mạch kín gồm nguồn DC, biến trở con chạy điều khiển, điện trở $R = 10\\,\\Omega$ và ampe kế.',
+        instructionVi: 'Lắp ráp mạch kín gồm nguồn DC, biến trở con chạy điều khiển, điện trở $R = 10\\,\\Omega$ và ampe kế. Bật nguồn PSU.',
         scientificConceptVi: 'Biến trở con chạy đóng vai trò phân áp điều chỉnh dòng điện mượt mà.',
         mathFormulaLatex: '$I = \\frac{U}{R_x + R_b}$',
-        requiredArchetypes: ['resistor-sample', 'rheostat', 'ammeter-dc'],
-        suggestedActionVi: 'Cắm dây nối các linh kiện trên đế thí nghiệm',
+        requiredArchetypes: ['optical-power-supply', 'resistor-sample', 'rheostat', 'digital-multimeter'],
+        suggestedActionVi: 'Đặt nguồn, điện trở mẫu, biến trở và ampe kế lên bàn; bật nguồn',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Mạch đo định luật Ôm đã lắp ráp chuẩn xác' };
+          // C-18/C-19 (Vòng 4): mạch kín theo solver điện trở (PSU–RES–RHE).
+          const psu = instances.find((i) => i.assetId === 'OL3D-EQP-PSU-0001');
+          const res = instances.find((i) => i.assetId === 'OL3D-EQP-RES-0001');
+          const rhe = instances.find((i) => i.assetId === 'OL3D-EQP-RHE-0001');
+          const amp = instances.find((i) => i.assetId === 'OL3D-EQP-AMP-0001');
+          if (!psu || !res || !rhe || !amp) return { isPassed: false, reasonVi: 'Thiếu thiết bị trong mạch (cần nguồn PSU, điện trở mẫu, biến trở, ampe kế)', hintVi: 'Đặt đủ PSU, điện trở mẫu 10 Ω, biến trở và ampe kế lên bàn' };
+          const st = solveResistiveCircuit([
+            { instance: psu, role: 'psu', resistanceOhms: 0 },
+            { instance: res, role: 'resistor', resistanceOhms: res.instanceState.resistanceOhms ?? 10 },
+            { instance: rhe, role: 'rheostat', resistanceOhms: rhe.instanceState.rheostatOhms ?? 10 },
+          ]);
+          if (!st.isCircuitClosed) return { isPassed: false, reasonVi: `Mạch chưa kín: ${st.reasonVi}`, hintVi: 'Bật nguồn PSU (bấm vào nguồn để bật)' };
+          return { isPassed: true, reasonVi: `Mạch kín: U = ${st.supplyVoltageV.toFixed(1)} V, R toàn mạch = ${st.resistanceTotalOhms.toFixed(1)} Ω, I = ${st.currentA.toFixed(2)} A (tính ra từ định luật Ôm)` };
         },
       },
       {
         stepIndex: 2,
         stepId: 'WF12-STEP-02',
         titleVi: 'Bước 2: Mắc vôn kế song song với hai đầu điện trở mẫu R',
-        instructionVi: 'Nối hai chốt của vôn kế vào hai đầu chân cắm của điện trở mẫu $R$.',
+        instructionVi: 'Đặt vôn kế trong 0,35 m của điện trở mẫu $R$ và chọn thang đo V.',
         scientificConceptVi: 'Hiệu điện thế hai đầu tải thuần trở tỷ lệ thuận với dòng điện chạy qua nó.',
         mathFormulaLatex: '$U_R = I \\cdot R$',
-        requiredArchetypes: ['voltmeter-dc', 'resistor-sample'],
-        suggestedActionVi: 'Mắc vôn kế song song hai cực điện trở',
+        requiredArchetypes: ['digital-multimeter', 'resistor-sample'],
+        suggestedActionVi: 'Đặt vôn kế cạnh điện trở mẫu, chọn thang V',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Vôn kế đã sẵn sàng đo điện áp rơi trên điện trở' };
+          // C-18/C-19 (Vòng 4): vôn kế đọc U trên điện trở mẫu; số đọc do reconcile
+          // ghi từ solver (chỉ khi vôn kế trong 0,35 m của RES và mạch kín).
+          const psu = instances.find((i) => i.assetId === 'OL3D-EQP-PSU-0001');
+          const res = instances.find((i) => i.assetId === 'OL3D-EQP-RES-0001');
+          const rhe = instances.find((i) => i.assetId === 'OL3D-EQP-RHE-0001');
+          const vol = instances.find((i) => i.assetId === 'OL3D-EQP-VOL-0001');
+          if (!psu || !res || !rhe || !vol) return { isPassed: false, reasonVi: 'Thiếu thiết bị (cần PSU, điện trở mẫu, biến trở, vôn kế)', hintVi: 'Đặt đủ PSU, điện trở mẫu, biến trở và vôn kế lên bàn' };
+          const st = solveResistiveCircuit([
+            { instance: psu, role: 'psu', resistanceOhms: 0 },
+            { instance: res, role: 'resistor', resistanceOhms: res.instanceState.resistanceOhms ?? 10 },
+            { instance: rhe, role: 'rheostat', resistanceOhms: rhe.instanceState.rheostatOhms ?? 10 },
+          ]);
+          if (!st.isCircuitClosed) return { isPassed: false, reasonVi: `Mạch chưa kín: ${st.reasonVi}`, hintVi: 'Bật nguồn PSU để mạch kín' };
+          const mode = vol.instanceState.multimeterMode;
+          if (mode !== 'V' && mode !== 'DCV') return { isPassed: false, reasonVi: 'Vôn kế chưa ở thang đo điện áp (V)', hintVi: 'Bấm nút chọn thang V trên vôn kế' };
+          const dx = vol.transform.positionM[0] - res.transform.positionM[0];
+          const dz = vol.transform.positionM[2] - res.transform.positionM[2];
+          if (Math.hypot(dx, dz) > 0.35) return { isPassed: false, reasonVi: 'Vôn kế đang ở xa điện trở mẫu (quá 0,35 m) nên chưa đo được', hintVi: 'Kéo vôn kế lại gần điện trở mẫu (trong 0,35 m)' };
+          const v = vol.instanceState.multimeterValue;
+          if (typeof v !== 'number' || !Number.isFinite(v)) return { isPassed: false, reasonVi: 'Vôn kế chưa có số đọc', hintVi: 'Đặt vôn kế cạnh điện trở mẫu rồi đọc lại' };
+          if (Math.abs(v - st.voltageAtResistorV) > 0.1) return { isPassed: false, reasonVi: `Vôn kế đọc ${v.toFixed(2)} V, lệch khỏi giá trị tính từ mạch ${st.voltageAtResistorV.toFixed(2)} V`, hintVi: 'Kiểm tra lại vị trí vôn kế và mạch điện' };
+          return { isPassed: true, reasonVi: `Vôn kế đọc $U_R = ${v.toFixed(2)}\\text{ V}$ trên điện trở mẫu (đo được; giá trị tính từ mạch: ${st.voltageAtResistorV.toFixed(2)} V)` };
         },
       },
       {
         stepIndex: 3,
         stepId: 'WF12-STEP-03',
         titleVi: 'Bước 3: Điều chỉnh biến trở, ghi bảng số liệu (U, I) và kiểm chứng',
-        instructionVi: 'Gạt con chạy biến trở qua 4 nấc ($U = 2\\text{V}, 4\\text{V}, 6\\text{V}, 8\\text{V}$), ghi các giá trị $I$ tương ứng.',
+        instructionVi: 'Vặn nguồn PSU qua các nấc 3 V, 6 V, 9 V, 12 V (nguồn thật trong phòng thí nghiệm chỉ có 4 nấc này) và/hoặc gạt con chạy biến trở, ghi các giá trị $I$ tương ứng.',
         scientificConceptVi: 'Hệ số góc của đồ thị đường thẳng đi qua gốc tọa độ chính là điện trở $R = \\frac{\\Delta U}{\\Delta I}$.',
-        mathFormulaLatex: '$I = \\frac{U}{R} \\iff \\frac{U}{I} = \\text{const} = 10.0\\,\\Omega$',
-        requiredArchetypes: ['rheostat'],
-        suggestedActionVi: 'Gạt con chạy biến trở và quan sát kim đo',
+        mathFormulaLatex: '$\\frac{U_R}{I} = 10.0\\,\\Omega$',
+        requiredArchetypes: ['rheostat', 'digital-multimeter'],
+        suggestedActionVi: 'Gạt con chạy biến trở và quan sát số đo',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Tỉ số $U/I$ không đổi ($10.0\\,\\Omega$), nghiệm đúng định luật Ôm' };
+          // C-18/C-19 (Vòng 4): đã vặn biến trở (rheostatAdjusted) và dòng đo được
+          // khớp I = U/R_total trong 5%.
+          const psu = instances.find((i) => i.assetId === 'OL3D-EQP-PSU-0001');
+          const res = instances.find((i) => i.assetId === 'OL3D-EQP-RES-0001');
+          const rhe = instances.find((i) => i.assetId === 'OL3D-EQP-RHE-0001');
+          const amp = instances.find((i) => i.assetId === 'OL3D-EQP-AMP-0001');
+          if (!psu || !res || !rhe || !amp) return { isPassed: false, reasonVi: 'Thiếu thiết bị trong mạch (cần PSU, điện trở mẫu, biến trở, ampe kế)', hintVi: 'Đặt đủ PSU, điện trở mẫu, biến trở và ampe kế lên bàn' };
+          const st = solveResistiveCircuit([
+            { instance: psu, role: 'psu', resistanceOhms: 0 },
+            { instance: res, role: 'resistor', resistanceOhms: res.instanceState.resistanceOhms ?? 10 },
+            { instance: rhe, role: 'rheostat', resistanceOhms: rhe.instanceState.rheostatOhms ?? 10 },
+          ]);
+          if (!st.isCircuitClosed) return { isPassed: false, reasonVi: `Mạch chưa kín: ${st.reasonVi}`, hintVi: 'Bật nguồn PSU để mạch kín' };
+          if (rhe.instanceState.rheostatAdjusted !== true) return { isPassed: false, reasonVi: 'Chưa vặn biến trở (vẫn đang ở giá trị mặc định 10 Ω)', hintVi: 'Gạt thanh trượt biến trở sang một giá trị khác 10 Ω' };
+          const mode = amp.instanceState.multimeterMode;
+          if (mode !== 'A' && mode !== 'DCA') return { isPassed: false, reasonVi: 'Ampe kế chưa ở thang đo dòng điện (A)', hintVi: 'Bấm nút chọn thang A trên ampe kế' };
+          const iMeasured = amp.instanceState.multimeterValue;
+          if (typeof iMeasured !== 'number' || !Number.isFinite(iMeasured)) return { isPassed: false, reasonVi: 'Ampe kế chưa có số đọc', hintVi: 'Đặt ampe kế trong 0,70 m của nguồn rồi đọc lại' };
+          const expected = st.currentA;
+          if (expected <= 0 || Math.abs(iMeasured - expected) / expected > 0.05) return { isPassed: false, reasonVi: `Dòng đo được I = ${iMeasured.toFixed(2)} A, lệch khỏi giá trị tính I = U/R = ${expected.toFixed(2)} A quá 5%`, hintVi: 'Kiểm tra lại vị trí ampe kế và mạch điện' };
+          return { isPassed: true, reasonVi: `Nghiệm đúng định luật Ôm: I đo được = ${iMeasured.toFixed(2)} A, U/R toàn mạch = ${expected.toFixed(2)} A (sai lệch ≤ 5%); $U_R/I = 10,0\\,\\Omega$ (tính ra)` };
         },
       },
     ],
@@ -981,39 +1065,79 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         stepIndex: 1,
         stepId: 'WF13-STEP-01',
         titleVi: 'Bước 1: Lắp mạch nối tiếp 2 bóng đèn Đ1 và Đ2',
-        instructionVi: 'Nối cực dương nguồn -> bóng đèn 1 -> bóng đèn 2 -> cực âm nguồn.',
+        instructionVi: 'Đặt 2 đui đèn và nguồn PSU lên bàn, chọn cách mắc Nối tiếp trên nguồn (mặc định), bật nguồn.',
         scientificConceptVi: 'Trong đoạn mạch nối tiếp chỉ có một đường dẫn dòng điện duy nhất.',
         mathFormulaLatex: '$I = I_1 = I_2, \\quad U = U_1 + U_2$',
-        requiredArchetypes: ['incandescent-lamp-socket'],
-        suggestedActionVi: 'Mắc nối tiếp 2 bóng đèn',
+        requiredArchetypes: ['incandescent-lamp-socket', 'optical-power-supply'],
+        suggestedActionVi: 'Đặt 2 đui đèn + nguồn, chọn mắc nối tiếp, bật nguồn',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Đã hoàn thành mắc nối tiếp 2 bóng đèn' };
+          // C-18/C-19 (Vòng 4): 2 đui đèn + PSU, topology 'series', cả 2 sáng,
+          // U1 + U2 = U_nguồn ± 0,2 V (tính ra từ solver; R bóng 12 Ω là giả định).
+          const psu = instances.find((i) => i.assetId === 'OL3D-EQP-PSU-0001');
+          const sockets = instances.filter((i) => i.assetId === 'OL3D-EQP-SOC-0001');
+          if (!psu || sockets.length < 2) return { isPassed: false, reasonVi: 'Thiếu thiết bị (cần nguồn PSU và 2 đui đèn)', hintVi: 'Đặt nguồn PSU và 2 đui đèn lên bàn' };
+          if ((psu.instanceState.circuitTopology ?? 'series') !== 'series') return { isPassed: false, reasonVi: 'Nguồn đang ở chế độ mắc song song, bước này cần mắc nối tiếp', hintVi: 'Bấm nút chuyển cách mắc trên nguồn sang Nối tiếp' };
+          const st = solveMultiBranchCircuit(psu, sockets.slice(0, 2), 'series');
+          if (!st.isCircuitClosed) return { isPassed: false, reasonVi: `Mạch chưa kín: ${st.reasonVi}`, hintVi: 'Bật nguồn PSU để mạch kín' };
+          if (!st.branches.every((b) => b.isLit)) return { isPassed: false, reasonVi: 'Có bóng chưa sáng (điện áp nhánh dưới ngưỡng 2,5 V)', hintVi: 'Tăng điện áp nguồn PSU lên (3/6/9/12 V)' };
+          const sum = st.branches[0].voltageV + st.branches[1].voltageV;
+          if (Math.abs(sum - st.supplyVoltageV) > 0.2) return { isPassed: false, reasonVi: `U1 + U2 = ${sum.toFixed(2)} V, lệch khỏi điện áp nguồn ${st.supplyVoltageV.toFixed(1)} V quá 0,2 V`, hintVi: 'Kiểm tra lại mạch nối tiếp' };
+          return { isPassed: true, reasonVi: `Mạch nối tiếp: cả 2 bóng sáng, U1 = ${st.branches[0].voltageV.toFixed(2)} V, U2 = ${st.branches[1].voltageV.toFixed(2)} V, U1 + U2 = ${sum.toFixed(2)} V ≈ U nguồn ${st.supplyVoltageV.toFixed(1)} V (tính ra; R bóng 12 Ω là giả định mô phỏng)` };
         },
       },
       {
         stepIndex: 2,
         stepId: 'WF13-STEP-02',
         titleVi: 'Bước 2: Đo hiệu điện thế và quan sát độ sáng mạch nối tiếp',
-        instructionVi: 'Đo $U_1 = 3.0\\text{ V}$ và $U_2 = 3.0\\text{ V}$ ($U_{\\text{tong}} = 6.0\\text{ V}$), hai đèn sáng mờ hơn bình thường.',
+        instructionVi: 'Đặt vôn kế trong 0,35 m của từng bóng đèn, chọn thang V, đọc $U_1$ và $U_2$ (ở nguồn 6 V thì $U_1 = U_2 = 3,0$ V).',
         scientificConceptVi: 'Điện áp nguồn bị chia đôi cho 2 tải tiêu thụ có cùng điện trở.',
         mathFormulaLatex: '$U_1 = U_2 = \\frac{U}{2} = 3.0\\text{ V}$',
-        requiredArchetypes: ['voltmeter-dc'],
-        suggestedActionVi: 'Đo điện áp trên từng bóng đèn',
+        requiredArchetypes: ['digital-multimeter', 'incandescent-lamp-socket'],
+        suggestedActionVi: 'Đặt vôn kế cạnh từng bóng đèn để đo U1, U2',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Đo đạc mạch nối tiếp chính xác: $U_1 + U_2 = 6.0\\text{ V}$' };
+          // C-18/C-19 (Vòng 4): vôn kế đọc khớp solver từng nhánh ± 0,1 V.
+          // (Số đọc của vôn kế do reconcile ghi khi vôn kế trong 0,35 m của bóng.)
+          const psu = instances.find((i) => i.assetId === 'OL3D-EQP-PSU-0001');
+          const sockets = instances.filter((i) => i.assetId === 'OL3D-EQP-SOC-0001');
+          const vol = instances.find((i) => i.assetId === 'OL3D-EQP-VOL-0001');
+          if (!psu || sockets.length < 2 || !vol) return { isPassed: false, reasonVi: 'Thiếu thiết bị (cần PSU, 2 đui đèn, vôn kế)', hintVi: 'Đặt đủ PSU, 2 đui đèn và vôn kế lên bàn' };
+          if ((psu.instanceState.circuitTopology ?? 'series') !== 'series') return { isPassed: false, reasonVi: 'Bước này đo mạch nối tiếp, nguồn đang ở chế độ song song', hintVi: 'Chuyển cách mắc trên nguồn sang Nối tiếp' };
+          const st = solveMultiBranchCircuit(psu, sockets.slice(0, 2), 'series');
+          if (!st.isCircuitClosed) return { isPassed: false, reasonVi: `Mạch chưa kín: ${st.reasonVi}`, hintVi: 'Bật nguồn PSU để mạch kín' };
+          const mode = vol.instanceState.multimeterMode;
+          if (mode !== 'V' && mode !== 'DCV') return { isPassed: false, reasonVi: 'Vôn kế chưa ở thang đo điện áp (V)', hintVi: 'Bấm nút chọn thang V trên vôn kế' };
+          const v = vol.instanceState.multimeterValue;
+          if (typeof v !== 'number' || !Number.isFinite(v)) return { isPassed: false, reasonVi: 'Vôn kế chưa có số đọc', hintVi: 'Đặt vôn kế trong 0,35 m của một bóng đèn rồi đọc lại' };
+          const match = st.branches.find((b) => Math.abs(v - b.voltageV) <= 0.1);
+          if (!match) return { isPassed: false, reasonVi: `Vôn kế đọc ${v.toFixed(2)} V, không khớp điện áp nhánh nào (U1 = ${st.branches[0].voltageV.toFixed(2)} V, U2 = ${st.branches[1].voltageV.toFixed(2)} V)`, hintVi: 'Đặt vôn kế sát một bóng đèn (trong 0,35 m) để đo điện áp nhánh đó' };
+          return { isPassed: true, reasonVi: `Vôn kế đọc ${v.toFixed(2)} V khớp điện áp một nhánh (U1 = ${st.branches[0].voltageV.toFixed(2)} V, U2 = ${st.branches[1].voltageV.toFixed(2)} V — đo được; giá trị tính từ solver)` };
         },
       },
       {
         stepIndex: 3,
         stepId: 'WF13-STEP-03',
         titleVi: 'Bước 3: Chuyển sang mạch song song và so sánh',
-        instructionVi: 'Nối 2 bóng đèn song song với nhau vào nguồn 6V, quan sát hai đèn sáng rực rỡ và đo dòng rẽ nhánh.',
+        instructionVi: 'Bấm nút chuyển cách mắc trên nguồn sang Song song, quan sát hai đèn sáng rực rỡ và đo dòng rẽ nhánh.',
         scientificConceptVi: 'Trong mạch song song, điện áp hai đầu mỗi nhánh bằng điện áp nguồn, dòng điện chia nhánh theo định luật nút.',
         mathFormulaLatex: '$U_1 = U_2 = U = 6.0\\text{ V}, \\quad I = I_1 + I_2$',
-        requiredArchetypes: ['incandescent-lamp-socket'],
-        suggestedActionVi: 'Mắc 2 bóng đèn song song',
+        requiredArchetypes: ['incandescent-lamp-socket', 'optical-power-supply'],
+        suggestedActionVi: 'Chuyển cách mắc sang song song',
         validationGuard: (instances) => {
-          return { isPassed: true, reasonVi: 'Mạch song song: Cả 2 đèn sáng hết công suất định mức, $U_1 = U_2 = 6.0\\text{ V}$' };
+          // C-18/C-19 (Vòng 4): topology 'parallel', U1 = U2 = U_nguồn ± 0,2 V,
+          // I_total = I1 + I2 ± 5% (tính ra từ solver; R bóng 12 Ω là giả định).
+          const psu = instances.find((i) => i.assetId === 'OL3D-EQP-PSU-0001');
+          const sockets = instances.filter((i) => i.assetId === 'OL3D-EQP-SOC-0001');
+          if (!psu || sockets.length < 2) return { isPassed: false, reasonVi: 'Thiếu thiết bị (cần nguồn PSU và 2 đui đèn)', hintVi: 'Đặt nguồn PSU và 2 đui đèn lên bàn' };
+          if ((psu.instanceState.circuitTopology ?? 'series') !== 'parallel') return { isPassed: false, reasonVi: 'Nguồn đang ở chế độ mắc nối tiếp, bước này cần mắc song song', hintVi: 'Bấm nút chuyển cách mắc trên nguồn sang Song song' };
+          const st = solveMultiBranchCircuit(psu, sockets.slice(0, 2), 'parallel');
+          if (!st.isCircuitClosed) return { isPassed: false, reasonVi: `Mạch chưa kín: ${st.reasonVi}`, hintVi: 'Bật nguồn PSU để mạch kín' };
+          if (!st.branches.every((b) => b.isLit)) return { isPassed: false, reasonVi: 'Có bóng chưa sáng (điện áp nhánh dưới ngưỡng 2,5 V)', hintVi: 'Tăng điện áp nguồn PSU lên (3/6/9/12 V)' };
+          const u1 = st.branches[0].voltageV;
+          const u2 = st.branches[1].voltageV;
+          if (Math.abs(u1 - st.supplyVoltageV) > 0.2 || Math.abs(u2 - st.supplyVoltageV) > 0.2) return { isPassed: false, reasonVi: `U1 = ${u1.toFixed(2)} V, U2 = ${u2.toFixed(2)} V, chưa bằng điện áp nguồn ${st.supplyVoltageV.toFixed(1)} V`, hintVi: 'Kiểm tra lại mạch song song' };
+          const sumI = st.branches[0].currentA + st.branches[1].currentA;
+          if (st.totalCurrentA <= 0 || Math.abs(st.totalCurrentA - sumI) / st.totalCurrentA > 0.05) return { isPassed: false, reasonVi: 'Dòng tổng không bằng tổng dòng nhánh', hintVi: 'Kiểm tra lại mạch song song' };
+          return { isPassed: true, reasonVi: `Mạch song song: cả 2 đèn sáng, U1 = U2 = ${st.supplyVoltageV.toFixed(1)} V, I = I1 + I2 = ${st.totalCurrentA.toFixed(2)} A (tính ra; R bóng 12 Ω là giả định mô phỏng)` };
         },
       },
     ],
@@ -1063,28 +1187,56 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
         instructionVi: 'Cắm cành tươi nguyên vẹn lá vào bình A (thực nghiệm) và cành đã ngắt sạch lá vào bình B (đối chứng).',
         scientificConceptVi: 'Thiết kế thí nghiệm đối chứng đơn biến để cô lập yếu tố thoát hơi nước qua bề mặt lá.',
         mathFormulaLatex: '$A: \\text{Co la} \\quad \\text{vs} \\quad B: \\text{Khong la}$',
-        requiredArchetypes: ['erlenmeyer-flask'],
+        requiredArchetypes: ['erlenmeyer-flask', 'plant-twig-leafy', 'plant-twig-bare'],
         suggestedActionVi: 'Cắm 2 cành cây vào 2 bình',
         validationGuard: (instances) => {
-          // C-11/C-17 (Vòng 3): KHÔNG viết guard pass giả — asset cành cây chưa tồn tại,
-          // không có trường nào phân biệt "có lá/không lá". Guard chặn cho tới khi có asset.
-          return { isPassed: false, reasonVi: 'Chưa thể cắm cành cây — asset cành cây (có lá / không lá) chưa có trong phòng thí nghiệm', hintVi: 'Bước này cần asset plant-twig (đang chờ bổ sung)' };
+          // C-18/C-19 (Vòng 4): cành có lá cắm trong 1 bình, cành không lá cắm trong
+          // bình còn lại (mỗi cành một bình, qua slot 'inside-vessel').
+          const flasks = instances.filter((i) => i.assetId === 'OL3D-EQP-FLK-0001');
+          if (flasks.length < 2) return { isPassed: false, reasonVi: 'Cần 2 bình tam giác (làm xong bước 1 trước)', hintVi: 'Chuẩn bị 2 bình tam giác ~100 ml nước mỗi bình' };
+          const leafy = instances.find((i) => i.assetId === 'OL3D-EQP-TWG-0001');
+          const bare = instances.find((i) => i.assetId === 'OL3D-EQP-TWG-0002');
+          if (!leafy || !bare) return { isPassed: false, reasonVi: 'Thiếu cành cây (cần cả cành có lá và cành không lá)', hintVi: 'Đặt cành có lá và cành không lá lên bàn' };
+          const leafyOk = leafy.instanceState.attachmentSlot === 'inside-vessel' && flasks.some((f) => f.instanceId === leafy.instanceState.attachedToInstanceId);
+          const bareOk = bare.instanceState.attachmentSlot === 'inside-vessel' && flasks.some((f) => f.instanceId === bare.instanceState.attachedToInstanceId);
+          if (!leafyOk) return { isPassed: false, reasonVi: 'Cành có lá chưa cắm vào bình tam giác nào', hintVi: 'Kéo cành có lá thả vào trong một bình tam giác' };
+          if (!bareOk) return { isPassed: false, reasonVi: 'Cành không lá chưa cắm vào bình tam giác nào', hintVi: 'Kéo cành không lá thả vào bình tam giác còn lại' };
+          if (leafy.instanceState.attachedToInstanceId === bare.instanceState.attachedToInstanceId) return { isPassed: false, reasonVi: 'Cả 2 cành đang cắm chung một bình — cần mỗi cành một bình', hintVi: 'Cắm cành không lá sang bình tam giác còn lại' };
+          return { isPassed: true, reasonVi: 'Đã cắm cành có lá vào bình thực nghiệm và cành không lá vào bình đối chứng (đo được qua vị trí gắn)' };
         },
       },
       {
         stepIndex: 3,
         stepId: 'WF14-STEP-03',
         titleVi: 'Bước 3: Chiếu sáng và đo độ tụt mực nước trong 2 bình',
-        instructionVi: 'Bật đèn chiếu sáng 30 phút, quan sát mực nước ở bình A tụt rõ rệt do khí khổng mở thoát hơi nước.',
+        instructionVi: 'Bật đèn quang học chiếu sáng 2 bình trong 30 phút mô phỏng (30 giây thật: 1 giây thật = 1 phút mô phỏng), quan sát mực nước ở bình A tụt rõ rệt do khí khổng mở thoát hơi nước. Đo độ tụt bằng ml (bình đo theo ml, không có thang mm).',
         scientificConceptVi: 'Thoát hơi nước tạo động lực hút từ ngọn kéo cột nước đi lên từ rễ qua mạch gỗ.',
-        mathFormulaLatex: '$\\Delta h_A = 12\\text{ mm} > \\Delta h_B \\approx 0.5\\text{ mm}$',
-        requiredArchetypes: ['erlenmeyer-flask'],
+        mathFormulaLatex: '$\\Delta V_A \\geq 10\\text{ ml} > 5 \\times \\Delta V_B$',
+        requiredArchetypes: ['erlenmeyer-flask', 'plant-twig-leafy', 'plant-twig-bare'],
         suggestedActionVi: 'Bật đèn chiếu sáng và quan sát mực nước tụt',
         validationGuard: (instances) => {
-          // C-11/C-17 (Vòng 3): KHÔNG viết guard pass giả — chưa có cành cây, chưa có cơ chế
-          // thời gian/thoát hơi nối vào instance (evaporationRate chỉ nội bộ trong bus),
-          // và đề bài đo Δh bằng mm trong khi bình đo bằng ml.
-          return { isPassed: false, reasonVi: 'Chưa thể đo độ tụt mực nước — cần cành cây và cơ chế mô phỏng thoát hơi theo thời gian (đang chờ bổ sung)', hintVi: 'Làm xong bước 1 rồi chờ asset cành cây và cơ chế thời gian' };
+          // C-18/C-19 (Vòng 4): bình A (có lá) tụt ≥ 10 ml và tụt gấp > 5 lần bình B
+          // (không lá). Mốc ban đầu initialLiquidLevelMl được ghi lúc cắm cành vào bình.
+          // Tốc độ thoát hơi là mô phỏng rút gọn thời gian (có lá 0,4 ml/phút mô phỏng,
+          // không lá 0,02 ml/phút mô phỏng), không phải tốc độ thật ngoài đời.
+          const flasks = instances.filter((i) => i.assetId === 'OL3D-EQP-FLK-0001');
+          const leafy = instances.find((i) => i.assetId === 'OL3D-EQP-TWG-0001');
+          const bare = instances.find((i) => i.assetId === 'OL3D-EQP-TWG-0002');
+          if (flasks.length < 2 || !leafy || !bare) return { isPassed: false, reasonVi: 'Chưa đủ 2 bình và 2 cành cây (làm xong bước 2 trước)', hintVi: 'Cắm cành có lá và cành không lá vào 2 bình tam giác' };
+          const flaskA = flasks.find((f) => f.instanceId === leafy.instanceState.attachedToInstanceId);
+          const flaskB = flasks.find((f) => f.instanceId === bare.instanceState.attachedToInstanceId);
+          if (!flaskA || !flaskB) return { isPassed: false, reasonVi: 'Cành cây chưa cắm vào bình (làm xong bước 2 trước)', hintVi: 'Kéo cành có lá và cành không lá thả vào 2 bình tam giác' };
+          const initA = flaskA.instanceState.initialLiquidLevelMl;
+          const initB = flaskB.instanceState.initialLiquidLevelMl;
+          if (typeof initA !== 'number' || typeof initB !== 'number') return { isPassed: false, reasonVi: 'Chưa ghi được mực nước ban đầu (cắm lại cành vào bình để ghi mốc)', hintVi: 'Lấy cành ra rồi cắm lại vào bình để hệ thống ghi mốc mực nước' };
+          const nowA = flaskA.instanceState.baseLiquidLevelMl;
+          const nowB = flaskB.instanceState.baseLiquidLevelMl;
+          if (typeof nowA !== 'number' || typeof nowB !== 'number') return { isPassed: false, reasonVi: 'Chưa đọc được mực nước hiện tại', hintVi: 'Đặt bình lên bàn rồi đọc lại' };
+          const dropA = initA - nowA;
+          const dropB = initB - nowB;
+          if (dropA < 10) return { isPassed: false, reasonVi: `Bình có lá mới tụt ${dropA.toFixed(1)} ml, chưa đủ 10 ml`, hintVi: 'Bật đèn quang học chiếu sáng 2 bình thêm một lúc (30 giây thật = 30 phút mô phỏng)' };
+          if (dropA <= 5 * dropB) return { isPassed: false, reasonVi: `Bình có lá tụt ${dropA.toFixed(1)} ml nhưng bình đối chứng cũng tụt ${dropB.toFixed(1)} ml (chưa gấp 5 lần)`, hintVi: 'Kiểm tra lại: bình đối chứng phải là cành không lá' };
+          return { isPassed: true, reasonVi: `Bình có lá tụt ${dropA.toFixed(1)} ml, gấp ${(dropB > 0 ? (dropA / dropB).toFixed(1) : 'nhiều')} lần bình đối chứng (${dropB.toFixed(1)} ml) — đo được; tốc độ là mô phỏng rút gọn thời gian (0,4 ml/phút mô phỏng có lá, 0,02 ml/phút không lá)` };
         },
       },
     ],
@@ -1105,31 +1257,54 @@ export const EXPERIMENT_WORKFLOWS: Record<string, ExperimentWorkflowDefinition> 
       {
         stepIndex: 1,
         stepId: 'WF15-STEP-01',
-        titleVi: 'Bước 1: Rót các mẫu dung dịch vào khay đĩa sứ',
-        instructionVi: 'Rót khoảng 5 ml từng mẫu dung dịch (Axit HCl / giấm ăn, Bazơ NaOH / nước vôi trong, Nước cất) vào khay.',
+        titleVi: 'Bước 1: Chuẩn bị 3 ống nghiệm chứa 3 mẫu dung dịch',
+        instructionVi: 'Đặt 3 ống nghiệm lên bàn, chọn mẫu cho từng ống bằng nút chọn mẫu trong bảng điều khiển của ống: 1 ống Axit HCl (pH 2,90), 1 ống Nước cất (pH 7,00), 1 ống Kiềm NaOH (pH 11,50).',
         scientificConceptVi: 'Thang đo pH định lượng nồng độ ion $H^+$ trong dung dịch: $\\text{pH} = -\\log[H^+]$.',
         mathFormulaLatex: '$\\text{pH} = -\\log_{10}[H^+]$',
-        requiredArchetypes: [],
-        suggestedActionVi: 'Rót các mẫu hóa chất vào khay sứ',
+        requiredArchetypes: ['test-tube'],
+        suggestedActionVi: 'Đặt 3 ống nghiệm, chọn mẫu axit / nước cất / kiềm cho từng ống',
         validationGuard: (instances) => {
-          // C-11/C-17 (Vòng 3): KHÔNG viết guard pass giả — khay mẫu và các mẫu dung dịch
-          // chưa có trong phòng thí nghiệm. Guard chặn cho tới khi có asset mẫu + khay.
-          return { isPassed: false, reasonVi: 'Chưa thể chuẩn bị mẫu dung dịch — khay mẫu và các mẫu (axit / bazơ / nước cất) chưa có trong phòng thí nghiệm', hintVi: 'Bước này cần asset khay mẫu + mẫu dung dịch (đang chờ bổ sung)' };
+          // C-18/C-19 (Vòng 4): 3 ống TUB, mỗi ống đã chọn 1 mẫu (samplePh):
+          // 1 ống pH < 7 (axit), 1 ống ≈ 7,00 ± 0,05 (trung tính), 1 ống > 7 (kiềm).
+          // pH mẫu là giá trị chọn bằng nút preset trong inspector (ghi rõ là chọn
+          // mẫu, chưa phải đo mẫu thật) — đo thật ở bước 3 bằng máy đo pH.
+          const tubes = instances.filter((i) => i.assetId === 'OL3D-EQP-TUB-0001');
+          if (tubes.length < 3) return { isPassed: false, reasonVi: `Mới có ${tubes.length} ống nghiệm, cần 3 ống (axit / nước cất / kiềm)`, hintVi: 'Đặt thêm ống nghiệm lên bàn cho đủ 3 ống' };
+          const phs = tubes.map((t) => t.instanceState.samplePh);
+          const unchosen = phs.filter((p) => typeof p !== 'number').length;
+          if (unchosen > 0) return { isPassed: false, reasonVi: `Còn ${unchosen} ống chưa chọn mẫu`, hintVi: 'Bấm vào từng ống nghiệm rồi bấm nút chọn mẫu (Axit HCl / Nước cất / Kiềm NaOH)' };
+          const nums = phs as number[];
+          const hasAcid = nums.some((p) => p < 7);
+          const hasNeutral = nums.some((p) => Math.abs(p - 7.0) <= 0.05);
+          const hasBase = nums.some((p) => p > 7);
+          if (!hasAcid || !hasNeutral || !hasBase) return { isPassed: false, reasonVi: `3 ống đang có pH: ${nums.map((p) => p.toFixed(2)).join(', ')} — cần đủ 1 axit (pH < 7), 1 trung tính (pH ≈ 7,00), 1 kiềm (pH > 7)`, hintVi: 'Chọn lại mẫu cho các ống: 1 ống Axit HCl, 1 ống Nước cất, 1 ống Kiềm NaOH' };
+          return { isPassed: true, reasonVi: `Đã chuẩn bị 3 mẫu: pH ${nums.map((p) => p.toFixed(2)).join(', ')} (axit / trung tính / kiềm — chọn mẫu bằng nút preset trong inspector)` };
         },
       },
       {
         stepIndex: 2,
         stepId: 'WF15-STEP-02',
-        titleVi: 'Bước 2: Dùng đũa thủy tinh chấm giọt dung dịch lên giấy chỉ thị màu',
-        instructionVi: 'Nhúng đầu đũa thủy tinh sạch vào dung dịch, chấm lên mẩu giấy chỉ thị pH vạn năng.',
+        titleVi: 'Bước 2: Nhúng giấy chỉ thị pH vào ống mẫu và đọc màu',
+        instructionVi: 'Kéo giấy chỉ thị pH thả vào trong một ống nghiệm đã chọn mẫu; màu giấy đổi theo pH của mẫu (đỏ → vàng → lục → lam → tím).',
         scientificConceptVi: 'Chất chỉ thị chuyển dịch cân bằng ion tạo hợp chất có cấu trúc màu đặc trưng theo độ pH.',
         mathFormulaLatex: '$HIn \\rightleftharpoons H^+ + In^-$',
-        requiredArchetypes: [],
-        suggestedActionVi: 'Chấm giọt dung dịch lên giấy pH',
+        requiredArchetypes: ['ph-indicator-strip', 'test-tube'],
+        suggestedActionVi: 'Nhúng giấy chỉ thị vào ống mẫu',
         validationGuard: (instances) => {
-          // C-11/C-17 (Vòng 3): KHÔNG viết guard pass giả — giấy chỉ thị và đũa thủy tinh
-          // chưa có trong phòng thí nghiệm. Guard chặn cho tới khi có asset.
-          return { isPassed: false, reasonVi: 'Chưa thể chấm giấy chỉ thị — giấy pH và đũa thủy tinh chưa có trong phòng thí nghiệm', hintVi: 'Bước này cần asset giấy chỉ thị pH + đũa khuấy (đang chờ bổ sung)' };
+          // C-18/C-19 (Vòng 4): giấy LIT gắn trong ống mẫu (inside-vessel), ống đã
+          // chọn mẫu (samplePh); màu giấy do reconcile tính từ
+          // ChemicalSolutionSolver.getUniversalIndicatorHex(pH mẫu).
+          const lit = instances.find((i) => i.assetId === 'OL3D-EQP-LIT-0001');
+          if (!lit) return { isPassed: false, reasonVi: 'Chưa đặt giấy chỉ thị pH lên bàn', hintVi: 'Đặt giấy chỉ thị pH lên bàn' };
+          if (lit.instanceState.attachmentSlot !== 'inside-vessel' || !lit.instanceState.attachedToInstanceId) return { isPassed: false, reasonVi: 'Giấy chỉ thị chưa nhúng vào ống mẫu nào', hintVi: 'Kéo giấy chỉ thị thả vào trong một ống nghiệm đã chọn mẫu' };
+          const tube = instances.find((i) => i.instanceId === lit.instanceState.attachedToInstanceId);
+          if (!tube || tube.assetId !== 'OL3D-EQP-TUB-0001') return { isPassed: false, reasonVi: 'Giấy chỉ thị không nằm trong ống nghiệm mẫu', hintVi: 'Kéo giấy chỉ thị thả vào trong một ống nghiệm đã chọn mẫu' };
+          const ph = tube.instanceState.samplePh;
+          if (typeof ph !== 'number') return { isPassed: false, reasonVi: 'Ống mẫu này chưa chọn mẫu dung dịch', hintVi: 'Bấm vào ống nghiệm rồi bấm nút chọn mẫu trước' };
+          const color = lit.instanceState.indicatorColorHex;
+          if (typeof color !== 'string' || !color) return { isPassed: false, reasonVi: 'Giấy chỉ thị đã nhúng nhưng màu chưa được tính', hintVi: 'Chờ hệ thống tính màu giấy theo pH mẫu rồi kiểm tra lại' };
+          const kind = ph < 7 ? 'axit' : ph > 7 ? 'kiềm' : 'trung tính';
+          return { isPassed: true, reasonVi: `Giấy chỉ thị đã nhúng vào mẫu ${kind} (pH = ${ph.toFixed(2)}), màu giấy ${color} (tính từ ChemicalSolutionSolver theo pH mẫu)` };
         },
       },
       {

@@ -13409,12 +13409,89 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                     );
                   })()}
 
+                  {/* C-18/C-19 (Vòng 4): ống nghiệm chưa có module HTML — nút chọn mẫu
+                      cho WF-15 (pH mẫu là giá trị chọn bằng nút, chưa phải đo thật). */}
+                  {activeAsset.geometry.proceduralArchetype === 'test-tube' && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onUpdateInstanceState?.(
+                            activeInstance.instanceId,
+                            { sampleKind: 'hcl', samplePh: 2.9 },
+                            `${activeAsset.name.vi}: Chọn mẫu Axit HCl (pH 2,90)`,
+                          )
+                        }
+                        className="px-2.5 py-1 rounded-[7px] bg-[#1E6BFF]/70 hover:bg-[#1E6BFF]/90 border border-white/25 text-white font-mono text-[12px] font-bold cursor-pointer transition-colors"
+                      >
+                        Axit HCl (pH 2,90)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onUpdateInstanceState?.(
+                            activeInstance.instanceId,
+                            { sampleKind: 'water', samplePh: 7.0 },
+                            `${activeAsset.name.vi}: Chọn mẫu Nước cất (pH 7,00)`,
+                          )
+                        }
+                        className="px-2.5 py-1 rounded-[7px] bg-emerald-600/70 hover:bg-emerald-600/90 border border-white/25 text-white font-mono text-[12px] font-bold cursor-pointer transition-colors"
+                      >
+                        Nước cất (pH 7,00)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onUpdateInstanceState?.(
+                            activeInstance.instanceId,
+                            { sampleKind: 'naoh', samplePh: 11.5 },
+                            `${activeAsset.name.vi}: Chọn mẫu Kiềm NaOH (pH 11,50)`,
+                          )
+                        }
+                        className="px-2.5 py-1 rounded-[7px] bg-violet-600/70 hover:bg-violet-600/90 border border-white/25 text-white font-mono text-[12px] font-bold cursor-pointer transition-colors"
+                      >
+                        Kiềm NaOH (pH 11,50)
+                      </button>
+                    </>
+                  )}
+
+                  {/* C-18/C-19 (Vòng 4): nguồn PSU chưa có module HTML — nút chuyển cách
+                      mắc 2 bóng đèn cho WF-13 (mặc định Nối tiếp). */}
+                  {activeAsset.geometry.proceduralArchetype ===
+                    'optical-power-supply' && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateInstanceState?.(
+                          activeInstance.instanceId,
+                          {
+                            circuitTopology:
+                              (activeInstance.instanceState.circuitTopology ??
+                                'series') === 'series'
+                                ? 'parallel'
+                                : 'series',
+                          },
+                          `Cách mắc 2 bóng đèn: ${(activeInstance.instanceState.circuitTopology ?? 'series') === 'series' ? 'Song song' : 'Nối tiếp'}`,
+                        )
+                      }
+                      className="px-2.5 py-1 rounded-[7px] bg-amber-600/70 hover:bg-amber-600/90 border border-white/25 text-white font-mono text-[12px] font-bold cursor-pointer transition-colors"
+                    >
+                      Cách mắc: {(activeInstance.instanceState.circuitTopology ?? 'series') === 'series' ? 'Nối tiếp → Song song' : 'Song song → Nối tiếp'}
+                    </button>
+                  )}
+
                   {!htmlEquipmentModuleRegistry.getModule(
                     activeAsset.assetId,
                   ) &&
                     activeAsset.geometry.proceduralArchetype ===
                       'digital-multimeter' && (
                       <>
+                        {/* C-18/C-19 (Vòng 4): số đọc hiện tại do solver mạch ghi (không
+                            còn nhãn cứng "U = 12.00 V / I = 0.75 A / R = 16.0 Ω" bịa sẵn);
+                            3 nút chỉ đổi thang đo, giá trị đo do reconcile tính lại. */}
+                        <span className="px-2.5 py-1 rounded-[7px] bg-slate-950/55 border border-emerald-400/60 font-mono text-[12px] font-bold text-[#67E8F9]">
+                          {`Thang đo: ${activeInstance.instanceState.multimeterMode ?? 'V'} — Số đọc: ${(typeof activeInstance.instanceState.multimeterValue === 'number' ? activeInstance.instanceState.multimeterValue : 0).toFixed(2)}`}
+                        </span>
                         <button
                           type="button"
                           onClick={() =>
@@ -13425,7 +13502,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                           }
                           className="px-2.5 py-1 rounded-[7px] bg-[#1E6BFF]/70 hover:bg-[#1E6BFF]/90 border border-white/25 text-white font-mono text-[12px] font-bold cursor-pointer transition-colors"
                         >
-                          U = 12.00 V
+                          Đo U (V)
                         </button>
                         <button
                           type="button"
@@ -13437,7 +13514,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                           }
                           className="px-2.5 py-1 rounded-[7px] bg-sky-600/70 hover:bg-sky-600/90 border border-white/25 text-white font-mono text-[12px] font-bold cursor-pointer transition-colors"
                         >
-                          I = 0.75 A
+                          Đo I (A)
                         </button>
                         <button
                           type="button"
@@ -13449,7 +13526,7 @@ export const LabViewport3D: React.FC<LabViewport3DProps> = ({
                           }
                           className="px-2.5 py-1 rounded-[7px] bg-slate-900/45 hover:bg-slate-900/70 border border-emerald-400/60 text-[#5EEAD4] font-mono text-[12px] font-bold cursor-pointer transition-colors"
                         >
-                          R = 16.0 Ω
+                          Đo R (Ω)
                         </button>
                       </>
                     )}

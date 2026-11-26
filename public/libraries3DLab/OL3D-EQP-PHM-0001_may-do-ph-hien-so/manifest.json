@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "1.0",
+  "moduleSpecVersion": "OL3D-HTML-MODULE-v2.4",
+  "moduleId": "OL3D-EQP-PHM-0001",
+  "slug": "may-do-ph-hien-so",
+  "name": "Máy đo pH hiện số kèm điện cực thủy tinh",
+  "category": "chemical-apparatus",
+  "version": "1.0.0",
+  "asset": {
+    "assetId": "OL3D-EQP-PHM-0001",
+    "slug": "may-do-ph-hien-so",
+    "name": {
+      "vi": "Máy đo pH hiện số kèm điện cực thủy tinh",
+      "en": "Digital Laboratory pH Meter"
+    },
+    "category": "chemical-apparatus",
+    "geometry": {
+      "dimensions": {
+        "height": {
+          "value": 220,
+          "unit": "mm",
+          "status": "verified"
+        },
+        "widthOrDiameter": {
+          "value": 120,
+          "unit": "mm",
+          "status": "verified"
+        },
+        "depth": {
+          "value": 120,
+          "unit": "mm",
+          "status": "verified"
+        }
+      },
+      "boundingBoxM": {
+        "width": 0.12,
+        "height": 0.22,
+        "depth": 0.12
+      },
+      "realPhotoUris": [],
+      "proceduralArchetype": "digital-multimeter"
+    },
+    "scientificProperties": {
+      "referenceMass": {
+        "value": 285,
+        "unit": "g",
+        "status": "verified"
+      }
+    }
+  },
+  "realPhotoMeta": {
+    "available": false,
+    "caption": "Chưa có ảnh thực tế cho thiết bị này."
+  },
+  "moduleControls": {
+    "stateKey": "multimeterValue",
+    "label": "Độ pH dung dịch đo",
+    "unit": "pH",
+    "min": 0,
+    "max": 14,
+    "step": 0.05,
+    "defaultValue": 0,
+    "canBeWeighedOnBalance": true,
+    "canHoldLiquid": false,
+    "canSubmergeInVessel": true,
+    "soundPhenomenon": "probe-measure",
+    "presets": [
+      {
+        "label": "Đo Axit CH₃COOH (pH 2.90)",
+        "statePatch": {
+          "multimeterValue": 2.9,
+          "multimeterMode": "pH"
+        }
+      },
+      {
+        "label": "Nước cất chuẩn (pH 7.00)",
+        "statePatch": {
+          "multimeterValue": 7,
+          "multimeterMode": "pH"
+        }
+      },
+      {
+        "label": "Dung dịch Kiềm (pH 11.50)",
+        "statePatch": {
+          "multimeterValue": 11.5,
+          "multimeterMode": "pH"
+        }
+      }
+    ]
+  }
+}

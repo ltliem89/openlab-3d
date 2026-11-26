@@ -1,0 +1,98 @@
+{
+  "schemaVersion": "1.0",
+  "moduleSpecVersion": "OL3D-HTML-MODULE-v2.4",
+  "moduleId": "OL3D-EQP-STR-0001",
+  "slug": "may-khuay-tu-gia-nhiet",
+  "name": "Máy khuấy từ gia nhiệt kèm cá từ PTFE",
+  "category": "thermal-equipment",
+  "version": "1.0.0",
+  "asset": {
+    "assetId": "OL3D-EQP-STR-0001",
+    "slug": "may-khuay-tu-gia-nhiet",
+    "name": {
+      "vi": "Máy khuấy từ gia nhiệt kèm cá từ PTFE",
+      "en": "Digital Magnetic Hotplate Stirrer"
+    },
+    "category": "thermal-apparatus",
+    "geometry": {
+      "dimensions": {
+        "height": {
+          "value": 165,
+          "unit": "mm",
+          "status": "verified"
+        },
+        "widthOrDiameter": {
+          "value": 150,
+          "unit": "mm",
+          "status": "verified"
+        },
+        "depth": {
+          "value": 170,
+          "unit": "mm",
+          "status": "verified"
+        }
+      },
+      "boundingBoxM": {
+        "width": 0.15,
+        "height": 0.165,
+        "depth": 0.17
+      },
+      "realPhotoUris": [],
+      "proceduralArchetype": "electronic-balance"
+    },
+    "scientificProperties": {
+      "referenceMass": {
+        "value": 1450,
+        "unit": "g",
+        "status": "verified"
+      }
+    }
+  },
+  "realPhotoMeta": {
+    "available": false,
+    "caption": "Chưa có ảnh thực tế cho thiết bị này."
+  },
+  "moduleControls": {
+    "stateKey": "multimeterValue",
+    "label": "Tốc độ khuấy từ (vòng/phút)",
+    "unit": "rpm",
+    "min": 0,
+    "max": 1500,
+    "step": 50,
+    "defaultValue": 0,
+    "canBeWeighedOnBalance": true,
+    "canHoldLiquid": false,
+    "canSubmergeInVessel": false,
+    "soundPhenomenon": "probe-measure",
+    "presets": [
+      {
+        "label": "Tắt khuấy (0 rpm · 25°C)",
+        "statePatch": {
+          "multimeterValue": 0,
+          "temperatureC": 25
+        }
+      },
+      {
+        "label": "Khuấy hòa tan nhẹ (450 rpm · 45°C)",
+        "statePatch": {
+          "multimeterValue": 450,
+          "temperatureC": 45
+        }
+      },
+      {
+        "label": "Khuấy trung bình (800 rpm · 65°C)",
+        "statePatch": {
+          "multimeterValue": 800,
+          "temperatureC": 65
+        }
+      },
+      {
+        "label": "Khuấy xoáy mạnh (1350 rpm · 90°C)",
+        "statePatch": {
+          "multimeterValue": 1350,
+          "temperatureC": 90
+        }
+      }
+    ]
+  }
+}
