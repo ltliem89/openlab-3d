@@ -44,6 +44,10 @@ export const CANONICAL_ARCHETYPE_MAP: Record<string, ProceduralArchetype> = {
   'OL3D-EQP-STW-0001': 'digital-stopwatch',
   'OL3D-EQP-TUB-0001': 'test-tube',
   'OL3D-EQP-ALC-0001': 'alcohol-burner',
+  // C-18/C-19 (Vòng 3): PHM-0001 dùng thân máy digital-multimeter — đúng archetype mà
+  // manifest của module HTML PHM khai; nếu để suy luận theo từ khóa cũng về đây,
+  // nhưng ghi rõ trong bảng để không phụ thuộc từ khóa.
+  'OL3D-EQP-PHM-0001': 'digital-multimeter',
 };
 
 function inferProceduralArchetypeFromIdOrSlug(
