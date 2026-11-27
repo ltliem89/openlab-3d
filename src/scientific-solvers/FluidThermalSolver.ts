@@ -11,6 +11,8 @@
 
 import { SolverInput, SolverResult } from './types';
 import { MetrologyEngine } from './MetrologyEngine';
+// Vòng 5 (B): fallback g dùng hằng chuẩn nguồn duy nhất.
+import { STANDARD_GRAVITY_MPS2 } from '../three-runtime/LabEnvironmentEngine';
 
 export interface FluidThermalDerivedOutputs {
   liquidLevelMl: number;
@@ -103,7 +105,7 @@ export class FluidThermalSolver {
     const warnings: string[] = [];
     const errors: string[] = [];
 
-    const g = Number(environment?.gravityMps2 ?? 9.80665);
+    const g = Number(environment?.gravityMps2 ?? STANDARD_GRAVITY_MPS2);
     const p0KPa = Number(environment?.atmosphericPressureKPa ?? 101.325);
     const p0 = p0KPa * 1000.0; // Pa
     const tAir = Number(environment?.airTemperatureC ?? 25.0);
@@ -232,7 +234,7 @@ export class FluidThermalSolver {
     const warnings: string[] = [];
     const errors: string[] = [];
 
-    const g = Number(environment?.gravityMps2 ?? 9.80665);
+    const g = Number(environment?.gravityMps2 ?? STANDARD_GRAVITY_MPS2);
     const p0KPa = Number(environment?.atmosphericPressureKPa ?? 101.325);
     const p0 = p0KPa * 1000.0;
     const tAir = Number(environment?.airTemperatureC ?? 25.0);

@@ -913,3 +913,193 @@ export function solveElectricalCircuit(
   };
 }
 
+// =========================================================================
+// Vòng 4 (C-18/C-19) — SOLVER MẠCH ĐIỆN TRỞ (WF-12, định luật Ôm)
+// Mạch: PSU (3/6/9/12 V) — điện trở mẫu RES 10 Ω — biến trở RHE 0–20 Ω,
+// mắc nối tiếp. R_total = 10 + R_rhe; I = U / R_total; U_RES = I×10;
+// U_RHE = I×R_rhe; P = U×I. Chỉ tính khi PSU bật và đủ RES + RHE trên bàn;
+// ngược lại trả về mạch hở (currentA = 0) với lý do rõ ràng.
+// =========================================================================
+export interface ResistiveCircuitNode {
+  instance: SceneInstance;
+  role: 'psu' | 'resistor' | 'rheostat';
+  resistanceOhms: number;
+}
+
+export interface ResistiveCircuitState {
+  isCircuitClosed: boolean;
+  supplyVoltageV: number;
+  resistanceTotalOhms: number;
+  currentA: number;
+  voltageAtResistorV: number;
+  voltageAtRheostatV: number;
+  powerW: number;
+  reasonVi: string;
+}
+
+export function solveResistiveCircuit(
+  nodes: ResistiveCircuitNode[],
+): ResistiveCircuitState {
+  const psu = nodes.find((n) => n.role === 'psu');
+  const res = nodes.find((n) => n.role === 'resistor');
+  const rhe = nodes.find((n) => n.role === 'rheostat');
+  // Điện trở toàn mạch tính được ngay cả khi PSU tắt / thiếu linh kiện — để chế độ
+  // đo Ω vẫn đọc được R khi nguồn tắt (đo điện trở không cấp nguồn).
+  const rRes0 = Math.max(0, res?.resistanceOhms ?? 0);
+  const rRhe0 = Math.max(0, rhe?.resistanceOhms ?? 0);
+  const closed: Omit<ResistiveCircuitState, 'isCircuitClosed' | 'reasonVi'> = {
+    supplyVoltageV: 0,
+    resistanceTotalOhms: rRes0 + rRhe0,
+    currentA: 0,
+    voltageAtResistorV: 0,
+    voltageAtRheostatV: 0,
+    powerW: 0,
+  };
+  if (!psu) {
+    return { ...closed, isCircuitClosed: false, reasonVi: 'Thiếu nguồn PSU trong mạch' };
+  }
+  if (!res || !rhe) {
+    return {
+      ...closed,
+      isCircuitClosed: false,
+      reasonVi: 'Thiếu điện trở mẫu hoặc biến trở trong mạch',
+    };
+  }
+  if (psu.instance.instanceState.isPoweredOn !== true) {
+    return { ...closed, isCircuitClosed: false, reasonVi: 'Nguồn PSU đang tắt' };
+  }
+  const psuState = psu.instance.instanceState;
+  const supplyVoltageV =
+    typeof psuState.voltageSetting === 'number' && psuState.voltageSetting > 0
+      ? psuState.voltageSetting
+      : typeof psuState.voltageStepV === 'number' && psuState.voltageStepV > 0
+        ? psuState.voltageStepV
+        : typeof psuState.supplyVoltageV === 'number' && psuState.supplyVoltageV > 0
+          ? psuState.supplyVoltageV
+          : 12.0;
+  const rRes = Math.max(0, res.resistanceOhms);
+  const rRhe = Math.max(0, rhe.resistanceOhms);
+  const resistanceTotalOhms = rRes + rRhe;
+  if (resistanceTotalOhms <= 0) {
+    return {
+      ...closed,
+      supplyVoltageV,
+      isCircuitClosed: false,
+      reasonVi: 'Điện trở toàn mạch bằng 0 — kiểm tra biến trở và điện trở mẫu',
+    };
+  }
+  const currentA = supplyVoltageV / resistanceTotalOhms;
+  const voltageAtResistorV = currentA * rRes;
+  const voltageAtRheostatV = currentA * rRhe;
+  return {
+    isCircuitClosed: true,
+    supplyVoltageV,
+    resistanceTotalOhms,
+    currentA,
+    voltageAtResistorV,
+    voltageAtRheostatV,
+    powerW: supplyVoltageV * currentA,
+    reasonVi: `Mạch kín: U = ${supplyVoltageV.toFixed(1)} V, R = ${resistanceTotalOhms.toFixed(1)} Ω, I = ${currentA.toFixed(2)} A (tính ra từ định luật Ôm)`,
+  };
+}
+
+// =========================================================================
+// Vòng 4 (C-18/C-19) — SOLVER MẠCH 2 BÓNG ĐÈN (WF-13, nối tiếp / song song)
+// 2 đui đèn SOC-0001 mắc với 1 nguồn PSU. Điện trở bóng đèn 12 Ω là GIẢ ĐỊNH
+// MÔ PHỎNG (chưa có số liệu phòng lab) — ghi rõ trong reason và tài liệu.
+// Nối tiếp: R_total = R1+R2, I = U/R_total, U1 = I·R1, U2 = I·R2.
+// Song song: U1 = U2 = U_psu, I1 = U/R1, I2 = U/R2, I_total = I1+I2.
+// Bóng sáng khi U_nhánh ≥ 2,5 V (ngưỡng LAMP_IGNITION_THRESHOLD_VOLTAGE_V).
+// =========================================================================
+export interface MultiBranchCircuitState {
+  isCircuitClosed: boolean;
+  topology: 'series' | 'parallel';
+  supplyVoltageV: number;
+  totalCurrentA: number;
+  branches: Array<{
+    instanceId: string;
+    resistanceOhms: number;
+    voltageV: number;
+    currentA: number;
+    isLit: boolean;
+  }>;
+  reasonVi: string;
+}
+
+export function solveMultiBranchCircuit(
+  psuInstance: SceneInstance | null | undefined,
+  socketInstances: SceneInstance[],
+  topology: 'series' | 'parallel',
+): MultiBranchCircuitState {
+  const empty: MultiBranchCircuitState = {
+    isCircuitClosed: false,
+    topology,
+    supplyVoltageV: 0,
+    totalCurrentA: 0,
+    branches: [],
+    reasonVi: 'Thiếu nguồn hoặc chưa đủ 2 bóng đèn trong mạch',
+  };
+  if (!psuInstance || socketInstances.length < 2) return empty;
+  const psuState = psuInstance.instanceState;
+  const supplyVoltageV =
+    typeof psuState.voltageSetting === 'number' && psuState.voltageSetting > 0
+      ? psuState.voltageSetting
+      : typeof psuState.voltageStepV === 'number' && psuState.voltageStepV > 0
+        ? psuState.voltageStepV
+        : typeof psuState.supplyVoltageV === 'number' && psuState.supplyVoltageV > 0
+          ? psuState.supplyVoltageV
+          : 12.0;
+  if (psuState.isPoweredOn !== true) {
+    return { ...empty, supplyVoltageV, reasonVi: 'Nguồn PSU đang tắt' };
+  }
+  const resistances = socketInstances.slice(0, 2).map((s) => {
+    const r =
+      typeof s.instanceState.bulbResistanceOhms === 'number' &&
+      s.instanceState.bulbResistanceOhms > 0
+        ? s.instanceState.bulbResistanceOhms
+        : 12;
+    return { instanceId: s.instanceId, resistanceOhms: r };
+  });
+  const [r1, r2] = resistances;
+  let branches: MultiBranchCircuitState['branches'];
+  let totalCurrentA: number;
+  if (topology === 'series') {
+    const rTotal = r1.resistanceOhms + r2.resistanceOhms;
+    const i = rTotal > 0 ? supplyVoltageV / rTotal : 0;
+    branches = resistances.map((r) => {
+      const v = i * r.resistanceOhms;
+      return {
+        instanceId: r.instanceId,
+        resistanceOhms: r.resistanceOhms,
+        voltageV: v,
+        currentA: i,
+        isLit: v >= LAMP_IGNITION_THRESHOLD_VOLTAGE_V,
+      };
+    });
+    totalCurrentA = i;
+  } else {
+    branches = resistances.map((r) => {
+      const i = r.resistanceOhms > 0 ? supplyVoltageV / r.resistanceOhms : 0;
+      return {
+        instanceId: r.instanceId,
+        resistanceOhms: r.resistanceOhms,
+        voltageV: supplyVoltageV,
+        currentA: i,
+        isLit: supplyVoltageV >= LAMP_IGNITION_THRESHOLD_VOLTAGE_V,
+      };
+    });
+    totalCurrentA = branches.reduce((acc, b) => acc + b.currentA, 0);
+  }
+  return {
+    isCircuitClosed: true,
+    topology,
+    supplyVoltageV,
+    totalCurrentA,
+    branches,
+    reasonVi:
+      topology === 'series'
+        ? `Mắc nối tiếp: U = ${supplyVoltageV.toFixed(1)} V, I = ${totalCurrentA.toFixed(2)} A, U1 + U2 = ${(branches[0].voltageV + branches[1].voltageV).toFixed(2)} V (tính ra; R bóng 12 Ω là giả định mô phỏng)`
+        : `Mắc song song: U1 = U2 = ${supplyVoltageV.toFixed(1)} V, I = I1 + I2 = ${totalCurrentA.toFixed(2)} A (tính ra; R bóng 12 Ω là giả định mô phỏng)`,
+  };
+}
+

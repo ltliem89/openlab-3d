@@ -166,7 +166,7 @@ p('### BẢNG CHỈ SỐ TOÀN CẢNH HỆ THỐNG MÔ PHỎNG (SYSTEM INVENTORY
 p('');
 p('| Chỉ số cốt lõi | Giá trị kiểm kê thực tế | Ghi chú kỹ thuật |');
 p('| :--- | :---: | :--- |');
-p(`| **Tổng số Thiết bị Thí nghiệm Độc lập** | **${MOCK_EQUIPMENT_ASSETS.length} thiết bị** | Tách biệt 100% thành 36 mục hồ sơ chuyên sâu độc lập |`);
+p(`| **Tổng số Thiết bị Thí nghiệm Độc lập** | **${MOCK_EQUIPMENT_ASSETS.length} thiết bị** | Tách biệt 100% thành 51 mục hồ sơ chuyên sâu độc lập |`);
 p(`| **Tổng số Tiêu bản Mẫu vật Kính hiển vi** | **${MICROSCOPE_SPECIMENS.length} mẫu tiêu bản** | Kèm ảnh vi mô, cấu trúc tế bào, nhuộm màu & độ bội giác |`);
 p(`| **Tổng số Biến Môi trường Mô phỏng** | **${Object.keys(INITIAL_ENVIRONMENT_VARIABLES).length} biến** | 13 biến lõi cấp phòng (Room-core) + 12 biến theo mẫu (Sample-specific) |`);
 p(`| **Nhóm Thiết bị Tiêu chuẩn GDPT 2018** | **${EQUIPMENT_GROUPS_G01_G10.length} nhóm (G01–G10)** | Phủ toàn diện Vật lí, Hóa học, Sinh học THCS & THPT |`);
@@ -477,7 +477,7 @@ p('');
 // =========================================================================
 p('# PHẦN IV — RÀ SOÁT CHI TIẾT TÁCH BIỆT TỪNG THIẾT BỊ MÔ PHỎNG (36 THIẾT BỊ)');
 p('');
-p('Dưới đây là hồ sơ kiểm toán độc lập chi tiết của toàn bộ **36 thiết bị thí nghiệm** có trong danh mục OpenLab 3D. Mỗi thiết bị được rà soát tách biệt theo 11 tiêu chí kỹ thuật chuẩn hóa.');
+p('Dưới đây là hồ sơ kiểm toán độc lập chi tiết của toàn bộ **51 thiết bị thí nghiệm** có trong danh mục OpenLab 3D. Mỗi thiết bị được rà soát tách biệt theo 11 tiêu chí kỹ thuật chuẩn hóa.');
 p('');
 
 // Iterate through each of the 36 equipment assets
@@ -789,7 +789,7 @@ p('| `BOX3_ALIGNMENT_FAULT` | Đáy mô hình không chạm mặt bàn | Điểm
 p('');
 p('---');
 p('');
-p('> **KẾT LUẬN BÁO CÁO**: Toàn bộ hệ thống mô phỏng OpenLab 3D với 36 thiết bị, 8 mẫu tiêu bản và 25 biến môi trường đã được rà soát, kiểm kê và chuẩn hóa đồng bộ 100%. Hồ sơ này là cơ sở kỹ thuật bất biến để các hệ thống khác phân tích, tái hiện và kiểm toán chất lượng.');
+p('> **KẾT LUẬN BÁO CÁO**: Toàn bộ hệ thống mô phỏng OpenLab 3D với 51 thiết bị, 8 mẫu tiêu bản và 25 biến môi trường đã được rà soát, kiểm kê và chuẩn hóa đồng bộ 100%. Hồ sơ này là cơ sở kỹ thuật bất biến để các hệ thống khác phân tích, tái hiện và kiểm toán chất lượng.');
 
 const finalMarkdown = lines.join('\n');
 const outputPath = './BAO_CAO_RA_SOAT_TOAN_DIEN_THANH_PHAN_MO_PHONG_THIET_BI_VA_MOI_TRUONG.md';

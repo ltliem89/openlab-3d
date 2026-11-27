@@ -3,6 +3,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { AssetDefinition } from '../domain/types';
 import { buildProceduralEquipmentGroup } from './ProceduralLabModels';
 import { htmlEquipmentModuleRegistry } from './HtmlEquipmentModuleRegistry';
+// Vòng 5 (B): truyền g live khi dựng mô hình có tia nước theo trọng lực.
+import { getGravityMps2 } from './environmentStore';
 
 export interface AssetLoadResult {
   assetId: string;
@@ -57,7 +59,7 @@ export class OpenLabAssetLoader {
           warnings.push(
             `Lỗi khi dựng mô hình từ HTML module của "${asset.name.vi}": ${pkgErr}. Đang dùng mô hình dự phòng.`,
           );
-          prototypeGroup = buildProceduralEquipmentGroup(asset, this.isSoftwareGl);
+          prototypeGroup = buildProceduralEquipmentGroup(asset, this.isSoftwareGl, getGravityMps2());
         }
       } else if (
         asset.geometry.modelUri.startsWith('http://') ||
@@ -72,11 +74,11 @@ export class OpenLabAssetLoader {
           warnings.push(
             `Không thể tải tệp GLB từ "${asset.geometry.modelUri}". Đã chuyển sang mô hình PBR đa thành phần chuẩn hóa.`,
           );
-          prototypeGroup = buildProceduralEquipmentGroup(asset, this.isSoftwareGl);
+          prototypeGroup = buildProceduralEquipmentGroup(asset, this.isSoftwareGl, getGravityMps2());
         }
       } else {
         // Trong giai đoạn Prototype, dựng trực tiếp mô hình 3D PBR đa thành phần theo quy ước không gian mét (m)
-        prototypeGroup = buildProceduralEquipmentGroup(asset, this.isSoftwareGl);
+        prototypeGroup = buildProceduralEquipmentGroup(asset, this.isSoftwareGl, getGravityMps2());
       }
 
       cached = {

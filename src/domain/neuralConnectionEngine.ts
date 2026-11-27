@@ -26,6 +26,8 @@ import {
   MAX_ELECTRICAL_CABLE_LENGTH_M,
   LAMP_IGNITION_THRESHOLD_VOLTAGE_V,
 } from '../three-runtime/AssemblySystem';
+// Vòng 5 (B): trọng lượng P = m·g dùng g live từ kho môi trường.
+import { getGravityMps2 } from '../three-runtime/environmentStore';
 
 export interface IntercomSignalPacket {
   id: string;
@@ -411,7 +413,7 @@ export class NeuralConnectionEngine {
 
     // Suy luận 2: Trọng lượng & Lực đẩy Archimedes (Cân / Lực kế)
     if (massSig && forceSig) {
-      const weightN = (massSig.value / 1000) * 9.80665;
+      const weightN = (massSig.value / 1000) * getGravityMps2();
       const diffN = Math.max(0, weightN - forceSig.value);
       inferences.push({
         id: 'causal-archimedes-eureka',
