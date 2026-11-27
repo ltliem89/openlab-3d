@@ -15,6 +15,8 @@ import {
 } from './cognitiveTopology';
 import { SceneInstance, AssetDefinition } from './types';
 import { labSoundEngine } from '../three-runtime/LabSoundEngine';
+// Vòng 5 (B): lực đẩy Archimedes dùng g live từ kho môi trường.
+import { getGravityMps2 } from '../three-runtime/environmentStore';
 
 export interface EurekaEventDetail {
   law: EpistemicLawDefinition;
@@ -148,16 +150,18 @@ export class CognitiveNeuralEngine {
       // 1. Cân điện tử -> Biến số Khối lượng m (g)
       if (inst.assetId.includes('BAL') || inst.assetId.includes('balance')) {
         const tagId = `TAG_MASS_${inst.instanceId}`;
-        currentActiveIds.add(tagId);
-        const netMass = solverMeasurements?.[inst.instanceId]?.value ?? (inst.instanceState?.measuredMassG ?? 66.25);
-        const safeMass = Number.isFinite(netMass) ? Math.max(0, netMass) : 0;
+        // Vòng 5 (A): bỏ fallback bịa 66.25 g — không có số đo thì không hiện nhãn.
+        const netMass = solverMeasurements?.[inst.instanceId]?.value ?? inst.instanceState?.measuredMassG;
+        const hasMass = typeof netMass === 'number' && Number.isFinite(netMass);
+        if (hasMass) currentActiveIds.add(tagId);
+        const safeMass = hasMass ? Math.max(0, netMass) : 0;
         
         // Đo lường ISO GUM: ĐCNN = 0.01g -> u_B = 0.01 / √3 ≈ 0.0058g, u_A ≈ 0.015g -> U = 2 * √(uA² + uB²) ≈ 0.032g
         const uB = 0.01 / Math.sqrt(3);
         const uA = 0.015;
         const U = 2 * Math.sqrt(uA * uA + uB * uB);
 
-        this._variableTags.set(tagId, {
+        if (hasMass) this._variableTags.set(tagId, {
           id: tagId,
           varType: 'mass',
           symbol: 'm',
@@ -182,19 +186,25 @@ export class CognitiveNeuralEngine {
       // 2. Ống đong / Bình tràn -> Biến số Thể tích chiếm chỗ V (mL) = V2 - V1
       if (inst.assetId.includes('CYL') || inst.assetId.includes('cylinder') || inst.assetId.includes('OVF')) {
         const tagId = `TAG_VOL_${inst.instanceId}`;
-        currentActiveIds.add(tagId);
-        const currentLevel = inst.instanceState?.liquidLevelMl ?? 74.5;
-        const baseLevel = inst.instanceState?.baseLiquidLevelMl ?? 50.0;
-        const deltaV = Math.max(0, currentLevel - baseLevel);
-        const volVal = solverMeasurements?.[inst.instanceId]?.value ?? (deltaV > 0 ? deltaV : 24.5);
-        const safeVol = Number.isFinite(volVal) ? Math.max(0, volVal) : 0;
+        // Vòng 5 (A): bỏ fallback bịa 74.5 / 50.0 / 24.5 — thiếu mức thì không hiện nhãn.
+        const solverVol = solverMeasurements?.[inst.instanceId]?.value;
+        const curLvl = inst.instanceState?.liquidLevelMl;
+        const baseLvl = inst.instanceState?.baseLiquidLevelMl;
+        const volVal = typeof solverVol === 'number'
+          ? solverVol
+          : (typeof curLvl === 'number' && typeof baseLvl === 'number'
+            ? Math.max(0, curLvl - baseLvl)
+            : undefined);
+        const hasVol = typeof volVal === 'number' && Number.isFinite(volVal);
+        if (hasVol) currentActiveIds.add(tagId);
+        const safeVol = hasVol ? Math.max(0, volVal) : 0;
         
         // ĐCNN = 1 mL -> u_B = 1 / √3 ≈ 0.58 mL, U ≈ 1.2 mL
         const uB = 1.0 / Math.sqrt(3);
         const uA = 0.3;
         const U = 2 * Math.sqrt(uA * uA + uB * uB);
 
-        this._variableTags.set(tagId, {
+        if (hasVol) this._variableTags.set(tagId, {
           id: tagId,
           varType: 'volume',
           symbol: 'V',
@@ -219,27 +229,35 @@ export class CognitiveNeuralEngine {
       // 3. Hộp nguồn điện DC -> Hiệu điện thế U (V)
       if (inst.assetId.includes('PSU') || inst.assetId.includes('power-supply')) {
         const tagId = `TAG_VOLT_${inst.instanceId}`;
-        currentActiveIds.add(tagId);
-        const voltVal = solverMeasurements?.[inst.instanceId]?.value ?? 6.0;
+        // Vòng 5 (A): bỏ fallback bịa 6.0 V — dùng điện áp thật đã chỉnh trên nguồn
+        // (voltageStepV / voltageSetting / supplyVoltageV); thiếu thì không hiện nhãn.
+        const st = inst.instanceState as Record<string, any>;
+        const voltVal = solverMeasurements?.[inst.instanceId]?.value
+          ?? (typeof st.voltageStepV === 'number' ? st.voltageStepV
+            : typeof st.voltageSetting === 'number' ? st.voltageSetting
+            : typeof st.supplyVoltageV === 'number' ? st.supplyVoltageV : undefined);
+        const hasVolt = typeof voltVal === 'number' && Number.isFinite(voltVal);
+        if (hasVolt) currentActiveIds.add(tagId);
+        const safeVolt = hasVolt ? voltVal : 0;
         const uB = 0.05;
         const U = 0.12;
 
-        this._variableTags.set(tagId, {
+        if (hasVolt) this._variableTags.set(tagId, {
           id: tagId,
           varType: 'voltage',
           symbol: 'U',
           symbolLatex: '$U$',
           nameVi: 'Hiệu điện thế nguồn',
           unitVi: 'V',
-          value: Number(voltVal.toFixed(2)),
-          formattedValue: voltVal.toFixed(2),
+          value: Number(safeVolt.toFixed(2)),
+          formattedValue: safeVolt.toFixed(2),
           sourceInstanceId: inst.instanceId,
           sourceAssetId: inst.assetId,
           sourceDeviceNameVi: nameVi,
           uncertaintyTypeA: 0.02,
           uncertaintyTypeB: uB,
           expandedUncertainty: U,
-          isoGumText: `${voltVal.toFixed(2)} ± ${U.toFixed(2)} V`,
+          isoGumText: `${safeVolt.toFixed(2)} ± ${U.toFixed(2)} V`,
           worldPositionM: holoPos,
           isActive: true,
           isFused: this._variableTags.get(tagId)?.isFused || false,
@@ -249,27 +267,31 @@ export class CognitiveNeuralEngine {
       // 4. Đồng hồ vạn năng DMM / Đèn halogen -> Cường độ dòng điện I (A)
       if (inst.assetId.includes('DMM') || inst.assetId.includes('OLP') || inst.assetId.includes('lamp')) {
         const tagId = `TAG_CURR_${inst.instanceId}`;
-        currentActiveIds.add(tagId);
-        const currVal = solverMeasurements?.[inst.instanceId]?.value ?? 0.50;
+        // Vòng 5 (A): bỏ fallback bịa 0.50 A — chỉ hiện khi solver đo được dòng
+        // (multimeterValue là preset bấm nút, không phải số đo — không dùng).
+        const currVal = solverMeasurements?.[inst.instanceId]?.value;
+        const hasCurr = typeof currVal === 'number' && Number.isFinite(currVal);
+        if (hasCurr) currentActiveIds.add(tagId);
+        const safeCurr = hasCurr ? currVal : 0;
         const uB = 0.005;
         const U = 0.015;
 
-        this._variableTags.set(tagId, {
+        if (hasCurr) this._variableTags.set(tagId, {
           id: tagId,
           varType: 'current',
           symbol: 'I',
           symbolLatex: '$I$',
           nameVi: 'Cường độ dòng điện',
           unitVi: 'A',
-          value: Number(currVal.toFixed(2)),
-          formattedValue: currVal.toFixed(2),
+          value: Number(safeCurr.toFixed(2)),
+          formattedValue: safeCurr.toFixed(2),
           sourceInstanceId: inst.instanceId,
           sourceAssetId: inst.assetId,
           sourceDeviceNameVi: nameVi,
           uncertaintyTypeA: 0.003,
           uncertaintyTypeB: uB,
           expandedUncertainty: U,
-          isoGumText: `${currVal.toFixed(2)} ± ${U.toFixed(2)} A`,
+          isoGumText: `${safeCurr.toFixed(2)} ± ${U.toFixed(2)} A`,
           worldPositionM: holoPos,
           isActive: true,
           isFused: this._variableTags.get(tagId)?.isFused || false,
@@ -279,37 +301,43 @@ export class CognitiveNeuralEngine {
       // 5. Lực kế lò xo -> Lực kéo F (N) & Độ dãn Δl (cm)
       if (inst.assetId.includes('DYN') || inst.assetId.includes('dynamometer')) {
         const tagId = `TAG_FORCE_${inst.instanceId}`;
-        currentActiveIds.add(tagId);
-        const forceVal = solverMeasurements?.[inst.instanceId]?.value ?? (inst.instanceState?.measuredForceN ?? 0.65);
+        // Vòng 5 (A): bỏ fallback bịa 0.65 N — dùng trường thật springExtensionN
+        // (reconcile tính từ khối lượng móc, Vòng 3); thiếu thì không hiện nhãn.
+        const forceVal = solverMeasurements?.[inst.instanceId]?.value
+          ?? inst.instanceState?.springExtensionN
+          ?? inst.instanceState?.measuredForceN;
+        const hasForce = typeof forceVal === 'number' && Number.isFinite(forceVal);
+        if (hasForce) currentActiveIds.add(tagId);
+        const safeForce = hasForce ? forceVal : 0;
         const U = 0.05;
 
-        this._variableTags.set(tagId, {
+        if (hasForce) this._variableTags.set(tagId, {
           id: tagId,
           varType: 'force',
           symbol: 'F',
           symbolLatex: '$F$',
           nameVi: 'Lực đàn hồi',
           unitVi: 'N',
-          value: Number(forceVal.toFixed(2)),
-          formattedValue: forceVal.toFixed(2),
+          value: Number(safeForce.toFixed(2)),
+          formattedValue: safeForce.toFixed(2),
           sourceInstanceId: inst.instanceId,
           sourceAssetId: inst.assetId,
           sourceDeviceNameVi: nameVi,
           uncertaintyTypeA: 0.01,
           uncertaintyTypeB: 0.02,
           expandedUncertainty: U,
-          isoGumText: `${forceVal.toFixed(2)} ± ${U.toFixed(2)} N`,
+          isoGumText: `${safeForce.toFixed(2)} ± ${U.toFixed(2)} N`,
           worldPositionM: holoPos,
           isActive: true,
           isFused: this._variableTags.get(tagId)?.isFused || false,
         });
 
-        // Thẻ độ dãn lò xo Δl
+        // Thẻ độ dãn lò xo Δl — cùng điều kiện có số đo lực như thẻ F.
         const tagDlId = `TAG_DL_${inst.instanceId}`;
-        currentActiveIds.add(tagDlId);
+        if (hasForce) currentActiveIds.add(tagDlId);
         const springK = 50.0; // N/m
-        const dlCm = (forceVal / springK) * 100.0;
-        this._variableTags.set(tagDlId, {
+        const dlCm = (safeForce / springK) * 100.0;
+        if (hasForce) this._variableTags.set(tagDlId, {
           id: tagDlId,
           varType: 'displacement',
           symbol: 'Δl',
@@ -334,24 +362,27 @@ export class CognitiveNeuralEngine {
       // 6. Nhiệt kế -> Nhiệt độ T (°C)
       if (inst.assetId.includes('THM') || inst.assetId.includes('thermometer')) {
         const tagId = `TAG_TEMP_${inst.instanceId}`;
-        currentActiveIds.add(tagId);
-        const tempVal = solverMeasurements?.[inst.instanceId]?.value ?? (inst.instanceState?.temperatureC ?? 25.0);
-        this._variableTags.set(tagId, {
+        // Vòng 5 (A): bỏ fallback bịa 25.0 °C — thiếu nhiệt độ thì không hiện nhãn.
+        const tempVal = solverMeasurements?.[inst.instanceId]?.value ?? inst.instanceState?.temperatureC;
+        const hasTemp = typeof tempVal === 'number' && Number.isFinite(tempVal);
+        if (hasTemp) currentActiveIds.add(tagId);
+        const safeTemp = hasTemp ? tempVal : 0;
+        if (hasTemp) this._variableTags.set(tagId, {
           id: tagId,
           varType: 'temperature',
           symbol: 'T',
           symbolLatex: '$T$',
           nameVi: 'Nhiệt độ chất lỏng',
           unitVi: '°C',
-          value: Number(tempVal.toFixed(1)),
-          formattedValue: tempVal.toFixed(1),
+          value: Number(safeTemp.toFixed(1)),
+          formattedValue: safeTemp.toFixed(1),
           sourceInstanceId: inst.instanceId,
           sourceAssetId: inst.assetId,
           sourceDeviceNameVi: nameVi,
           uncertaintyTypeA: 0.2,
           uncertaintyTypeB: 0.29,
           expandedUncertainty: 0.5,
-          isoGumText: `${tempVal.toFixed(1)} ± 0.5 °C`,
+          isoGumText: `${safeTemp.toFixed(1)} ± 0.5 °C`,
           worldPositionM: holoPos,
           isActive: true,
           isFused: this._variableTags.get(tagId)?.isFused || false,
@@ -362,34 +393,39 @@ export class CognitiveNeuralEngine {
       if (inst.assetId.includes('DSK') || inst.assetId.includes('LSR') || inst.assetId.includes('OPT')) {
         const tagIncId = `TAG_INC_${inst.instanceId}`;
         const tagRefId = `TAG_REF_${inst.instanceId}`;
-        currentActiveIds.add(tagIncId);
-        currentActiveIds.add(tagRefId);
+        // Vòng 5 (A): bỏ fallback bịa 45.0° — thiếu góc tới thì không hiện nhãn
+        // (góc khúc xạ r tính từ i nên cũng không hiện).
+        const incAngle = inst.instanceState?.incidentAngleDeg;
+        const hasAngle = typeof incAngle === 'number' && Number.isFinite(incAngle);
+        if (hasAngle) {
+          currentActiveIds.add(tagIncId);
+          currentActiveIds.add(tagRefId);
+        }
+        const safeInc = hasAngle ? incAngle : 0;
+        const refAngle = Math.asin(Math.sin((safeInc * Math.PI) / 180) / 1.50) * (180 / Math.PI);
 
-        const incAngle = inst.instanceState?.incidentAngleDeg ?? 45.0;
-        const refAngle = Math.asin(Math.sin((incAngle * Math.PI) / 180) / 1.50) * (180 / Math.PI);
-
-        this._variableTags.set(tagIncId, {
+        if (hasAngle) this._variableTags.set(tagIncId, {
           id: tagIncId,
           varType: 'incidence_angle',
           symbol: 'i',
           symbolLatex: '$i$',
           nameVi: 'Góc tới',
           unitVi: '°',
-          value: Number(incAngle.toFixed(1)),
-          formattedValue: `${incAngle.toFixed(1)}°`,
+          value: Number(safeInc.toFixed(1)),
+          formattedValue: `${safeInc.toFixed(1)}°`,
           sourceInstanceId: inst.instanceId,
           sourceAssetId: inst.assetId,
           sourceDeviceNameVi: nameVi,
           uncertaintyTypeA: 0.2,
           uncertaintyTypeB: 0.29,
           expandedUncertainty: 0.5,
-          isoGumText: `${incAngle.toFixed(1)}° ± 0.5°`,
+          isoGumText: `${safeInc.toFixed(1)}° ± 0.5°`,
           worldPositionM: holoPos,
           isActive: true,
           isFused: this._variableTags.get(tagIncId)?.isFused || false,
         });
 
-        this._variableTags.set(tagRefId, {
+        if (hasAngle) this._variableTags.set(tagRefId, {
           id: tagRefId,
           varType: 'refraction_angle',
           symbol: 'r',
@@ -553,8 +589,8 @@ export class CognitiveNeuralEngine {
       const volVar = varA.varType === 'volume' ? varA : varB;
       const forceVar = varA.varType === 'force' ? varA : varB;
 
-      // F_A = ρ_water * g * V = 1000 * 9.80665 * (V * 1e-6) (N)
-      const buoyancy = 1000.0 * 9.80665 * (volVar.value * 1e-6);
+      // F_A = ρ_water * g * V (N), g live từ kho môi trường — Vòng 5 (B).
+      const buoyancy = 1000.0 * getGravityMps2() * (volVar.value * 1e-6);
       const law = this._laws.get('LAW_ARCHIMEDES')!;
       law.status = 'discovered';
       law.discoveredAt = new Date().toLocaleTimeString('vi-VN');

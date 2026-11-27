@@ -6,6 +6,26 @@
 import { SceneInstance } from '../domain/types';
 import { EXPERIMENT_WORKFLOWS, ExperimentWorkflowDefinition, WorkflowStepSpec } from './ExperimentWorkflows';
 import { neuralConnectionEngine } from '../domain/neuralConnectionEngine';
+import { MOCK_EQUIPMENT_ASSETS } from '../data/mockCatalog';
+
+// C-18/C-19 (Vòng 4): tra archetype thật trong catalog theo assetId.
+const ARCHETYPE_BY_ASSET_ID = new Map(
+  MOCK_EQUIPMENT_ASSETS.map((a) => [a.assetId, a.geometry.proceduralArchetype]),
+);
+
+/**
+ * Một yêu cầu trong requiredArchetypes khớp với một instance khi:
+ * - archetype thật trong catalog của instance bằng đúng chuỗi yêu cầu, HOẶC
+ * - assetId chứa chuỗi yêu cầu (tương thích ngược với các requiredArchetypes cũ
+ *   đang là mảnh assetId như 'BAL', 'BKR').
+ * Trước Vòng 4 chỉ có nhánh thứ hai (substring trên assetId) nên các chuỗi
+ * archetype thật như 'spring-dynamometer' không bao giờ khớp.
+ */
+export function matchesRequiredArchetype(instance: SceneInstance, req: string): boolean {
+  const arch = ARCHETYPE_BY_ASSET_ID.get(instance.assetId);
+  if (arch === req) return true;
+  return instance.assetId.toLowerCase().includes(req.toLowerCase());
+}
 
 export interface WorkflowProgressState {
   workflowId: string | null;
@@ -234,7 +254,7 @@ export class ExperimentWorkflowEngine {
 
     if (requiredArchetypes.length > 0) {
       const matchInstA = instances.find((i) =>
-        requiredArchetypes.some((req) => i.assetId.toLowerCase().includes(req.toLowerCase()))
+        requiredArchetypes.some((req) => matchesRequiredArchetype(i, req))
       );
       if (matchInstA) sourceAssetId = matchInstA.assetId;
     }
@@ -243,7 +263,7 @@ export class ExperimentWorkflowEngine {
       const matchInstB = instances.find(
         (i) =>
           i.assetId !== sourceAssetId &&
-          requiredArchetypes.some((req) => i.assetId.toLowerCase().includes(req.toLowerCase()))
+          requiredArchetypes.some((req) => matchesRequiredArchetype(i, req))
       );
       if (matchInstB) targetAssetId = matchInstB.assetId;
     }

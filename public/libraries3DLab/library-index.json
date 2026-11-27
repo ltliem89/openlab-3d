@@ -1,8 +1,8 @@
 {
   "librarySpec": "OL3D-HOST-IMAGE-BRIDGE-v1.0",
   "configuredBasePath": "C:\\Users\\ltlie\\Documents\\libraries3DLab",
-  "updatedAt": "2026-11-03T13:48:26.670Z",
-  "totalPreinstalledModules": 19,
+  "updatedAt": "2026-11-26T14:08:14.758Z",
+  "totalPreinstalledModules": 21,
   "note": "17 thiết bị đã được nạp sẵn ảnh thực tế 240x240 chuẩn 1:1 trong thư mục libraries3DLab; hỗ trợ đồng bộ trực tiếp ra ổ đĩa máy tính.",
   "libraries": [
     {
@@ -888,6 +888,34 @@
             "label": "Đế nhựa chống lật đặt bàn thí nghiệm (y = 0)"
           }
         ]
+      }
+    },
+    {
+      "moduleId": "OL3D-EQP-PHM-0001",
+      "assetId": "OL3D-EQP-PHM-0001",
+      "slug": "may-do-ph-hien-so",
+      "nameVi": "Máy đo pH hiện số kèm điện cực thủy tinh",
+      "nameEn": "Digital Laboratory pH Meter",
+      "category": "chemical-apparatus",
+      "folderName": "OL3D-EQP-PHM-0001_may-do-ph-hien-so",
+      "htmlFileName": "may-do-ph-hien-so.html",
+      "manifestPath": "/libraries3DLab/OL3D-EQP-PHM-0001_may-do-ph-hien-so/manifest.json",
+      "realPhotoMeta": {
+        "available": false
+      }
+    },
+    {
+      "moduleId": "OL3D-EQP-STR-0001",
+      "assetId": "OL3D-EQP-STR-0001",
+      "slug": "may-khuay-tu-gia-nhiet",
+      "nameVi": "Máy khuấy từ gia nhiệt kèm cá từ PTFE",
+      "nameEn": "Digital Magnetic Hotplate Stirrer",
+      "category": "thermal-equipment",
+      "folderName": "OL3D-EQP-STR-0001_may-khuay-tu-gia-nhiet",
+      "htmlFileName": "may-khuay-tu-gia-nhiet.html",
+      "manifestPath": "/libraries3DLab/OL3D-EQP-STR-0001_may-khuay-tu-gia-nhiet/manifest.json",
+      "realPhotoMeta": {
+        "available": false
       }
     }
   ]

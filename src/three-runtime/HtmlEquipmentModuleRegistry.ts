@@ -44,6 +44,21 @@ export const CANONICAL_ARCHETYPE_MAP: Record<string, ProceduralArchetype> = {
   'OL3D-EQP-STW-0001': 'digital-stopwatch',
   'OL3D-EQP-TUB-0001': 'test-tube',
   'OL3D-EQP-ALC-0001': 'alcohol-burner',
+  // C-18/C-19 (Vòng 3): PHM-0001 dùng thân máy digital-multimeter — đúng archetype mà
+  // manifest của module HTML PHM khai; nếu để suy luận theo từ khóa cũng về đây,
+  // nhưng ghi rõ trong bảng để không phụ thuộc từ khóa.
+  'OL3D-EQP-PHM-0001': 'digital-multimeter',
+  // C-18/C-19 (Vòng 4): 10 asset mới.
+  'OL3D-EQP-STR-0001': 'electronic-balance',
+  'OL3D-EQP-NAC-0001': 'chemical-sample',
+  'OL3D-EQP-AMP-0001': 'digital-multimeter',
+  'OL3D-EQP-VOL-0001': 'digital-multimeter',
+  'OL3D-EQP-RES-0001': 'resistor-sample',
+  'OL3D-EQP-RHE-0001': 'rheostat',
+  'OL3D-EQP-SOC-0001': 'incandescent-lamp-socket',
+  'OL3D-EQP-TWG-0001': 'plant-twig-leafy',
+  'OL3D-EQP-TWG-0002': 'plant-twig-bare',
+  'OL3D-EQP-LIT-0001': 'ph-indicator-strip',
 };
 
 function inferProceduralArchetypeFromIdOrSlug(
@@ -173,7 +188,9 @@ export interface HtmlModuleInteractiveControlSpec {
     | 'springExtensionN'
     | 'jawOpeningMm'
     | 'magnification'
-    | 'measuredMassG';
+    | 'measuredMassG'
+    | 'sampleMassG'
+    | 'rheostatOhms';
   label: string;
   unit: string;
   min: number;
@@ -421,6 +438,43 @@ export function resolveDefaultModuleControls(
       break;
     }
 
+    // C-18/C-19 (Vòng 4): mẫu muối NaCl — khối lượng mẫu đã xúc, mặc định 0 = chưa xúc.
+    case 'chemical-sample':
+      stateKey = 'sampleMassG';
+      label = 'Khối lượng muối đã xúc m';
+      unit = 'g';
+      min = 0;
+      max = 20;
+      step = 0.5;
+      defaultValue = 0;
+      canHoldLiquid = false;
+      canSubmergeInVessel = false;
+      soundPhenomenon = 'probe-measure';
+      presets = [
+        { label: '0.0 g (Chưa xúc)', statePatch: { sampleMassG: 0 } },
+        { label: '10.0 g (Đủ pha dung dịch 10%)', statePatch: { sampleMassG: 10 } },
+      ];
+      break;
+
+    // C-18/C-19 (Vòng 4): biến trở — điện trở hiện tại, mặc định 10 Ω (giữa thang).
+    case 'rheostat':
+      stateKey = 'rheostatOhms';
+      label = 'Điện trở biến trở R';
+      unit = 'Ω';
+      min = 0;
+      max = 20;
+      step = 1;
+      defaultValue = 10;
+      canHoldLiquid = false;
+      canSubmergeInVessel = false;
+      soundPhenomenon = 'probe-measure';
+      presets = [
+        { label: '0 Ω (Ngắn mạch biến trở)', statePatch: { rheostatOhms: 0 } },
+        { label: '10 Ω (Giữa thang)', statePatch: { rheostatOhms: 10 } },
+        { label: '20 Ω (Tối đa)', statePatch: { rheostatOhms: 20 } },
+      ];
+      break;
+
     case 'digital-multimeter':
       stateKey = 'multimeterValue';
       label = 'Giá trị đo U / I / R';
@@ -428,15 +482,13 @@ export function resolveDefaultModuleControls(
       min = 0;
       max = 250;
       step = 0.1;
-      defaultValue = 12;
+      // C-18/C-19 (Vòng 4): mặc định 0 = chưa đo; giá trị đo do solver mạch ghi,
+      // KHÔNG bấm preset đặt giá trị đo nữa (preset cũ 0/1,5/12 V là số đo giả).
+      defaultValue = 0;
       canHoldLiquid = false;
       canSubmergeInVessel = false;
       soundPhenomenon = 'probe-measure';
-      presets = [
-        { label: '0.0 V (Hở mạch)', statePatch: { multimeterValue: 0 } },
-        { label: '1.5 V (Pin AA)', statePatch: { multimeterValue: 1.5 } },
-        { label: '12.0 V (Nguồn DC)', statePatch: { multimeterValue: 12 } },
-      ];
+      presets = [];
       break;
 
     case 'galvanometer':
@@ -1931,7 +1983,7 @@ export const SAMPLE_PH_METER_HTML_MODULE = `<!DOCTYPE html>
       "min": 0.0,
       "max": 14.0,
       "step": 0.05,
-      "defaultValue": 7.0,
+      "defaultValue": 0,
       "canBeWeighedOnBalance": true,
       "canHoldLiquid": false,
       "canSubmergeInVessel": true,
@@ -2608,7 +2660,7 @@ export const SAMPLE_MAGNETIC_STIRRER_HTML_MODULE = `<!DOCTYPE html>
       "min": 0,
       "max": 1500,
       "step": 50,
-      "defaultValue": 600,
+      "defaultValue": 0,
       "canBeWeighedOnBalance": true,
       "canHoldLiquid": false,
       "canSubmergeInVessel": false,
